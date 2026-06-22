@@ -16,6 +16,9 @@ import (
 
 	"github.com/shafqat/studyrover/backend/internal/auth"
 	"github.com/shafqat/studyrover/backend/internal/contracts"
+	"github.com/shafqat/studyrover/backend/internal/jobs"
+	"github.com/shafqat/studyrover/backend/internal/knowledge"
+	"github.com/shafqat/studyrover/backend/internal/storage"
 	"github.com/shafqat/studyrover/backend/internal/store"
 )
 
@@ -35,6 +38,12 @@ type Handlers struct {
 	Store    store.Store
 	Sessions *auth.SessionManager
 	Auth     *auth.Authenticator
+
+	// Phase-2 foundation dependencies (wired in internal/app). Handlers read
+	// these for the AI tutor, async ingestion jobs, and uploaded-file storage.
+	Knowledge knowledge.Source
+	Jobs      *jobs.Queue
+	Storage   storage.Store
 }
 
 // spaDir is the built frontend served for non-API routes (client-side routing).
@@ -76,7 +85,7 @@ func NewRouter(h *Handlers) http.Handler {
 // authMiddleware enforces the session role required by each API route, keyed by
 // the request path (with the /api prefix already stripped by Mount):
 //   - /auth/login, /auth/register, /auth/student  → public (no session)
-//   - /attempts...                                → student session
+//   - /attempts..., /tutor...                     → student session
 //   - everything else                            → parent session
 func authMiddleware(sessions *auth.SessionManager) func(http.Handler) http.Handler {
 	requireParent := sessions.RequireParent
@@ -91,7 +100,7 @@ func authMiddleware(sessions *auth.SessionManager) func(http.Handler) http.Handl
 			switch {
 			case isPublicPath(path):
 				next.ServeHTTP(w, r)
-			case strings.HasPrefix(path, "/attempts"):
+			case strings.HasPrefix(path, "/attempts"), strings.HasPrefix(path, "/tutor"):
 				student.ServeHTTP(w, r)
 			default:
 				parent.ServeHTTP(w, r)

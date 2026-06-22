@@ -19,6 +19,13 @@ type Config struct {
 	RPID string
 	// RPOrigin is the WebAuthn Relying Party origin (env RP_ORIGIN), e.g. "http://localhost:5173".
 	RPOrigin string
+	// StorageDir is the local filesystem directory for uploaded source files
+	// (env STORAGE_DIR). Optional; empty selects a sensible default at wiring time.
+	StorageDir string
+	// GeminiAPIKey authenticates the Gemini knowledge backend (env GEMINI_API_KEY).
+	// Optional; when empty the Gemini adapter is not provisioned and the selector
+	// falls back to another backend.
+	GeminiAPIKey string
 }
 
 // Default values applied when an optional env var is unset.
@@ -37,6 +44,8 @@ func Load() (*Config, error) {
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		RPID:          getenv("RP_ID", defaultRPID),
 		RPOrigin:      os.Getenv("RP_ORIGIN"),
+		StorageDir:    os.Getenv("STORAGE_DIR"),
+		GeminiAPIKey:  os.Getenv("GEMINI_API_KEY"),
 	}
 
 	var missing []string

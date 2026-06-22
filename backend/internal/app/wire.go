@@ -13,12 +13,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/shafqat/studyrover/backend/internal/auth"
 	"github.com/shafqat/studyrover/backend/internal/config"
+	"github.com/shafqat/studyrover/backend/internal/contracts"
 	httpapi "github.com/shafqat/studyrover/backend/internal/http"
+	"github.com/shafqat/studyrover/backend/internal/jobs"
+	"github.com/shafqat/studyrover/backend/internal/knowledge"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/fake"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/gemini"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/notebooklm"
+	"github.com/shafqat/studyrover/backend/internal/storage"
 	"github.com/shafqat/studyrover/backend/internal/store"
 )
 
@@ -54,10 +62,19 @@ func Run() error {
 	}
 	defer db.Close()
 
-	handler, err := buildHandler(cfg, db)
+	handler, worker, err := buildHandler(cfg, db)
 	if err != nil {
 		return err
 	}
+
+	// Start the job worker pool. Worker.Run blocks until ctx is cancelled (the
+	// shutdown signal) and then drains in-flight jobs, so running it on a
+	// goroutine bound to the root context gives a clean, signal-driven shutdown.
+	go func() {
+		if err := worker.Run(ctx); err != nil {
+			log.Printf("app: job worker stopped: %v", err)
+		}
+	}()
 
 	return serve(ctx, cfg, handler)
 }
@@ -74,24 +91,63 @@ func openStore(ctx context.Context, databaseURL string) (*store.DB, error) {
 	return db, nil
 }
 
-// buildHandler assembles auth dependencies and the HTTP handler set, then mounts
-// them on the chi router owned by internal/http (W02). The store is passed as the
-// Store interface so the handlers depend on the contract, not the concrete pool.
-func buildHandler(cfg *config.Config, db store.Store) (http.Handler, error) {
+// defaultStorageSubdir is the directory name appended to os.TempDir() for
+// uploaded source files when no STORAGE_DIR is configured.
+const defaultStorageSubdir = "studyrover-files"
+
+// buildHandler assembles auth dependencies, the Phase-2 foundation infra
+// (storage, job queue, knowledge backend, job worker), and the HTTP handler set,
+// then mounts them on the chi router owned by internal/http (W02). The store is
+// passed as the Store interface so the handlers depend on the contract, not the
+// concrete pool. It returns the constructed *jobs.Worker so Run can start it on a
+// goroutine and stop it on shutdown; no job handlers are registered yet.
+func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worker, error) {
 	sessions := auth.NewSessionManager(cfg.SessionSecret, cfg.RPOrigin)
 
 	authn, err := auth.NewAuthenticator(cfg.RPID, cfg.RPOrigin, "StudyRover")
 	if err != nil {
-		return nil, fmt.Errorf("app: build authenticator: %w", err)
+		return nil, nil, fmt.Errorf("app: build authenticator: %w", err)
 	}
+
+	// Local-filesystem object store for uploaded sources. Default to a temp dir
+	// when no STORAGE_DIR is configured so the binary runs without extra setup.
+	storageDir := cfg.StorageDir
+	if storageDir == "" {
+		storageDir = filepath.Join(os.TempDir(), defaultStorageSubdir)
+	}
+	files, err := storage.NewLocal(storageDir, 0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("app: build storage: %w", err)
+	}
+
+	// Postgres-backed job queue and its draining worker. Both depend only on the
+	// Store seam.
+	queue := jobs.NewQueue(db)
+	worker := jobs.NewWorker(queue, nil, jobs.Config{})
+
+	// Knowledge backend selected at wiring time. The adapters are constructed
+	// unconditionally and injected into the selector; a missing Gemini key /
+	// NotebookLM endpoint leaves those adapters unprovisioned, and New falls back
+	// to the deterministic fake. Defaults pick NotebookLM per the contract.
+	knowledgeSrc := knowledge.New(
+		contracts.Settings{KnowledgeBackend: contracts.KnowledgeBackendNotebooklm},
+		knowledge.Config{
+			Gemini:     gemini.New(gemini.Config{APIKey: cfg.GeminiAPIKey}),
+			NotebookLM: notebooklm.New(notebooklm.Config{}),
+			Fake:       fake.New(0),
+		},
+	)
 
 	h := &httpapi.Handlers{
-		Store:    db,
-		Sessions: sessions,
-		Auth:     authn,
+		Store:     db,
+		Sessions:  sessions,
+		Auth:      authn,
+		Knowledge: knowledgeSrc,
+		Jobs:      queue,
+		Storage:   files,
 	}
 
-	return httpapi.NewRouter(h), nil
+	return httpapi.NewRouter(h), worker, nil
 }
 
 // serve runs the HTTP server until ctx is cancelled (shutdown signal) or the
