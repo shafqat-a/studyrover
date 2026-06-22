@@ -1,0 +1,1935 @@
+# StudyRover — OpenAPI 3.1 root document (W01) — ASSEMBLED, self-contained.
+#
+# The single assembled contract: document metadata, the cookie-session security
+# scheme, every Phase 1 path, and a components block that INLINES every per-entity
+# schema from contracts/components/*.yaml (the C-tasks remain authoritative for
+# those fragments; W01 assembles them here so the document is self-contained and
+# codegen-friendly).
+#
+# This is the ONLY file that declares `paths`. Codegen consumes THIS file:
+#   - oapi-codegen        -> backend/internal/contracts/contracts.gen.go (Go models + chi server)
+#   - openapi-typescript  -> frontend/src/api/schema.d.ts (TS types)
+#
+# Do NOT hand-edit the inlined component schemas here — edit the owning
+# contracts/components/*.yaml fragment and re-run the W01 assembly + `make gen`.
+# Cross-language rule: JSON is camelCase; IDs are strings (UUID/cuid);
+# timestamps are RFC 3339 strings.
+#
+openapi: 3.1.0
+info:
+  title: StudyRover API
+  version: 0.1.0
+  description: StudyRover Phase 1 — the tutoring core. A parent sets up subjects/topics/questions/exams;
+    a student takes exams; the system produces scores + mastery and emits a ScoreEvent. JSON over HTTP;
+    parent cookie session required except for the student exam + student-auth endpoints.
+  license:
+    name: Proprietary
+servers:
+- url: /api
+  description: StudyRover API, served by the Go binary under the /api base path.
+security:
+- cookieSession: []
+tags:
+- name: subjects
+- name: sources
+- name: topics
+- name: examDefinitions
+- name: questions
+- name: student
+- name: settings
+- name: attempts
+- name: auth
+- name: progress
+paths:
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags:
+      - subjects
+      summary: List subjects
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of subjects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfSubject'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createSubject
+      tags:
+      - subjects
+      summary: Create a subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubject'
+      responses:
+        '201':
+          description: The created subject.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getSubject
+      tags:
+      - subjects
+      summary: Get a subject
+      responses:
+        '200':
+          description: The subject.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateSubject
+      tags:
+      - subjects
+      summary: Update a subject (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subject'
+      responses:
+        '200':
+          description: The updated subject.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteSubject
+      tags:
+      - subjects
+      summary: Delete a subject
+      responses:
+        '204':
+          description: The subject was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /sources:
+    get:
+      operationId: listSources
+      tags:
+      - sources
+      summary: List sources for a subject
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter sources to a single subject.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfSource'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createSource
+      tags:
+      - sources
+      summary: Create a source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSource'
+      responses:
+        '201':
+          description: The created source.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Source'
+        default:
+          $ref: '#/components/responses/Problem'
+  /sources/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getSource
+      tags:
+      - sources
+      summary: Get a source
+      responses:
+        '200':
+          description: The source.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Source'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteSource
+      tags:
+      - sources
+      summary: Delete a source
+      responses:
+        '204':
+          description: The source was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /topics:
+    get:
+      operationId: listTopics
+      tags:
+      - topics
+      summary: List topics for a subject
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter topics to a single subject.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of topics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfTopic'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createTopic
+      tags:
+      - topics
+      summary: Create a topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTopic'
+      responses:
+        '201':
+          description: The created topic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        default:
+          $ref: '#/components/responses/Problem'
+  /topics/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getTopic
+      tags:
+      - topics
+      summary: Get a topic
+      responses:
+        '200':
+          description: The topic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateTopic
+      tags:
+      - topics
+      summary: Update a topic (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Topic'
+      responses:
+        '200':
+          description: The updated topic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteTopic
+      tags:
+      - topics
+      summary: Delete a topic
+      responses:
+        '204':
+          description: The topic was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /exam-definitions:
+    get:
+      operationId: listExamDefinitions
+      tags:
+      - examDefinitions
+      summary: List exam definitions for a subject
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter exam definitions to a single subject.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of exam definitions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfExamDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createExamDefinition
+      tags:
+      - examDefinitions
+      summary: Create an exam definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExamDefinition'
+      responses:
+        '201':
+          description: The created exam definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+  /exam-definitions/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getExamDefinition
+      tags:
+      - examDefinitions
+      summary: Get an exam definition
+      responses:
+        '200':
+          description: The exam definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateExamDefinition
+      tags:
+      - examDefinitions
+      summary: Update an exam definition (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExamDefinition'
+      responses:
+        '200':
+          description: The updated exam definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteExamDefinition
+      tags:
+      - examDefinitions
+      summary: Delete an exam definition
+      responses:
+        '204':
+          description: The exam definition was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions:
+    get:
+      operationId: listQuestions
+      tags:
+      - questions
+      summary: List questions for a subject / topic
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter questions to a single subject.
+      - name: topicId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter questions to a single topic.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of questions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfQuestion'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createQuestion
+      tags:
+      - questions
+      summary: Create a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestion'
+      responses:
+        '201':
+          description: The created question.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getQuestion
+      tags:
+      - questions
+      summary: Get a question
+      responses:
+        '200':
+          description: The question.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateQuestion
+      tags:
+      - questions
+      summary: Update a question (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '200':
+          description: The updated question.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteQuestion
+      tags:
+      - questions
+      summary: Delete a question
+      responses:
+        '204':
+          description: The question was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /student:
+    get:
+      operationId: getStudent
+      tags:
+      - student
+      summary: Get the student profile
+      responses:
+        '200':
+          description: The student profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateStudent
+      tags:
+      - student
+      summary: Update the student profile (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Student'
+      responses:
+        '200':
+          description: The updated student profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        default:
+          $ref: '#/components/responses/Problem'
+  /settings:
+    get:
+      operationId: getSettings
+      tags:
+      - settings
+      summary: Get the application settings singleton
+      responses:
+        '200':
+          description: The settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateSettings
+      tags:
+      - settings
+      summary: Update settings (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Settings'
+      responses:
+        '200':
+          description: The updated settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+        default:
+          $ref: '#/components/responses/Problem'
+  /attempts:
+    get:
+      operationId: listAttempts
+      tags:
+      - attempts
+      summary: List exam attempts for a student
+      parameters:
+      - name: studentId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter attempts to a single student.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of exam attempts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfExamAttempt'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: startAttempt
+      tags:
+      - attempts
+      summary: Start a new exam attempt
+      description: Assembles the exam and persists an in_progress attempt, returning the attempt plus
+        the delivered questions (without the answer key).
+      security:
+      - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartAttempt'
+      responses:
+        '201':
+          description: The started attempt and its delivered questions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartAttemptResult'
+        default:
+          $ref: '#/components/responses/Problem'
+  /attempts/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getAttempt
+      tags:
+      - attempts
+      summary: Get an in-progress attempt (no answers revealed)
+      responses:
+        '200':
+          description: The attempt (delivered, no answers).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamAttempt'
+        default:
+          $ref: '#/components/responses/Problem'
+  /attempts/{id}/submit:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: submitAttempt
+      tags:
+      - attempts
+      summary: Submit answers and grade the attempt
+      description: Grades the attempt server-side, persists the graded result, and returns the graded
+        attempt plus the emitted ScoreEvent (the Phase 3 seam).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAttempt'
+      responses:
+        '200':
+          description: The graded attempt and the emitted score event.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitAttemptResult'
+        default:
+          $ref: '#/components/responses/Problem'
+  /attempts/{id}/result:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getAttemptResult
+      tags:
+      - attempts
+      summary: Get the graded result of an attempt (answers revealed)
+      responses:
+        '200':
+          description: The graded attempt with answers revealed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamAttempt'
+        default:
+          $ref: '#/components/responses/Problem'
+  /auth/register:
+    post:
+      operationId: authRegister
+      tags:
+      - auth
+      summary: Parent WebAuthn registration ceremony (begin/finish)
+      description: Drives the parent WebAuthn registration ceremony. The opaque ceremony payload (begin
+        options or the authenticator response) is passed through to go-webauthn. On finish, a Session
+        is returned and the session cookie is set.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnCeremony'
+      responses:
+        '200':
+          description: Ceremony options, or a Session on a successful finish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        default:
+          $ref: '#/components/responses/Problem'
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags:
+      - auth
+      summary: Parent WebAuthn login ceremony (begin/finish)
+      description: Drives the parent WebAuthn authentication ceremony. The opaque ceremony payload is
+        passed through to go-webauthn. On finish, a Session is returned and the session cookie is set.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebAuthnCeremony'
+      responses:
+        '200':
+          description: Ceremony options, or a Session on a successful finish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        default:
+          $ref: '#/components/responses/Problem'
+  /auth/student:
+    post:
+      operationId: authStudent
+      tags:
+      - auth
+      summary: Student sign-in
+      description: Signs a student in (optionally with a PIN) and sets the session cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentSignIn'
+      responses:
+        '200':
+          description: The student session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        default:
+          $ref: '#/components/responses/Problem'
+  /progress:
+    get:
+      operationId: getProgress
+      tags:
+      - progress
+      summary: Get a student's mastery, streak, and attempt history
+      parameters:
+      - name: studentId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: The student whose progress to return.
+      responses:
+        '200':
+          description: The student's progress summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Progress'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: sr_session
+      description: HTTP-only session cookie issued by /auth/* after a successful WebAuthn (parent) or
+        PIN (student) ceremony. Carries the role + subject id.
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Resource identifier (UUID/cuid).
+      schema:
+        type: string
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: 1-based page number to return.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSizeParam:
+      name: pageSize
+      in: query
+      required: false
+      description: Maximum number of items per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  responses:
+    Problem:
+      description: An error occurred; the body is an RFC 7807-style problem.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    AttemptStatus:
+      type: string
+      description: Lifecycle state of an exam attempt.
+      enum:
+      - in_progress
+      - submitted
+    Answer:
+      type: object
+      description: A single answer within an attempt. selectedOptionId is absent when the student left
+        the question unanswered; correct is populated only after server-side grading.
+      additionalProperties: false
+      required:
+      - questionId
+      properties:
+        questionId:
+          type: string
+          description: The question this answer responds to.
+        selectedOptionId:
+          type: string
+          description: The option the student selected, if any.
+        correct:
+          type: boolean
+          description: Whether the selected option was correct (set on grading).
+    PerTopicScore:
+      type: object
+      description: Per-topic correct/total breakdown for an attempt. Canonical definition; ScoreEvent
+        references this same shape.
+      additionalProperties: false
+      required:
+      - topicId
+      - correct
+      - total
+      properties:
+        topicId:
+          type: string
+          description: The topic these counts belong to.
+        correct:
+          type: integer
+          description: Number of correctly answered questions for this topic.
+          minimum: 0
+        total:
+          type: integer
+          description: Total number of questions for this topic in the attempt.
+          minimum: 0
+    ExamAttempt:
+      type: object
+      description: A student's attempt at an exam definition. Created in_progress with the assembled questionIds;
+        graded fields (scorePct, passed, perTopic, cooldownUntil, submittedAt) are populated after submission.
+      additionalProperties: false
+      required:
+      - id
+      - examDefinitionId
+      - studentId
+      - status
+      - questionIds
+      - answers
+      - startedAt
+      properties:
+        id:
+          type: string
+          description: Unique attempt id.
+        examDefinitionId:
+          type: string
+          description: The exam definition this attempt is for.
+        studentId:
+          type: string
+          description: The student taking the exam.
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AttemptStatus'
+          description: Current lifecycle state.
+          default: in_progress
+        questionIds:
+          type: array
+          description: The assembled question ids, in delivery order.
+          items:
+            type: string
+        answers:
+          type: array
+          description: The student's answers; empty until questions are answered.
+          default: []
+          items:
+            $ref: '#/components/schemas/Answer'
+        scorePct:
+          type: integer
+          description: Overall score percentage (0–100); present once graded.
+          minimum: 0
+          maximum: 100
+        passed:
+          type: boolean
+          description: Whether the attempt met the exam pass bar; present once graded.
+        perTopic:
+          type: array
+          description: Per-topic breakdown; present once graded.
+          items:
+            $ref: '#/components/schemas/PerTopicScore'
+        cooldownUntil:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp until which a new attempt is blocked after a failed attempt;
+            absent when there is no active cooldown.
+        startedAt:
+          type: string
+          format: date-time
+          description: When the attempt was started.
+        submittedAt:
+          type: string
+          format: date-time
+          description: When the attempt was submitted; absent while in_progress.
+    StartAttempt:
+      type: object
+      description: Request body to start a new exam attempt.
+      additionalProperties: false
+      required:
+      - examDefinitionId
+      - studentId
+      properties:
+        examDefinitionId:
+          type: string
+          description: The exam definition to attempt.
+        studentId:
+          type: string
+          description: The student starting the attempt.
+    SubmitAttempt:
+      type: object
+      description: Request body to submit answers for grading.
+      additionalProperties: false
+      required:
+      - answers
+      properties:
+        answers:
+          type: array
+          description: The submitted answers, one entry per answered question.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - questionId
+            - selectedOptionId
+            properties:
+              questionId:
+                type: string
+                description: The question being answered.
+              selectedOptionId:
+                type: string
+                description: The selected option id.
+    PageOfExamAttempt:
+      type: object
+      description: A paginated page of exam attempts.
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamAttempt'
+        total:
+          type: integer
+          description: Total number of attempts matching the query.
+          minimum: 0
+        page:
+          type: integer
+          description: 1-based page number.
+          minimum: 1
+        pageSize:
+          type: integer
+          description: Number of items per page.
+          minimum: 1
+    Parent:
+      type: object
+      description: A parent/guardian account, authenticated via WebAuthn (FIDO2).
+      additionalProperties: false
+      required:
+      - id
+      - displayName
+      - email
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique parent id (UUID/cuid).
+        displayName:
+          type: string
+          description: Human-readable name shown in the UI.
+        email:
+          type: string
+          format: email
+          description: Parent email address (also the WebAuthn user name).
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    Credential:
+      type: object
+      description: A registered WebAuthn (FIDO2) credential belonging to a parent. Stores the public key
+        + signature counter used to verify assertions.
+      additionalProperties: false
+      required:
+      - id
+      - parentId
+      - credentialId
+      - publicKey
+      - counter
+      - isBackup
+      properties:
+        id:
+          type: string
+          description: Unique credential record id (UUID/cuid).
+        parentId:
+          type: string
+          description: Id of the owning Parent.
+        credentialId:
+          type: string
+          description: Base64url-encoded WebAuthn credential id.
+        publicKey:
+          type: string
+          description: Base64url-encoded COSE public key.
+        counter:
+          type: integer
+          format: int64
+          description: Signature counter, used to detect cloned authenticators.
+        isBackup:
+          type: boolean
+          default: false
+          description: Whether the authenticator is backup-eligible / a backup device.
+    RegisterBegin:
+      type: object
+      description: Body that starts the parent WebAuthn registration ceremony. The server replies with
+        opaque registration options (handled by go-webauthn).
+      additionalProperties: false
+      required:
+      - displayName
+      - email
+      properties:
+        displayName:
+          type: string
+          description: Human-readable name for the new parent account.
+        email:
+          type: string
+          format: email
+          description: Parent email address (the WebAuthn user name).
+    Session:
+      type: object
+      description: The active session identity returned after a successful auth ceremony. Mirrors what
+        the server stores behind the sr_session cookie.
+      additionalProperties: false
+      required:
+      - role
+      - id
+      properties:
+        role:
+          type: string
+          description: Whether the session belongs to a parent or a student.
+          enum:
+          - parent
+          - student
+        id:
+          type: string
+          description: Id of the authenticated parent or student.
+    WebAuthnCeremony:
+      type: object
+      description: Free-form WebAuthn ceremony payload (registration/authentication options or the authenticator's
+        response). Opaque — the structure is owned by the WebAuthn libraries, not this contract.
+      additionalProperties: true
+    Code:
+      type: string
+      description: 'Machine-readable error category. Maps to the matching HTTP status: VALIDATION->422/400,
+        NOT_FOUND->404, UNAUTHORIZED->401, CONFLICT->409, INTERNAL->500.'
+      enum:
+      - VALIDATION
+      - NOT_FOUND
+      - UNAUTHORIZED
+      - CONFLICT
+      - INTERNAL
+    Problem:
+      type: object
+      description: RFC 7807-style problem detail returned for any error response. The HTTP status of the
+        response matches the `status` field and the `code` category.
+      additionalProperties: false
+      required:
+      - type
+      - title
+      - status
+      - code
+      properties:
+        type:
+          type: string
+          description: A URI reference identifying the problem type. May be the literal "about:blank"
+            when no specific type is defined.
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type.
+        status:
+          type: integer
+          description: The HTTP status code for this occurrence of the problem.
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence.
+        code:
+          $ref: '#/components/schemas/Code'
+    ExamType:
+      type: string
+      description: Kind of exam. `gate` exams are the everyday internet-time gate; `formal` exams are
+        heavier graded assessments.
+      enum:
+      - gate
+      - formal
+    RewardStyle:
+      type: string
+      description: How earned internet time relates to the score. `flat` grants the full time for the
+        exam size on a pass; `scaled` multiplies by the score%.
+      enum:
+      - flat
+      - scaled
+    ExamDefinition:
+      type: object
+      description: A parent-configured exam template for a subject.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - name
+      - type
+      - scopeTopicIds
+      - size
+      - passBar
+      - cooldownMin
+      - rewardStyle
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Stable identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: The subject this exam template belongs to.
+        name:
+          type: string
+          description: Human-readable name for the exam template.
+        type:
+          $ref: '#/components/schemas/ExamType'
+          default: gate
+        scopeTopicIds:
+          type: array
+          description: Topic ids the exam draws from. An empty array means the whole subject.
+          items:
+            type: string
+          default: []
+        size:
+          type: integer
+          description: Number of questions in the exam.
+          minimum: 1
+          default: 20
+        passBar:
+          type: integer
+          description: Minimum score percentage required to pass.
+          minimum: 0
+          maximum: 100
+          default: 70
+        cooldownMin:
+          type: integer
+          description: Minutes a student must wait after a failed attempt.
+          minimum: 0
+          default: 10
+        rewardStyle:
+          $ref: '#/components/schemas/RewardStyle'
+          default: flat
+        createdAt:
+          type: string
+          format: date-time
+          description: When the exam template was created (RFC 3339).
+    CreateExamDefinition:
+      type: object
+      description: Request body to create an ExamDefinition. The server assigns `id` and `createdAt` and
+        applies the spec §10 defaults for any omitted field.
+      additionalProperties: false
+      required:
+      - subjectId
+      - name
+      properties:
+        subjectId:
+          type: string
+          description: The subject this exam template belongs to.
+        name:
+          type: string
+          description: Human-readable name for the exam template.
+        type:
+          $ref: '#/components/schemas/ExamType'
+          default: gate
+        scopeTopicIds:
+          type: array
+          description: Topic ids the exam draws from. An empty array (the default) means the whole subject.
+          items:
+            type: string
+          default: []
+        size:
+          type: integer
+          description: Number of questions in the exam.
+          minimum: 1
+          default: 20
+        passBar:
+          type: integer
+          description: Minimum score percentage required to pass.
+          minimum: 0
+          maximum: 100
+          default: 70
+        cooldownMin:
+          type: integer
+          description: Minutes a student must wait after a failed attempt.
+          minimum: 0
+          default: 10
+        rewardStyle:
+          $ref: '#/components/schemas/RewardStyle'
+          default: flat
+    PageOfExamDefinition:
+      type: object
+      description: A page of ExamDefinition results.
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamDefinition'
+        total:
+          type: integer
+          description: Total number of matching exam definitions.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.
+    Difficulty:
+      type: string
+      description: Relative difficulty of a question.
+      enum:
+      - easy
+      - medium
+      - hard
+    Option:
+      type: object
+      description: A single multiple-choice answer option. The id is server-assigned.
+      additionalProperties: false
+      required:
+      - id
+      - text
+      properties:
+        id:
+          type: string
+          description: Server-assigned identifier for this option (unique within a question).
+        text:
+          type: string
+          description: The option's display text.
+    Question:
+      type: object
+      description: A multiple-choice question with its answer key. This is the parent-facing (authoring)
+        shape; the student receives DeliveredQuestion, which omits correctOptionId.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - text
+      - options
+      - correctOptionId
+      - difficulty
+      - enabled
+      properties:
+        id:
+          type: string
+          description: Unique question identifier.
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/Option'
+        correctOptionId:
+          type: string
+          description: The id of the option that is correct (must match an option's id).
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+          default: medium
+        enabled:
+          type: boolean
+          description: Whether this question is eligible for selection into exams.
+          default: true
+    CreateQuestion:
+      type: object
+      description: Payload to author a new question. Options are supplied as plain texts and the correct
+        one is identified by its index; the server assigns Option ids and resolves correctOptionId from
+        correctOptionIndex.
+      additionalProperties: false
+      required:
+      - subjectId
+      - text
+      - options
+      - correctOptionIndex
+      properties:
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer option texts. At least four are required.
+          minItems: 4
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - text
+            properties:
+              text:
+                type: string
+                description: The option's display text.
+        correctOptionIndex:
+          type: integer
+          description: Zero-based index into options identifying the correct answer.
+          minimum: 0
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+    DeliveredQuestion:
+      type: object
+      description: A question as delivered to the student during an exam — identical to Question but WITHOUT
+        correctOptionId, so the answer key never leaves the server. Grading is performed server-side.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - text
+      - options
+      - difficulty
+      - enabled
+      properties:
+        id:
+          type: string
+          description: Unique question identifier.
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/Option'
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+          default: medium
+        enabled:
+          type: boolean
+          description: Whether this question is eligible for selection into exams.
+          default: true
+    PageOfQuestion:
+      type: object
+      description: A paginated page of questions.
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        total:
+          type: integer
+          description: Total number of questions matching the query.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.
+    ScoreEvent:
+      type: object
+      description: Immutable record of a single graded exam outcome. Emitted by Phase 1 on exam submission
+        and consumed only by the Phase 3 Guardian. Carries the score and per-topic breakdown but no reward/minutes/time
+        fields, which are Guardian-only.
+      additionalProperties: false
+      required:
+      - attemptId
+      - studentId
+      - subjectId
+      - examDefinitionId
+      - scopeTopicIds
+      - size
+      - scorePct
+      - passed
+      - perTopic
+      - timestamp
+      properties:
+        attemptId:
+          type: string
+          description: ID of the ExamAttempt (C06) this score came from.
+        studentId:
+          type: string
+          description: ID of the Student (C07) who took the exam.
+        subjectId:
+          type: string
+          description: ID of the Subject (C01) the exam belongs to.
+        examDefinitionId:
+          type: string
+          description: ID of the ExamDefinition (C04) that produced the attempt.
+        scopeTopicIds:
+          type: array
+          description: Topic IDs the exam was scoped to. Empty array means the whole subject (mirrors
+            ExamDefinition.scopeTopicIds).
+          items:
+            type: string
+        size:
+          type: integer
+          description: Number of questions in the attempt.
+        scorePct:
+          type: integer
+          description: Final score as a whole percentage (0–100).
+        passed:
+          type: boolean
+          description: Whether the attempt met the exam's pass bar.
+        perTopic:
+          type: array
+          description: Per-topic correct/total breakdown for the attempt.
+          items:
+            $ref: '#/components/schemas/PerTopicScore'
+        timestamp:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the score was recorded.
+    KnowledgeBackend:
+      type: string
+      description: The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM
+        is the default; Gemini is the direct alternative.
+      enum:
+      - notebooklm
+      - gemini
+    Settings:
+      type: object
+      description: The application settings singleton. Holds the spec defaults that gate exam creation
+        plus the Guardian-side reward knobs (stored now, used in Phase 3). L10 ResolveSettings fills any
+        missing field from these same defaults at runtime.
+      additionalProperties: false
+      required:
+      - id
+      - rewardRateMinPerQ
+      - dailyCapHours
+      - defaultExamSize
+      - defaultPassBar
+      - defaultCooldownMin
+      - knowledgeBackend
+      - difficultyRamp
+      properties:
+        id:
+          type: string
+          description: Identifier of the settings singleton row.
+        rewardRateMinPerQ:
+          type: integer
+          description: 'Guardian-side: minutes of earned time per correct question. Stored now, unused
+            until Phase 3.'
+          default: 3
+        dailyCapHours:
+          type: integer
+          description: 'Guardian-side: maximum hours of earned time per day. Stored now, unused until
+            Phase 3.'
+          default: 3
+        defaultExamSize:
+          type: integer
+          description: Default number of questions for a new exam definition.
+          default: 20
+        defaultPassBar:
+          type: integer
+          description: Default pass threshold (percent) for a new exam definition.
+          default: 70
+        defaultCooldownMin:
+          type: integer
+          description: Default cooldown (minutes) after a failed attempt.
+          default: 10
+        knowledgeBackend:
+          allOf:
+          - $ref: '#/components/schemas/KnowledgeBackend'
+          description: The selected knowledge backend.
+          default: notebooklm
+        difficultyRamp:
+          type: boolean
+          description: Whether exam assembly ramps difficulty (easy -> hard) across the delivered questions.
+          default: false
+    SourceType:
+      type: string
+      description: The kind of study source.
+      enum:
+      - file
+      - notebooklm
+      - text
+    SourceStatus:
+      type: string
+      description: Processing state of a source. Phase 1 sources are created `ready`; `processing` is
+        reserved for Phase 2 async ingestion/OCR.
+      enum:
+      - processing
+      - ready
+    Source:
+      type: object
+      description: A study source attached to a subject.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - type
+      - title
+      - status
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique source id (UUID/cuid).
+        subjectId:
+          type: string
+          description: Id of the subject this source belongs to.
+        type:
+          $ref: '#/components/schemas/SourceType'
+        title:
+          type: string
+          description: Human-readable title for the source.
+        status:
+          $ref: '#/components/schemas/SourceStatus'
+          default: ready
+        fileRef:
+          type: string
+          description: Storage reference for a `file` source (set only for files).
+        url:
+          type: string
+          description: URL for a `notebooklm` source.
+        text:
+          type: string
+          description: Inline content for a `text` source.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    CreateSource:
+      type: object
+      description: Payload to create a new source. Server assigns id/status/createdAt.
+      additionalProperties: false
+      required:
+      - subjectId
+      - type
+      - title
+      properties:
+        subjectId:
+          type: string
+          description: Id of the subject this source belongs to.
+        type:
+          $ref: '#/components/schemas/SourceType'
+        title:
+          type: string
+          description: Human-readable title for the source.
+        fileRef:
+          type: string
+          description: Storage reference for a `file` source.
+        url:
+          type: string
+          description: URL for a `notebooklm` source.
+        text:
+          type: string
+          description: Inline content for a `text` source.
+    PageOfSource:
+      type: object
+      description: A page of sources (Page<Source>).
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+        total:
+          type: integer
+          description: Total number of sources matching the query.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.
+    Student:
+      type: object
+      description: A learner profile. Created by the parent during setup and used as the identity the
+        student signs in as for exams.
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        name:
+          type: string
+          description: The student's display name.
+          minLength: 1
+        gradeLevel:
+          type: string
+          description: Optional grade / year level (free-form, e.g. "Grade 7").
+        avatarUrl:
+          type: string
+          description: Optional URL to an avatar image.
+        notes:
+          type: string
+          description: Optional free-form notes the parent keeps about the student.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the student was created.
+    CreateStudent:
+      type: object
+      description: Request body to create (or, in Phase 1, update via PUT) a student profile. The server
+        assigns id and createdAt.
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: The student's display name.
+          minLength: 1
+        gradeLevel:
+          type: string
+          description: Optional grade / year level (free-form, e.g. "Grade 7").
+        avatarUrl:
+          type: string
+          description: Optional URL to an avatar image.
+        notes:
+          type: string
+          description: Optional free-form notes the parent keeps about the student.
+    Subject:
+      type: object
+      description: A unit of study a parent configures (e.g. "Algebra I").
+      required:
+      - id
+      - name
+      - archived
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable subject name.
+        color:
+          type: string
+          description: Optional display color (e.g. hex token) for the subject.
+        icon:
+          type: string
+          description: Optional icon identifier for the subject.
+        description:
+          type: string
+          description: Optional longer description of the subject.
+        archived:
+          type: boolean
+          default: false
+          description: Whether the subject is archived (hidden from active lists).
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    CreateSubject:
+      type: object
+      description: Request body to create a Subject; server assigns id/createdAt and defaults archived=false.
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable subject name.
+        color:
+          type: string
+          description: Optional display color (e.g. hex token) for the subject.
+        icon:
+          type: string
+          description: Optional icon identifier for the subject.
+        description:
+          type: string
+          description: Optional longer description of the subject.
+    PageOfSubject:
+      type: object
+      description: A single page of Subject results (Page<Subject> per the common pagination pattern).
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          description: The Subjects in this page.
+          items:
+            $ref: '#/components/schemas/Subject'
+        total:
+          type: integer
+          description: Total number of Subjects matching the query across all pages.
+        page:
+          type: integer
+          description: 1-based page number of this result.
+        pageSize:
+          type: integer
+          description: Maximum number of items per page.
+    Topic:
+      type: object
+      description: A unit of study within a subject. May optionally point at a source and a page range.
+        `order` controls syllabus position; `active` toggles whether the topic is in scope for exams.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - name
+      - order
+      - active
+      properties:
+        id:
+          type: string
+          description: Unique topic identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Identifier of the owning subject.
+        name:
+          type: string
+          description: Human-readable topic name.
+          minLength: 1
+        sourceId:
+          type: string
+          description: Optional identifier of the source this topic is drawn from.
+        pageStart:
+          type: integer
+          format: int32
+          description: Optional first page of the topic within its source.
+          minimum: 1
+        pageEnd:
+          type: integer
+          format: int32
+          description: Optional last page of the topic within its source. If both pages are present, pageEnd
+            must be >= pageStart.
+          minimum: 1
+        order:
+          type: integer
+          format: int32
+          description: Position of the topic in the subject's syllabus.
+        active:
+          type: boolean
+          description: Whether the topic is active (in scope for exams).
+          default: true
+    CreateTopic:
+      type: object
+      description: Request body for creating a topic. Server assigns id and defaults.
+      additionalProperties: false
+      required:
+      - subjectId
+      - name
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the owning subject.
+        name:
+          type: string
+          description: Human-readable topic name.
+          minLength: 1
+        sourceId:
+          type: string
+          description: Optional identifier of the source this topic is drawn from.
+        pageStart:
+          type: integer
+          format: int32
+          description: Optional first page of the topic within its source.
+          minimum: 1
+        pageEnd:
+          type: integer
+          format: int32
+          description: Optional last page of the topic within its source. If both pages are present, pageEnd
+            must be >= pageStart.
+          minimum: 1
+        order:
+          type: integer
+          format: int32
+          description: Optional syllabus position; server assigns one if omitted.
+    PageOfTopic:
+      type: object
+      description: A paginated page of topics (Page<Topic> per CONTRACTS.md §C11).
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          description: The topics on this page.
+          items:
+            $ref: '#/components/schemas/Topic'
+        total:
+          type: integer
+          format: int32
+          description: Total number of topics matching the query.
+        page:
+          type: integer
+          format: int32
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          format: int32
+          description: Number of items per page.
+    StartAttemptResult:
+      type: object
+      description: The result of starting an attempt — the attempt plus its delivered questions.
+      additionalProperties: false
+      required:
+      - attempt
+      - questions
+      properties:
+        attempt:
+          $ref: '#/components/schemas/ExamAttempt'
+        questions:
+          type: array
+          description: The delivered questions, in delivery order, without the answer key.
+          items:
+            $ref: '#/components/schemas/DeliveredQuestion'
+    SubmitAttemptResult:
+      type: object
+      description: The result of submitting an attempt — the graded attempt plus the emitted ScoreEvent.
+      additionalProperties: false
+      required:
+      - attempt
+      - scoreEvent
+      properties:
+        attempt:
+          $ref: '#/components/schemas/ExamAttempt'
+        scoreEvent:
+          $ref: '#/components/schemas/ScoreEvent'
+    StudentSignIn:
+      type: object
+      description: Body to sign a student in for an exam session.
+      additionalProperties: false
+      required:
+      - studentId
+      properties:
+        studentId:
+          type: string
+          description: The student signing in.
+        pin:
+          type: string
+          description: Optional PIN gating the student sign-in.
+    AuthResult:
+      type: object
+      description: The response of a WebAuthn ceremony step. During the begin step it carries opaque ceremony
+        options; on a successful finish it carries the established Session. Both fields are optional;
+        exactly one is present per step.
+      additionalProperties: false
+      properties:
+        options:
+          $ref: '#/components/schemas/WebAuthnCeremony'
+        session:
+          $ref: '#/components/schemas/Session'
+    Progress:
+      type: object
+      description: 'A student''s progress summary: per-topic mastery, the current streak, and recent attempt
+        history.'
+      additionalProperties: false
+      required:
+      - studentId
+      - mastery
+      - streak
+      - history
+      properties:
+        studentId:
+          type: string
+          description: The student this progress belongs to.
+        mastery:
+          type: array
+          description: Per-topic mastery levels (0–100).
+          items:
+            $ref: '#/components/schemas/TopicMastery'
+        streak:
+          type: integer
+          description: Current consecutive-pass streak (in days).
+          minimum: 0
+        history:
+          type: array
+          description: Recent exam attempts, newest first.
+          items:
+            $ref: '#/components/schemas/ExamAttempt'
+    TopicMastery:
+      type: object
+      description: A single topic's mastery level for a student.
+      additionalProperties: false
+      required:
+      - topicId
+      - mastery
+      properties:
+        topicId:
+          type: string
+          description: The topic this mastery is for.
+        mastery:
+          type: integer
+          description: Mastery level as a whole percentage (0–100).
+          minimum: 0
+          maximum: 100

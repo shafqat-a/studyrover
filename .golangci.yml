@@ -1,0 +1,55 @@
+# StudyRover — golangci-lint config (F10)
+#
+# Keeps Go uniform across many parallel contributors and catches breakage early.
+# Generated code (internal/contracts, sqlc output) is excluded so codegen churn
+# never fails lint.
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-dirs:
+    - internal/contracts
+    - internal/store
+  exclude-rules:
+    # Test files may use long lines and skip some error wrapping niceties.
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - dupl
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck # unchecked errors
+    - gosimple # simplifications
+    - govet # vet checks
+    - ineffassign # ineffectual assignments
+    - staticcheck # static analysis
+    - unused # unused code
+    - bodyclose # http response body closed
+    - errorlint # errors.Is/As, %w wrapping
+    - gocritic # opinionated diagnostics
+    - goimports # import grouping/formatting
+    - misspell # common misspellings
+    - revive # golint replacement
+    - unconvert # unnecessary conversions
+    - whitespace # leading/trailing whitespace
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/shafqat/studyrover/backend
+  govet:
+    enable:
+      - shadow
+  revive:
+    rules:
+      - name: exported
+        disabled: true
+  misspell:
+    locale: US

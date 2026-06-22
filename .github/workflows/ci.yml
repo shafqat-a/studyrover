@@ -1,0 +1,200 @@
+# StudyRover CI (F10)
+#
+# Uniform code across many parallel contributors + early breakage detection,
+# both languages. Pipeline:
+#   1. gen-check  — `make gen` produces no git diff (contract/codegen in sync).
+#   2. go         — go vet + golangci-lint + race tests.
+#   3. frontend   — eslint + prettier check + vitest + vite build.
+#   4. e2e        — Playwright end-to-end against the built app.
+#
+# Node/pnpm are BUILD-TIME ONLY. The prod artifact is the Go binary.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Versions mirror .tool-versions at the repo root.
+env:
+  GO_VERSION: "1.23.4"
+  NODE_VERSION: "22.12.0"
+  PNPM_VERSION: "9.15.0"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # gen-check: the contract is the single source of truth. Regenerate Go + TS
+  # from OpenAPI and fail if anything drifts from what is committed.
+  # ---------------------------------------------------------------------------
+  gen-check:
+    name: Codegen drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install build-time deps
+        run: make install
+
+      - name: Regenerate code from OpenAPI
+        run: make gen
+
+      - name: Assert no codegen drift
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "::error::Generated code is out of sync with the OpenAPI contract."
+            echo "Run 'make gen' locally and commit the result."
+            git status --porcelain
+            git diff
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # go: vet, golangci-lint, and race-enabled tests.
+  # ---------------------------------------------------------------------------
+  go:
+    name: Go (vet + lint + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: Download modules
+        working-directory: backend
+        run: go mod download
+
+      - name: go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+          working-directory: backend
+          args: --timeout=5m
+
+      - name: go test (race)
+        working-directory: backend
+        run: go test -race ./...
+
+  # ---------------------------------------------------------------------------
+  # frontend: eslint + prettier check + vitest + vite build.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        working-directory: frontend
+        run: pnpm run lint
+
+      - name: Prettier check
+        working-directory: frontend
+        run: pnpm exec prettier --check .
+
+      - name: Unit tests (Vitest)
+        working-directory: frontend
+        run: pnpm run test
+
+      - name: Build SPA
+        working-directory: frontend
+        run: pnpm run build
+
+  # ---------------------------------------------------------------------------
+  # e2e: Playwright against the built application. Runs after the unit gates.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: pnpm run e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

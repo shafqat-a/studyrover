@@ -1,0 +1,160 @@
+# StudyRover — ExamDefinition schemas (C04)
+#
+# A parent-configured exam template for a subject: how many questions, what
+# scope (whole subject or a set of topics), the pass bar, the post-fail
+# cooldown, and how rewards scale. Defaults are the spec §10 starting values.
+#
+# Cross-language rule: defined once here; oapi-codegen emits Go structs and
+# openapi-typescript emits TS types. JSON is camelCase; IDs are strings;
+# timestamps are RFC 3339 strings. Servers apply the defaults on create.
+
+components:
+  schemas:
+    ExamType:
+      type: string
+      description: >-
+        Kind of exam. `gate` exams are the everyday internet-time gate; `formal`
+        exams are heavier graded assessments.
+      enum:
+        - gate
+        - formal
+
+    RewardStyle:
+      type: string
+      description: >-
+        How earned internet time relates to the score. `flat` grants the full
+        time for the exam size on a pass; `scaled` multiplies by the score%.
+      enum:
+        - flat
+        - scaled
+
+    ExamDefinition:
+      type: object
+      description: A parent-configured exam template for a subject.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - name
+        - type
+        - scopeTopicIds
+        - size
+        - passBar
+        - cooldownMin
+        - rewardStyle
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Stable identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: The subject this exam template belongs to.
+        name:
+          type: string
+          description: Human-readable name for the exam template.
+        type:
+          $ref: "#/components/schemas/ExamType"
+          default: gate
+        scopeTopicIds:
+          type: array
+          description: >-
+            Topic ids the exam draws from. An empty array means the whole
+            subject.
+          items:
+            type: string
+          default: []
+        size:
+          type: integer
+          description: Number of questions in the exam.
+          minimum: 1
+          default: 20
+        passBar:
+          type: integer
+          description: Minimum score percentage required to pass.
+          minimum: 0
+          maximum: 100
+          default: 70
+        cooldownMin:
+          type: integer
+          description: Minutes a student must wait after a failed attempt.
+          minimum: 0
+          default: 10
+        rewardStyle:
+          $ref: "#/components/schemas/RewardStyle"
+          default: flat
+        createdAt:
+          type: string
+          format: date-time
+          description: When the exam template was created (RFC 3339).
+
+    CreateExamDefinition:
+      type: object
+      description: >-
+        Request body to create an ExamDefinition. The server assigns `id` and
+        `createdAt` and applies the spec §10 defaults for any omitted field.
+      additionalProperties: false
+      required:
+        - subjectId
+        - name
+      properties:
+        subjectId:
+          type: string
+          description: The subject this exam template belongs to.
+        name:
+          type: string
+          description: Human-readable name for the exam template.
+        type:
+          $ref: "#/components/schemas/ExamType"
+          default: gate
+        scopeTopicIds:
+          type: array
+          description: >-
+            Topic ids the exam draws from. An empty array (the default) means
+            the whole subject.
+          items:
+            type: string
+          default: []
+        size:
+          type: integer
+          description: Number of questions in the exam.
+          minimum: 1
+          default: 20
+        passBar:
+          type: integer
+          description: Minimum score percentage required to pass.
+          minimum: 0
+          maximum: 100
+          default: 70
+        cooldownMin:
+          type: integer
+          description: Minutes a student must wait after a failed attempt.
+          minimum: 0
+          default: 10
+        rewardStyle:
+          $ref: "#/components/schemas/RewardStyle"
+          default: flat
+
+    PageOfExamDefinition:
+      type: object
+      description: A page of ExamDefinition results.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExamDefinition"
+        total:
+          type: integer
+          description: Total number of matching exam definitions.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.

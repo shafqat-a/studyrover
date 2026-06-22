@@ -1,0 +1,192 @@
+# StudyRover — Question + Option schemas (C05)
+#
+# Owns every schema in the Question family under #/components/schemas:
+# Difficulty, Option, Question, CreateQuestion, DeliveredQuestion, and the
+# paginated PageOfQuestion. W01 assembles this fragment into the OpenAPI root
+# (contracts/openapi.yaml) and runs codegen, emitting Go types
+# (backend/internal/contracts) and TS types (frontend/src/api/schema.d.ts).
+#
+# Cross-language rule: each shape is defined ONCE here. Field names are
+# camelCase in JSON; IDs are strings.
+#
+# Grading invariant: the server assigns option ids and owns grading. The
+# student NEVER receives the answer key, so DeliveredQuestion is Question minus
+# correctOptionId. CreateQuestion accepts plain option texts plus the index of
+# the correct one; the server turns that into Option ids + correctOptionId.
+
+components:
+  schemas:
+    Difficulty:
+      type: string
+      description: Relative difficulty of a question.
+      enum:
+        - easy
+        - medium
+        - hard
+
+    Option:
+      type: object
+      description: A single multiple-choice answer option. The id is server-assigned.
+      additionalProperties: false
+      required:
+        - id
+        - text
+      properties:
+        id:
+          type: string
+          description: Server-assigned identifier for this option (unique within a question).
+        text:
+          type: string
+          description: The option's display text.
+
+    Question:
+      type: object
+      description: >-
+        A multiple-choice question with its answer key. This is the parent-facing
+        (authoring) shape; the student receives DeliveredQuestion, which omits
+        correctOptionId.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - text
+        - options
+        - correctOptionId
+        - difficulty
+        - enabled
+      properties:
+        id:
+          type: string
+          description: Unique question identifier.
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/Option'
+        correctOptionId:
+          type: string
+          description: The id of the option that is correct (must match an option's id).
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+          default: medium
+        enabled:
+          type: boolean
+          description: Whether this question is eligible for selection into exams.
+          default: true
+
+    CreateQuestion:
+      type: object
+      description: >-
+        Payload to author a new question. Options are supplied as plain texts and
+        the correct one is identified by its index; the server assigns Option ids
+        and resolves correctOptionId from correctOptionIndex.
+      additionalProperties: false
+      required:
+        - subjectId
+        - text
+        - options
+        - correctOptionIndex
+      properties:
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer option texts. At least four are required.
+          minItems: 4
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - text
+            properties:
+              text:
+                type: string
+                description: The option's display text.
+        correctOptionIndex:
+          type: integer
+          description: Zero-based index into options identifying the correct answer.
+          minimum: 0
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+
+    DeliveredQuestion:
+      type: object
+      description: >-
+        A question as delivered to the student during an exam — identical to
+        Question but WITHOUT correctOptionId, so the answer key never leaves the
+        server. Grading is performed server-side.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - text
+        - options
+        - difficulty
+        - enabled
+      properties:
+        id:
+          type: string
+          description: Unique question identifier.
+        subjectId:
+          type: string
+          description: Subject this question belongs to.
+        topicId:
+          type: string
+          description: Optional topic this question is scoped to.
+        text:
+          type: string
+          description: The question prompt.
+        options:
+          type: array
+          description: The answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/Option'
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+          default: medium
+        enabled:
+          type: boolean
+          description: Whether this question is eligible for selection into exams.
+          default: true
+
+    PageOfQuestion:
+      type: object
+      description: A paginated page of questions.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        total:
+          type: integer
+          description: Total number of questions matching the query.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.

@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * StudyRover design tokens (CSS custom properties).
+ *
+ * Values are HSL channels ("H S% L%") so Tailwind can apply opacity modifiers
+ * via `hsl(var(--token) / <alpha-value>)` (see tailwind.config.ts). Keep this
+ * file the single source for raw color/elevation values; everything else
+ * references the semantic Tailwind classes (bg-primary, text-foreground, ...).
+ */
+@layer base {
+  :root {
+    /* Neutral surfaces */
+    --sr-background: 240 33% 99%;
+    --sr-surface: 0 0% 100%;
+    --sr-surface-muted: 240 24% 96%;
+    --sr-border: 240 16% 90%;
+    --sr-ring: 250 84% 60%;
+
+    /* Foreground / text */
+    --sr-foreground: 240 24% 16%;
+    --sr-foreground-muted: 240 10% 42%;
+
+    /* Brand — indigo/violet */
+    --sr-primary: 250 84% 60%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 250 96% 95%;
+
+    /* Secondary — teal */
+    --sr-secondary: 174 62% 42%;
+    --sr-secondary-foreground: 0 0% 100%;
+    --sr-secondary-soft: 174 64% 94%;
+
+    /* Accent — amber (rewards / highlights) */
+    --sr-accent: 38 92% 50%;
+    --sr-accent-foreground: 30 60% 16%;
+    --sr-accent-soft: 42 96% 92%;
+
+    /* Semantic states */
+    --sr-success: 152 60% 38%;
+    --sr-success-foreground: 0 0% 100%;
+    --sr-success-soft: 152 56% 93%;
+
+    --sr-warning: 32 90% 48%;
+    --sr-warning-foreground: 30 60% 14%;
+    --sr-warning-soft: 40 94% 92%;
+
+    --sr-danger: 356 72% 52%;
+    --sr-danger-foreground: 0 0% 100%;
+    --sr-danger-soft: 356 84% 95%;
+
+    /* Elevation */
+    --sr-shadow: 240 40% 20%;
+  }
+
+  .dark {
+    --sr-background: 240 24% 10%;
+    --sr-surface: 240 20% 14%;
+    --sr-surface-muted: 240 16% 18%;
+    --sr-border: 240 14% 24%;
+    --sr-ring: 250 84% 68%;
+
+    --sr-foreground: 240 24% 96%;
+    --sr-foreground-muted: 240 12% 70%;
+
+    --sr-primary: 250 84% 68%;
+    --sr-primary-foreground: 240 24% 10%;
+    --sr-primary-soft: 250 40% 24%;
+
+    --sr-secondary: 174 56% 52%;
+    --sr-secondary-foreground: 240 24% 10%;
+    --sr-secondary-soft: 174 40% 22%;
+
+    --sr-accent: 38 92% 58%;
+    --sr-accent-foreground: 30 60% 12%;
+    --sr-accent-soft: 38 40% 24%;
+
+    --sr-success: 152 56% 48%;
+    --sr-success-foreground: 240 24% 10%;
+    --sr-success-soft: 152 36% 20%;
+
+    --sr-warning: 32 90% 56%;
+    --sr-warning-foreground: 30 60% 12%;
+    --sr-warning-soft: 32 40% 22%;
+
+    --sr-danger: 356 76% 62%;
+    --sr-danger-foreground: 240 24% 10%;
+    --sr-danger-soft: 356 40% 24%;
+
+    --sr-shadow: 240 60% 4%;
+  }
+
+  * {
+    border-color: theme('colors.border');
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  /* Visible, consistent focus for keyboard / assistive-tech users. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-foreground;
+  }
+}

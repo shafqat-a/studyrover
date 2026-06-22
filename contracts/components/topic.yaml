@@ -1,0 +1,122 @@
+# StudyRover — Topic schema (C03)
+#
+# Owns the Topic entity shapes under #/components/schemas. The root document
+# (contracts/openapi.yaml, owned by W01) $refs these from `paths` and assembles
+# them into the single spec that drives codegen (Go types + TS client).
+#
+# Matches CONTRACTS.md §C03. JSON is camelCase; ids are strings; pages are ints.
+# Constraint: if both pageStart and pageEnd are present, pageEnd >= pageStart
+# (validated in the handler/core, not expressible in JSON Schema alone).
+
+components:
+  schemas:
+    Topic:
+      type: object
+      description: >-
+        A unit of study within a subject. May optionally point at a source and a
+        page range. `order` controls syllabus position; `active` toggles whether
+        the topic is in scope for exams.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - name
+        - order
+        - active
+      properties:
+        id:
+          type: string
+          description: Unique topic identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Identifier of the owning subject.
+        name:
+          type: string
+          description: Human-readable topic name.
+          minLength: 1
+        sourceId:
+          type: string
+          description: Optional identifier of the source this topic is drawn from.
+        pageStart:
+          type: integer
+          format: int32
+          description: Optional first page of the topic within its source.
+          minimum: 1
+        pageEnd:
+          type: integer
+          format: int32
+          description: >-
+            Optional last page of the topic within its source. If both pages are
+            present, pageEnd must be >= pageStart.
+          minimum: 1
+        order:
+          type: integer
+          format: int32
+          description: Position of the topic in the subject's syllabus.
+        active:
+          type: boolean
+          description: Whether the topic is active (in scope for exams).
+          default: true
+
+    CreateTopic:
+      type: object
+      description: Request body for creating a topic. Server assigns id and defaults.
+      additionalProperties: false
+      required:
+        - subjectId
+        - name
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the owning subject.
+        name:
+          type: string
+          description: Human-readable topic name.
+          minLength: 1
+        sourceId:
+          type: string
+          description: Optional identifier of the source this topic is drawn from.
+        pageStart:
+          type: integer
+          format: int32
+          description: Optional first page of the topic within its source.
+          minimum: 1
+        pageEnd:
+          type: integer
+          format: int32
+          description: >-
+            Optional last page of the topic within its source. If both pages are
+            present, pageEnd must be >= pageStart.
+          minimum: 1
+        order:
+          type: integer
+          format: int32
+          description: Optional syllabus position; server assigns one if omitted.
+
+    PageOfTopic:
+      type: object
+      description: A paginated page of topics (Page<Topic> per CONTRACTS.md §C11).
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          description: The topics on this page.
+          items:
+            $ref: '#/components/schemas/Topic'
+        total:
+          type: integer
+          format: int32
+          description: Total number of topics matching the query.
+        page:
+          type: integer
+          format: int32
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          format: int32
+          description: Number of items per page.

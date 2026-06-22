@@ -4,6 +4,9 @@ Personal **study-to-earn-internet** system (studyrover.com).
 
 The **Study Platform** — subjects, AI tutor, exams — is the product and runs standalone. An optional **Guardian** (Reward Engine + MikroTik Network Wall) turns exam scores into enforced internet time. The two halves are decoupled; the only contract between them is an exam **score**. The system works with or without the Guardian.
 
+## Build
+Run `make` to list build targets (`gen`, `build`, `dev`, `test`, `lint`, `migrate`, `seed`). The parallel task breakdown lives in [`tasks/`](tasks/).
+
 ## Docs
 - `docs/spec/StudyRover-Spec-and-Plan.md` — product spec + phased build plan (the source of truth)
 - `docs/spec/StudyRover-Architecture.mermaid` — system architecture diagram

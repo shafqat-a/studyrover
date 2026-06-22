@@ -1,0 +1,198 @@
+# StudyRover — ExamAttempt + Answer schemas (C06)
+#
+# The exam-loop core shapes: a student starts an attempt (StartAttempt), the
+# server assembles questions and persists an ExamAttempt(in_progress), the
+# student submits answers (SubmitAttempt), and the server grades + persists the
+# finished attempt (graded fields populated, optional cooldownUntil on fail).
+#
+# PerTopicScore is defined canonically HERE; scoreEvent.yaml $refs it.
+#
+# Cross-language rule: JSON is camelCase; IDs are strings; timestamps are
+# RFC 3339 strings. Defined once in OpenAPI; Go + TS both consume codegen.
+
+components:
+  schemas:
+    AttemptStatus:
+      type: string
+      description: Lifecycle state of an exam attempt.
+      enum:
+        - in_progress
+        - submitted
+
+    Answer:
+      type: object
+      description: >-
+        A single answer within an attempt. selectedOptionId is absent when the
+        student left the question unanswered; correct is populated only after
+        server-side grading.
+      additionalProperties: false
+      required:
+        - questionId
+      properties:
+        questionId:
+          type: string
+          description: The question this answer responds to.
+        selectedOptionId:
+          type: string
+          description: The option the student selected, if any.
+        correct:
+          type: boolean
+          description: Whether the selected option was correct (set on grading).
+
+    PerTopicScore:
+      type: object
+      description: >-
+        Per-topic correct/total breakdown for an attempt. Canonical definition;
+        ScoreEvent references this same shape.
+      additionalProperties: false
+      required:
+        - topicId
+        - correct
+        - total
+      properties:
+        topicId:
+          type: string
+          description: The topic these counts belong to.
+        correct:
+          type: integer
+          description: Number of correctly answered questions for this topic.
+          minimum: 0
+        total:
+          type: integer
+          description: Total number of questions for this topic in the attempt.
+          minimum: 0
+
+    ExamAttempt:
+      type: object
+      description: >-
+        A student's attempt at an exam definition. Created in_progress with the
+        assembled questionIds; graded fields (scorePct, passed, perTopic,
+        cooldownUntil, submittedAt) are populated after submission.
+      additionalProperties: false
+      required:
+        - id
+        - examDefinitionId
+        - studentId
+        - status
+        - questionIds
+        - answers
+        - startedAt
+      properties:
+        id:
+          type: string
+          description: Unique attempt id.
+        examDefinitionId:
+          type: string
+          description: The exam definition this attempt is for.
+        studentId:
+          type: string
+          description: The student taking the exam.
+        status:
+          allOf:
+            - $ref: './attempt.yaml#/components/schemas/AttemptStatus'
+          description: Current lifecycle state.
+          default: in_progress
+        questionIds:
+          type: array
+          description: The assembled question ids, in delivery order.
+          items:
+            type: string
+        answers:
+          type: array
+          description: The student's answers; empty until questions are answered.
+          default: []
+          items:
+            $ref: './attempt.yaml#/components/schemas/Answer'
+        scorePct:
+          type: integer
+          description: Overall score percentage (0–100); present once graded.
+          minimum: 0
+          maximum: 100
+        passed:
+          type: boolean
+          description: Whether the attempt met the exam pass bar; present once graded.
+        perTopic:
+          type: array
+          description: Per-topic breakdown; present once graded.
+          items:
+            $ref: './attempt.yaml#/components/schemas/PerTopicScore'
+        cooldownUntil:
+          type: string
+          format: date-time
+          description: >-
+            RFC 3339 timestamp until which a new attempt is blocked after a
+            failed attempt; absent when there is no active cooldown.
+        startedAt:
+          type: string
+          format: date-time
+          description: When the attempt was started.
+        submittedAt:
+          type: string
+          format: date-time
+          description: When the attempt was submitted; absent while in_progress.
+
+    StartAttempt:
+      type: object
+      description: Request body to start a new exam attempt.
+      additionalProperties: false
+      required:
+        - examDefinitionId
+        - studentId
+      properties:
+        examDefinitionId:
+          type: string
+          description: The exam definition to attempt.
+        studentId:
+          type: string
+          description: The student starting the attempt.
+
+    SubmitAttempt:
+      type: object
+      description: Request body to submit answers for grading.
+      additionalProperties: false
+      required:
+        - answers
+      properties:
+        answers:
+          type: array
+          description: The submitted answers, one entry per answered question.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - questionId
+              - selectedOptionId
+            properties:
+              questionId:
+                type: string
+                description: The question being answered.
+              selectedOptionId:
+                type: string
+                description: The selected option id.
+
+    PageOfExamAttempt:
+      type: object
+      description: A paginated page of exam attempts.
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: './attempt.yaml#/components/schemas/ExamAttempt'
+        total:
+          type: integer
+          description: Total number of attempts matching the query.
+          minimum: 0
+        page:
+          type: integer
+          description: 1-based page number.
+          minimum: 1
+        pageSize:
+          type: integer
+          description: Number of items per page.
+          minimum: 1

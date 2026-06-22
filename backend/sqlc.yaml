@@ -1,0 +1,33 @@
+# sqlc configuration (F03) — type-safe Go from SQL.
+#
+# Engine: PostgreSQL. The schema is the full set of golang-migrate migrations
+# (sqlc reads the up-migrations as DDL), and queries live one file per table.
+# Output is pgx/v5 code emitted into internal/store.
+#
+# No queries yet is fine: `sqlc generate` produces just the models/db scaffold.
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries"
+    gen:
+      go:
+        package: "store"
+        out: "internal/store"
+        sql_package: "pgx/v5"
+        # Emit the generated DBTX/Queries/New scaffold as querier_gen.go so it
+        # does not collide with the hand-written internal/store/db.go (W04),
+        # which provides the pgx pool + Store facade in the same package.
+        output_db_file_name: "querier_gen.go"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        json_tags_case_style: "camel"
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"

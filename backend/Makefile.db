@@ -1,0 +1,65 @@
+# StudyRover — database toolchain (F03).
+#
+# golang-migrate (multi-file migrations under db/migrations) + sqlc codegen.
+# Local Postgres comes from the repo-root docker-compose.yml.
+#
+# Run from the backend/ directory, e.g.:
+#   make -f Makefile.db db-up
+#   make -f Makefile.db migrate-up
+#   make -f Makefile.db migrate-create name=add_widget
+#   make -f Makefile.db sqlc
+#
+# Or include it from another Makefile:  include backend/Makefile.db
+
+# ---- Config -----------------------------------------------------------------
+# Default matches docker-compose.yml. Override on the CLI: make ... DATABASE_URL=...
+DATABASE_URL   ?= postgres://studyrover:studyrover@localhost:5432/studyrover?sslmode=disable
+MIGRATIONS_DIR ?= db/migrations
+
+MIGRATE        ?= migrate
+SQLC           ?= sqlc
+
+# Path to the repo-root compose file (this Makefile lives in backend/).
+COMPOSE_FILE   ?= ../docker-compose.yml
+DOCKER_COMPOSE ?= docker compose -f $(COMPOSE_FILE)
+
+.PHONY: db-help db-up db-down db-reset migrate-up migrate-down migrate-create migrate-force migrate-version sqlc
+
+# ---- Help -------------------------------------------------------------------
+db-help: ## List database targets
+	@echo "StudyRover database targets (Makefile.db):"
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| sort \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+
+# ---- Local Postgres (docker-compose) ----------------------------------------
+db-up: ## Start the local Postgres container (waits until healthy)
+	$(DOCKER_COMPOSE) up -d --wait db
+
+db-down: ## Stop the local Postgres container (keeps the data volume)
+	$(DOCKER_COMPOSE) down
+
+db-reset: ## Stop Postgres and DELETE its data volume
+	$(DOCKER_COMPOSE) down -v
+
+# ---- Migrations (golang-migrate) --------------------------------------------
+migrate-up: ## Apply all up migrations
+	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
+
+migrate-down: ## Roll back the last migration
+	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
+
+migrate-create: ## Create a new migration pair: make migrate-create name=add_widget
+	@test -n "$(name)" || { echo "usage: make migrate-create name=<snake_case_name>"; exit 1; }
+	$(MIGRATE) create -ext sql -dir $(MIGRATIONS_DIR) -seq $(name)
+
+migrate-force: ## Force the migration version (recover from dirty state): make migrate-force version=N
+	@test -n "$(version)" || { echo "usage: make migrate-force version=<N>"; exit 1; }
+	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" force $(version)
+
+migrate-version: ## Print the current migration version
+	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
+
+# ---- sqlc -------------------------------------------------------------------
+sqlc: ## Generate type-safe Go from SQL (sqlc.yaml)
+	$(SQLC) generate

@@ -1,0 +1,47 @@
+# StudyRover — OpenAPI metadata fragment (F06)
+#
+# Owns the document-level fields of the OpenAPI 3.1 contract: version, info,
+# servers, and security schemes. The root document (contracts/openapi.yaml,
+# owned by W01) inlines / mirrors these values and adds `paths` + `$ref`s to
+# the per-entity schema files under contracts/components/*.yaml.
+#
+# Cross-language rule: this is the single source of the API's identity. JSON is
+# camelCase; IDs are strings; timestamps are RFC 3339 strings. Auth is a
+# parent cookie session (see securitySchemes below).
+
+openapi: 3.1.0
+
+info:
+  title: StudyRover API
+  version: 0.1.0
+  description: >-
+    StudyRover Phase 1 — the tutoring core. A parent sets up
+    subjects/topics/questions/exams; a student takes exams; the system produces
+    scores + mastery and emits a ScoreEvent. JSON over HTTP; parent cookie
+    session required except for the student exam + student-auth endpoints.
+  license:
+    name: Proprietary
+
+servers:
+  - url: /api
+    description: StudyRover API, served by the Go binary under the /api base path.
+
+# Cookie-session security scheme. Authentication ceremonies (WebAuthn for the
+# parent, PIN for the student) are handled by the /auth/* endpoints; once
+# authenticated the server sets an HTTP-only session cookie that subsequent
+# requests carry. Endpoints that require a session reference `cookieSession`;
+# the student-exam and auth endpoints opt out via `security: []`.
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: sr_session
+      description: >-
+        HTTP-only session cookie issued by /auth/* after a successful WebAuthn
+        (parent) or PIN (student) ceremony. Carries the role + subject id.
+
+# Default document-level security: a valid parent/student session cookie.
+# Individual auth + student-facing operations override with `security: []`.
+security:
+  - cookieSession: []

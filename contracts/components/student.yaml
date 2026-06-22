@@ -1,0 +1,66 @@
+# StudyRover — Student schema (C07)
+#
+# The learner profile the parent sets up and the student signs in as. Phase 1
+# keeps it minimal: an id + name plus optional descriptive fields. JSON is
+# camelCase; `id` is a string (UUID/cuid); `createdAt` is an RFC 3339 string.
+#
+# Schemas live under #/components/schemas; W01's root document $refs them into
+# openapi.yaml. Handlers (A11 GET/PUT /student) consume the generated types and
+# never redefine these shapes.
+
+components:
+  schemas:
+    Student:
+      type: object
+      description: >-
+        A learner profile. Created by the parent during setup and used as the
+        identity the student signs in as for exams.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        name:
+          type: string
+          description: The student's display name.
+          minLength: 1
+        gradeLevel:
+          type: string
+          description: Optional grade / year level (free-form, e.g. "Grade 7").
+        avatarUrl:
+          type: string
+          description: Optional URL to an avatar image.
+        notes:
+          type: string
+          description: Optional free-form notes the parent keeps about the student.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the student was created.
+
+    CreateStudent:
+      type: object
+      description: >-
+        Request body to create (or, in Phase 1, update via PUT) a student
+        profile. The server assigns id and createdAt.
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: The student's display name.
+          minLength: 1
+        gradeLevel:
+          type: string
+          description: Optional grade / year level (free-form, e.g. "Grade 7").
+        avatarUrl:
+          type: string
+          description: Optional URL to an avatar image.
+        notes:
+          type: string
+          description: Optional free-form notes the parent keeps about the student.
