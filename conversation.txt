@@ -1,0 +1,307 @@
+StudyRover — Design Conversation Transcript
+============================================
+
+A faithful reconstruction of the design conversation that produced the
+StudyRover spec, architecture, and screen inventory. User messages are
+verbatim; Claude's responses are reproduced in full substance. Tool/file
+edits are omitted; their results live in docs/spec/.
+
+--------------------------------------------------------------------------------
+TURN 1
+--------------------------------------------------------------------------------
+USER:
+1. Need a way to define subjects to study
+2. Need a way to add books for study
+3. Need to way to add syllabus from books
+4. Per study need AI assistant - to decide study guide
+5. Need to be able to take exams - to evaluate
+6. Need to be able to connect to the home routers to allow internet access control. Enable/ Disable
+7. Based
+
+CLAUDE:
+Noted the message cut off at #7. Reflected the shape: a self-directed study
+system. 1-3 = content layer (subjects -> books -> syllabus). 4 = AI tutor
+(study guide from syllabus). 5 = assessment layer (exams). 6 = the odd one out:
+router-level internet control is a different technical domain (talking to home
+networking hardware) vs the content/AI app of 1-5. Likely intent: lock down
+distractions during study. Asked what #7 is and what the user wants (spec,
+architecture, prototype, or brainstorm).
+
+--------------------------------------------------------------------------------
+TURN 2
+--------------------------------------------------------------------------------
+USER:
+some wifi system show a login screen where you buy internet - here the student
+can be given 2 hrs to study. When trying to access internet she will be shown a
+quiz - and based on her result decide time given for internet access and access
+can be granted
+
+CLAUDE:
+Reframed the whole concept as "study-to-earn-internet" -- the router is the
+incentive engine, not just a blocker. The five learning requirements build the
+study side; the captive portal closes the loop by making study the price of
+internet. Explained captive portals (hotel/airport wifi tech) and that a typical
+ISP router cannot do this alone -- needs gear supporting an EXTERNAL captive
+portal (UniFi, MikroTik, OpenWrt, pfSense). Described the end-to-end loop:
+connect -> portal intercepts -> quiz -> grade -> unlock device MAC for N minutes
+-> expire -> back to quiz. Asked: written spec, technical architecture, or
+prototype?
+
+--------------------------------------------------------------------------------
+TURN 3
+--------------------------------------------------------------------------------
+USER:
+Lets write down the major components of the system and work down from there
+
+CLAUDE:
+Laid out 7 major components:
+1. Identity & Devices (accounts + device->student MAC registry; the bridge)
+2. Curriculum (subjects -> books -> syllabus)
+3. AI Study Assistant (study guide from syllabus + progress)
+4. Assessment Engine (generate/deliver/grade; serves two consumers)
+5. Access Control / Network (captive portal + controller integration + session manager)
+6. Reward Policy Engine (score -> minutes; where the product "feel" lives)
+7. Progress & Analytics
+Plus platform plumbing. Two insights: the device registry is the linchpin
+(MAC -> student -> grant), and there are two kinds of assessment (formal exams
+vs short gate quizzes). Asked which to drill into; offered a diagram.
+
+--------------------------------------------------------------------------------
+TURN 4
+--------------------------------------------------------------------------------
+USER:
+Lets discuss more... the kid is internet addicted. So she will be more inclined
+toward small study goals, dont you think...
+
+CLAUDE:
+Agreed -- the hardest moment is STARTING, and small goals lower the activation
+barrier. But flagged the twist: the reward IS the addiction, which is powerful
+but invites gaming/satisficing (minimum study for maximum internet). So the
+principle is "small to start, then shaped": tiny early wins, then raise the bar;
+frequent short cycles over one big block; diminishing returns + daily cap so
+small goals don't become infinite internet; genuine recall so it's not just
+clicking; visible progress so studying carries its own reward. Honest note: this
+manages the pull (Premack principle), it's a scaffold not a cure. Asked the user
+to define the atomic study unit (the smallest rewardable action).
+
+--------------------------------------------------------------------------------
+TURN 5
+--------------------------------------------------------------------------------
+USER:
+Lets create a plan and a spec
+
+CLAUDE:
+Produced StudyGate-Spec-and-Plan.md (later renamed StudyRover). Baked in
+sensible defaults for open decisions and flagged them as "to confirm." Covered
+problem statement, goals, non-goals, 7-component architecture, the core loop,
+behavioral design principles, the atomic-unit question, user stories, P0/P1/P2
+requirements, a reward policy v1, network/hardware approach, success metrics,
+risks & open questions, and a phased build plan. Led the plan with a Phase 0
+network spike (later revised). Flagged the bypass risk (portal only governs one
+wifi network).
+
+--------------------------------------------------------------------------------
+TURN 6
+--------------------------------------------------------------------------------
+USER (answering the open questions):
+- Bypass risk: only wifi control is required
+- Hardware: Mikrotik
+- Atomic study unit: TBD
+- Anti-guessing: Multiple choice
+- Override: Yes, by special FIDO2 code
+- Student/subjects: my daughter; will provide input on student
+
+CLAUDE:
+Updated the spec: added a Confirmed Decisions table; rewrote the hardware
+section for MikroTik (Hotspot = captive portal; RouterOS API or RADIUS for timed
+grants; verify v6 vs v7). Flagged two implications: (1) MCQ is guessable -- with
+4 options, 5 questions, 60% bar, pure guessing passes ~10%; 10 questions at 70%
+drops it to ~0.4%; add cooldown + rotating bank. (2) FIDO2 needs a backup key or
+a lost key locks the parent out. WiFi-only accepted as scope.
+
+--------------------------------------------------------------------------------
+TURN 7
+--------------------------------------------------------------------------------
+USER (adding more):
+1. provide student profile - manage my daughter as user
+2. view study progress and provide guidance to AI tutor
+3. many places for input - but works with defaults
+4. system finds specific IPs/MACs/machine names and walls that, lets other
+   household machines pass
+5. total of 4 systems: (1) administration of study, (2) the tutor, (3) the exam
+   system -- these 3 tightly tied; the network wall is a separate component
+   connecting exam & reward -- this is separate
+
+CLAUDE:
+Restructured into a 4-system architecture: Study Platform (Admin + Tutor + Exam,
+tightly coupled) + a separate Network Wall, joined by the Reward Engine as the
+only seam. Created the architecture diagram. Captured: targeted, allow-by-default
+enforcement (only the daughter's registered device gated; MAC is the primary key,
+IP/hostname secondary); "configurable but works on defaults" as a principle;
+student profile (P0); parent guidance to tutor (P1).
+
+--------------------------------------------------------------------------------
+TURN 8
+--------------------------------------------------------------------------------
+USER:
+Lets call this project StudyRover as I just purchased a domain named studyrover.com
+
+CLAUDE:
+Renamed the project StudyGate -> StudyRover across the spec and diagram, updated
+the title/intro with the domain, and renamed the files. Noted the domain gives
+the captive portal a real host for the MikroTik walled garden.
+
+--------------------------------------------------------------------------------
+TURN 9
+--------------------------------------------------------------------------------
+USER:
+(re-sent the same five points from Turn 7)
+
+CLAUDE:
+Confirmed all five were already captured and mapped each to its location in the
+spec (decisions table, System A, the configurable-defaults principle, the
+targeted-wall detail, the 4-system restructure + diagram). Re-surfaced the one
+remaining blocker: the atomic study unit.
+
+--------------------------------------------------------------------------------
+TURN 10
+--------------------------------------------------------------------------------
+USER:
+It depends how to take the exam - it could be 5 question mcq - that earns 15 mins
+of internet, but default size is 1hr - that could be 20 questions
+
+CLAUDE:
+Resolved the atomic unit: the rewardable unit is an EXAM whose SIZE is the dial.
+Rate = 3 minutes per question (5 q -> 15 min, 20 q -> 60 min), default 20 q / 60
+min, smallest 5 q / 15 min. Serves both "easy to start" (5 q) and "works on
+defaults" (20 q). One sub-decision: flat reward (pass -> full time) vs scaled
+(score% x max); recommended flat for v1. Showed the anti-gaming math: a 20-q exam
+is ~un-guessable; the 5-q exam at a 70% bar is ~1.6% guessable, and a post-fail
+cooldown makes farming not worth it. Updated spec sections 7, 10, 9, 13, 0.
+
+--------------------------------------------------------------------------------
+TURN 11
+--------------------------------------------------------------------------------
+USER:
+You should not wait for subjects. I should be able to enter subjects from admin
+screen. I should be able to add books from the admin screen - pdf scans, word
+docs, texts. Those would define the syllabus. I could say these pages/topics are
+for midterms. Keep everything with a default and be configurable. I should be
+able to define specific instructions for specific subjects for AI tutor etc
+
+CLAUDE:
+Agreed subjects aren't a wait-item -- the admin screen is where they're entered.
+Expanded System A into a content pipeline: add subjects; upload books (PDF incl.
+scanned via OCR, Word, text); structure into a syllabus; scope pages/topics to
+exams (e.g., "midterm"); per-subject tutor instructions; all default+configurable.
+Flagged that scanned PDFs need OCR. Noted that exam scope + exam size now fully
+define any exam (gate quiz vs midterm = same object, different settings). Kept
+minimal manual content in P0; put heavy ingestion/OCR/AI-syllabus in P1
+(transparent scope tradeoff, can be pulled forward).
+
+--------------------------------------------------------------------------------
+TURN 12
+--------------------------------------------------------------------------------
+USER:
+I should be able to add a notebook llm project as a syllabus. The tutor should be
+able use the sources, and output generated there. we might need an MCP server to
+connect to notebookllm. It can do OCR for you
+
+CLAUDE:
+Searched current state. Findings: NotebookLM can ingest PDFs (incl. scanned),
+Word, text, images and read them with Gemini -- so OCR is offloaded; it can also
+generate quizzes/flashcards/study guides. Connection options: (a) official
+NotebookLM Enterprise API -- real but enterprise-only/heavyweight; (b) unofficial
+MCP/Python libs (notebooklm-mcp, notebooklm-py) -- already provide the MCP server
+the user imagined, including quiz generation, but use undocumented endpoints that
+can break, ToS-gray, prototype-grade; (c) official consumer API -- "in the works",
+not yet available; (d) Gemini API direct -- official, stable, same OCR+grounding
+without the NotebookLM UI. Design move: put a Knowledge-Source adapter in front
+(same isolation as the Network Wall) so the backend is swappable. Updated spec
+(knowledge-backend subsection in section 4, decisions, risks) and the diagram
+(external Knowledge Backend node).
+
+--------------------------------------------------------------------------------
+TURN 13
+--------------------------------------------------------------------------------
+USER:
+I think we have disconnect for phase 0. The main product is the AI based tutoring
+system. the Internet access blockage is a small part that shows is like guardian
+component for internet access. So That is separate component and not much hurdle
+there. I think that should be the last part to build? wdyt?
+
+CLAUDE:
+Agreed and changed the plan. Explained why: the tutoring system is the product
+with standalone value; the Wall is a decoupled consumer of scores; MikroTik
+time-grants are well-trodden, not research risk -- so network-first was
+over-weighting a small, isolated risk. Kept only the genuine kernel: an optional
+~15-minute MikroTik smoke test (grant/revoke a device for N min) as cheap
+insurance, not a phase. Re-sequenced the build: Phase 1 tutoring core -> Phase 2
+intelligence/depth -> Phase 3 the Wall (last). Noted the only finicky part of the
+Wall is captive-portal UX quirks, not the API.
+
+--------------------------------------------------------------------------------
+TURN 14
+--------------------------------------------------------------------------------
+USER:
+So the education system is independent system - from the guardian system which
+decides on internet access. Someone should be able to study with or without the
+guardian system
+
+CLAUDE:
+Made independence a first-class, non-negotiable property. Consequence made
+explicit: converting a score into minutes is the GUARDIAN's job, not education's,
+so the Reward Engine moved into the Guardian. The education side produces pure
+scores + mastery; the only wire crossing between the halves is a SCORE. Strip the
+Guardian and there's no notion of "minutes" -- just a working study tool. Updated
+the spec (decisions, section 4 two-halves framing, component table, build plan --
+Phase 1 produces scores only, Reward Engine moved to Phase 3) and redrew the
+diagram (Guardian as an optional dashed box containing Reward Engine + Network
+Wall, score as the only contract). Flagged that defining the score EVENT (subject,
+scope, size, %, timestamp, per-topic breakdown) is the real interface to nail down.
+
+--------------------------------------------------------------------------------
+TURN 15
+--------------------------------------------------------------------------------
+USER:
+Smoke test not important. we can do without guardian element. but we want it.
+Lets write down the screens and what elements are there for input so that we can
+build the frontend
+
+CLAUDE:
+Created StudyRover-Screens.md -- a screen-by-screen inventory (~20 screens across
+Auth, Admin/Study Administration, Student, and the optional Guardian), each with
+its input controls, types, and defaults, plus a build-order summary. Assumptions:
+responsive web app; two roles (Parent/Admin, Student); the gate is a captive-portal
+web page; every config field has a default. Time-earned displays only light up
+when the Guardian is on, so the same screens work with or without it. Student auth
+kept light; parent gets full FIDO2 for setup and overrides.
+
+--------------------------------------------------------------------------------
+TURN 16
+--------------------------------------------------------------------------------
+USER:
+in folder /home/shafqat/git - create a folder named studyrover. Save the screens
+md document under docs/spec folder, also save spec and plan and architecture.
+Save this whole conversation in conversation.txt. I will hand over rest of the
+task to claude code
+
+CLAUDE:
+Assembled the studyrover/ project structure (docs/spec/ with the three documents,
+this conversation.txt, and a README for handover) and packaged it for transfer
+into /home/shafqat/git.
+
+================================================================================
+KEY DECISIONS (quick reference)
+================================================================================
+- Concept: study-to-earn-internet. Study Platform is the product; Guardian is optional.
+- Independence: study works with or without the Guardian; contract between them = a score.
+- Architecture: Study Platform (Admin + Tutor + Exam) | Guardian (Reward Engine + Network Wall).
+- Knowledge backend: NotebookLM or Gemini behind a swappable Knowledge-Source adapter; OCR offloaded.
+- Atomic unit: a configurable-size exam. 3 min/question. Default 20 q (60 min); min 5 q (15 min).
+- Quiz: multiple choice. Pass bar 70%. Post-fail cooldown ~10 min. Rotating bank. (Anti-gaming.)
+- Reward: flat on pass for v1 (scaled = P1 upgrade). Daily cap (default 3 h).
+- Network: WiFi-only. MikroTik Hotspot. Targeted & allow-by-default (only the student's device, by MAC).
+- Override: parent, via FIDO2/WebAuthn, logged; register a backup key.
+- Everything configurable, ships with sensible defaults.
+- Build order (value-first): Phase 1 tutoring core (scores) -> Phase 2 tutor/knowledge depth -> Phase 3 Guardian.
