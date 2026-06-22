@@ -188,17 +188,18 @@ ON CONFLICT (id) DO UPDATE SET
 	question_id = EXCLUDED.question_id,
 	text        = EXCLUDED.text`
 
-	// Insert option first so the question's correct_option_id FK is satisfied
-	// regardless of constraint timing.
-	for _, opt := range qn.Options {
-		if _, err := tx.Exec(ctx, insertOption, opt.ID, qn.ID, opt.Text); err != nil {
-			return fmt.Errorf("option %s: %w", opt.ID, err)
-		}
-	}
+	// Insert the question FIRST: option.question_id is a FK to question, while
+	// correct_option_id is a plain (non-FK) text column — so the question row may
+	// reference an option id that does not exist yet.
 	if _, err := tx.Exec(ctx, insertQuestion,
 		qn.ID, qn.SubjectID, qn.TopicID, qn.Text, qn.CorrectOptionID, qn.Difficulty, qn.Enabled,
 	); err != nil {
 		return err
+	}
+	for _, opt := range qn.Options {
+		if _, err := tx.Exec(ctx, insertOption, opt.ID, qn.ID, opt.Text); err != nil {
+			return fmt.Errorf("option %s: %w", opt.ID, err)
+		}
 	}
 	return nil
 }
