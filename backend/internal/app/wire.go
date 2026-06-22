@@ -120,11 +120,6 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 		return nil, nil, fmt.Errorf("app: build storage: %w", err)
 	}
 
-	// Postgres-backed job queue and its draining worker. Both depend only on the
-	// Store seam.
-	queue := jobs.NewQueue(db)
-	worker := jobs.NewWorker(queue, nil, jobs.Config{})
-
 	// Knowledge backend selected at wiring time. The adapters are constructed
 	// unconditionally and injected into the selector; a missing Gemini key /
 	// NotebookLM endpoint leaves those adapters unprovisioned, and New falls back
@@ -137,6 +132,18 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 			Fake:       fake.New(0),
 		},
 	)
+
+	// Postgres-backed job queue and its draining worker. The registry maps each
+	// Phase-2 job type to the feature handler that processes it, wired with the
+	// deps each handler needs (knowledge source, store, storage). Registering the
+	// handlers before the worker starts ensures enqueued jobs are actually
+	// processed rather than failing as an unknown type.
+	queue := jobs.NewQueue(db)
+	registry := jobs.NewRegistry()
+	registry.Register(jobs.TypeIngest, jobs.NewIngestHandler(knowledgeSrc, db, files))
+	registry.Register(jobs.TypeSyllabus, jobs.NewSyllabusHandler(knowledgeSrc))
+	registry.Register(jobs.TypeQuestions, jobs.NewQuestionGenHandler(knowledgeSrc, db))
+	worker := jobs.NewWorker(queue, registry, jobs.Config{})
 
 	h := &httpapi.Handlers{
 		Store:     db,
