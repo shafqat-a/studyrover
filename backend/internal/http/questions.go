@@ -143,7 +143,7 @@ func (h *Handlers) CreateQuestion(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	difficulty := string(contracts.Medium)
+	difficulty := string(contracts.DifficultyMedium)
 	if body.Difficulty != nil {
 		difficulty = string(*body.Difficulty)
 	}

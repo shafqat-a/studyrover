@@ -92,7 +92,7 @@ func (h *Handlers) CreateSource(w http.ResponseWriter, r *http.Request) {
 		SubjectID: body.SubjectId,
 		Type:      string(body.Type),
 		Title:     body.Title,
-		Status:    string(contracts.Ready),
+		Status:    string(contracts.SourceStatusReady),
 		FileRef:   body.FileRef,
 		Url:       body.Url,
 		Text:      body.Text,

@@ -1,0 +1,80 @@
+# StudyRover — Guidance schemas (2-C07)
+#
+# Owns the Guidance entity shapes under #/components/schemas. The root document
+# (contracts/openapi.yaml, owned by W01) $refs these into its components block;
+# codegen emits Go types (oapi-codegen -> backend/internal/contracts) and TS
+# types (openapi-typescript -> frontend/src/api).
+#
+# Parent guidance steers the AI tutor (spec §2.10). Guidance may be global
+# (applies to every subject) or scoped to a single subject.
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+
+components:
+  schemas:
+    Guidance:
+      type: object
+      description: >-
+        Parent-authored guidance that steers the AI tutor's behaviour
+        (spec §2.10). When scope is "global" it applies to every subject;
+        when scope is "subject" it applies only to the subject named by
+        subjectId.
+      required:
+        - id
+        - scope
+        - text
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        scope:
+          type: string
+          enum:
+            - global
+            - subject
+          description: >-
+            Whether this guidance applies to all subjects ("global") or to a
+            single subject ("subject", in which case subjectId is set).
+        subjectId:
+          type: string
+          description: >-
+            Identifier of the subject this guidance is scoped to. Present only
+            when scope is "subject".
+        text:
+          type: string
+          minLength: 1
+          description: The free-text guidance the tutor should follow.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    CreateGuidance:
+      type: object
+      description: >-
+        Request body to create or replace parent guidance; the server assigns
+        id/createdAt. subjectId is required when scope is "subject" and must be
+        omitted when scope is "global".
+      required:
+        - scope
+        - text
+      properties:
+        scope:
+          type: string
+          enum:
+            - global
+            - subject
+          description: >-
+            Whether this guidance applies to all subjects ("global") or to a
+            single subject ("subject", in which case subjectId is required).
+        subjectId:
+          type: string
+          description: >-
+            Identifier of the subject this guidance is scoped to. Required when
+            scope is "subject"; omit when scope is "global".
+        text:
+          type: string
+          minLength: 1
+          description: The free-text guidance the tutor should follow.

@@ -400,6 +400,365 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tutor/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a new AI tutor conversation
+         * @description Creates a tutor chat session scoped to a subject for a student (2-A01).
+         */
+        post: operations["createConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tutor/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get a conversation and its messages
+         * @description Returns the conversation plus its full message history, newest last (2-A03).
+         */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tutor/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post a student message and stream the AI tutor's answer
+         * @description Posts a student message to the conversation and streams the grounded AI tutor answer as Server-Sent Events; each event's data payload is a JSON-encoded AnswerChunk (2-A02).
+         */
+        post: operations["postMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subjects/{id}/study-guide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get the latest study guide for a subject
+         * @description Returns the most recently generated study guide for the subject, optionally scoped to a topic (2-A04).
+         */
+        get: operations["getStudyGuide"];
+        put?: never;
+        /**
+         * Generate a study guide for a subject
+         * @description Generates a citation-grounded markdown study guide for the subject, optionally scoped to a topic (2-A04).
+         */
+        post: operations["generateStudyGuide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sources/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest a source asynchronously
+         * @description Submits a source for async ingestion/OCR via the knowledge backend, returning a Job that clients poll for processing -> ready/error (2-A05).
+         */
+        post: operations["ingestSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List async jobs
+         * @description Lists async jobs, optionally filtered by subject (2-A06).
+         */
+        get: operations["listJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get an async job (poll or SSE)
+         * @description Returns the current state of an async job. With Accept application/json the job is returned once; with Accept text/event-stream the job is streamed as Server-Sent Events whose data payload is a JSON-encoded Job until it reaches ready/error (2-A06).
+         */
+        get: operations["getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subjects/{id}/syllabus/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Derive a suggested syllabus for a subject
+         * @description Kicks off async derivation of a suggested topic tree from the subject's ingested sources; returns a Job whose result holds a TopicSuggestion[] (2-A07).
+         */
+        post: operations["suggestSyllabus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subjects/{id}/syllabus/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a suggested syllabus to a subject
+         * @description Materializes a (possibly parent-edited) suggested topic tree into real Topics (2-A08).
+         */
+        post: operations["applySyllabus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate question drafts for a subject
+         * @description Kicks off async generation of question drafts for a subject (optionally scoped to a topic); returns a Job whose result holds a QuestionDraft[] (2-A09).
+         */
+        post: operations["generateQuestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List question drafts
+         * @description Lists generated question drafts awaiting review, optionally filtered by subject and topic (2-A10).
+         */
+        get: operations["listQuestionDrafts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/drafts/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a question draft into the live bank
+         * @description Approves a pending draft, assigning Option ids and resolving correctOptionId, and returns the created Question (2-A10).
+         */
+        post: operations["approveQuestionDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/drafts/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a question draft
+         * @description Marks a pending draft as rejected so it never enters the live question bank (2-A10).
+         */
+        post: operations["rejectQuestionDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subjects/{id}/tutor-instructions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get the per-subject tutor instructions
+         * @description Returns the parent-set instructions steering the AI tutor for this subject (2-A11).
+         */
+        get: operations["getTutorInstructions"];
+        /**
+         * Set the per-subject tutor instructions
+         * @description Creates or replaces the parent-set instructions steering the AI tutor for this subject (2-A11).
+         */
+        put: operations["updateTutorInstructions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guidance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get parent guidance to the tutor
+         * @description Returns the parent guidance steering the AI tutor, optionally scoped to a subject; global guidance is returned when no subjectId is given (2-A12).
+         */
+        get: operations["getGuidance"];
+        /**
+         * Create or replace parent guidance
+         * @description Creates or replaces parent guidance steering the AI tutor (global or subject-scoped) and returns the stored Guidance (2-A12).
+         */
+        put: operations["updateGuidance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the parent study dashboard for a student
+         * @description Returns the aggregated parent-facing dashboard for a student — mastery, mastery timeline, exam history, average score, streak, and parent guidance (2-A13).
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1062,6 +1421,302 @@ export interface components {
             topicId: string;
             /** @description Mastery level as a whole percentage (0–100). */
             mastery: number;
+        };
+        /** @description A tutor chat session between a student and the AI tutor, scoped to a subject. */
+        Conversation: {
+            /** @description Server-assigned unique identifier (UUID/cuid). */
+            id: string;
+            /** @description Subject this conversation is grounded in. */
+            subjectId: string;
+            /** @description Student who owns this conversation. */
+            studentId: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339 creation timestamp.
+             */
+            createdAt: string;
+        };
+        /** @description Request body to start a tutor conversation; the server assigns id/createdAt. */
+        CreateConversation: {
+            /** @description Subject this conversation is grounded in. */
+            subjectId: string;
+            /** @description Student who owns this conversation. */
+            studentId: string;
+        };
+        /** @description A single turn in a tutor Conversation, authored by the student or the AI tutor. */
+        Message: {
+            /** @description Server-assigned unique identifier (UUID/cuid). */
+            id: string;
+            /** @description Conversation this message belongs to. */
+            conversationId: string;
+            /**
+             * @description Who authored the message — the student (user) or the AI tutor (assistant).
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** @description Full message text. */
+            text: string;
+            /** @description Source citations backing an assistant message (empty/absent for user messages). */
+            citations?: components["schemas"]["Citation"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339 creation timestamp.
+             */
+            createdAt: string;
+        };
+        /** @description A reference to a knowledge source backing an assistant answer. */
+        Citation: {
+            /** @description Identifier of the knowledge source being cited. */
+            sourceId: string;
+            /** @description Human-readable label for the cited source (e.g. document title). */
+            label: string;
+            /** @description Optional location within the source (e.g. page number, section, or anchor). */
+            locator?: string;
+        };
+        /** @description Request body to post a student message and stream the AI tutor's grounded answer. */
+        AskRequest: {
+            /** @description Conversation the message is posted to. */
+            conversationId: string;
+            /** @description The student's question or message. */
+            text: string;
+            /** @description Optional topic to focus/ground the answer on. */
+            topicId?: string;
+        };
+        /**
+         * @description One Server-Sent Event chunk of a streamed AI tutor answer. Emitted as the
+         *     JSON `data:` payload of a text/event-stream response. Clients concatenate
+         *     `delta` values; `citations` may arrive on any chunk (typically the final
+         *     one); `done=true` marks the end of the stream.
+         */
+        AnswerChunk: {
+            /** @description Incremental text appended to the assistant's answer so far. */
+            delta: string;
+            /** @description Source citations for the answer, typically included on the final chunk. */
+            citations?: components["schemas"]["Citation"][];
+            /** @description True on the terminal chunk, signalling the answer is complete. */
+            done: boolean;
+        };
+        /** @description A conversation together with its full message history (2-A03). */
+        ConversationWithMessages: {
+            conversation: components["schemas"]["Conversation"];
+            /** @description The conversation's messages, in chronological order (newest last). */
+            messages: components["schemas"]["Message"][];
+        };
+        /** @description An AI-generated, citation-grounded markdown study guide for a subject (optionally scoped to a topic). */
+        StudyGuide: {
+            /** @description Server-assigned unique identifier (UUID/cuid). */
+            id: string;
+            /** @description Identifier of the Subject this study guide belongs to. */
+            subjectId: string;
+            /** @description Optional identifier of the Topic this guide is scoped to; omitted for whole-subject guides. */
+            topicId?: string;
+            /** @description The study guide body rendered as Markdown. */
+            markdown: string;
+            /** @description Source citations grounding the guide's content. */
+            citations: components["schemas"]["Citation"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339 timestamp of when the guide was generated.
+             */
+            generatedAt: string;
+        };
+        /** @description Request to generate (or fetch the latest) StudyGuide for a subject, optionally scoped to a topic. */
+        GuideRequest: {
+            /** @description Identifier of the Subject to generate the study guide for. */
+            subjectId: string;
+            /** @description Optional identifier of the Topic to scope the study guide to. */
+            topicId?: string;
+        };
+        /** @description An async unit of work (ingestion, syllabus derivation, or question generation) processed by the background worker. Clients poll for status. */
+        Job: {
+            /** @description Server-assigned unique identifier (UUID/cuid). */
+            id: string;
+            /**
+             * @description The kind of work this job performs.
+             * @enum {string}
+             */
+            type: "ingest" | "syllabus" | "questions";
+            /**
+             * @description Lifecycle state of the job.
+             * @enum {string}
+             */
+            status: "queued" | "processing" | "ready" | "error";
+            /** @description The Subject this job operates on. */
+            subjectId: string;
+            /** @description Completion percentage from 0 to 100. */
+            progress: number;
+            /** @description Open result payload, present when status is ready. Its concrete shape is typed per job type at the use site (e.g. TopicSuggestion[] for type=syllabus). */
+            result?: {
+                [key: string]: unknown;
+            };
+            /** @description Human-readable failure detail, present when status is error. */
+            error?: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339 creation timestamp.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339 timestamp of the last status/progress update.
+             */
+            updatedAt: string;
+        };
+        /** @description A paginated page of async jobs. */
+        PageOfJob: {
+            items: components["schemas"]["Job"][];
+            /** @description Total number of jobs matching the query. */
+            total: number;
+            /** @description 1-based page number. */
+            page: number;
+            /** @description Number of items per page. */
+            pageSize: number;
+        };
+        /** @description A single suggested syllabus topic derived by the knowledge backend from ingested sources. Topics form a recursive tree via `children`. */
+        TopicSuggestion: {
+            /** @description Human-readable topic name. */
+            name: string;
+            /** @description Optional id of the ingested Source this topic was derived from (UUID/cuid). Absent when the suggestion is not anchored to a source. */
+            sourceId?: string;
+            /** @description Optional 1-based start page in the source where this topic begins. */
+            pageStart?: number;
+            /** @description Optional 1-based end page in the source where this topic ends. */
+            pageEnd?: number;
+            /** @description Zero-based ordering of this topic among its siblings. */
+            order: number;
+            /** @description Optional nested sub-topics (recursive). */
+            children?: components["schemas"]["TopicSuggestion"][];
+        };
+        /** @description Response to POST /subjects/{id}/syllabus/suggest. Syllabus derivation is async; poll GET /jobs/{jobId} for status. On completion Job.result holds a TopicSuggestion[]. */
+        SuggestSyllabusResponse: {
+            /** @description Id of the async Job (type=syllabus) driving the derivation. */
+            jobId: string;
+        };
+        /** @description Request body for POST /subjects/{id}/syllabus/apply. Materializes the (possibly parent-edited) suggested topic tree into real Topics. */
+        ApplySyllabusRequest: {
+            /** @description The suggested topic tree to apply, in display order. */
+            topics: components["schemas"]["TopicSuggestion"][];
+        };
+        /** @description A candidate answer option on a generated draft. Plain text only; no id is assigned until the draft is approved into a Question. */
+        QuestionDraftOption: {
+            /** @description The option's display text. */
+            text: string;
+        };
+        /** @description An AI-generated multiple-choice question awaiting parent review. Mirrors the CreateQuestion authoring shape (options as plain texts plus a correctOptionIndex) so that approving a draft maps cleanly onto a real Question (C05). A draft has status pending until a parent approves (creates a Question) or rejects it. */
+        QuestionDraft: {
+            /** @description Server-assigned unique identifier for this draft. */
+            id: string;
+            /** @description Subject this draft belongs to. */
+            subjectId: string;
+            /** @description Optional topic this draft is scoped to. */
+            topicId?: string;
+            /** @description The question prompt. */
+            text: string;
+            /** @description The candidate answer options. At least four are required. */
+            options: components["schemas"]["QuestionDraftOption"][];
+            /** @description Zero-based index into options identifying the correct answer. */
+            correctOptionIndex: number;
+            /** @default medium */
+            difficulty: components["schemas"]["Difficulty"];
+            /**
+             * @description Review status of the draft.
+             * @default pending
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+        };
+        /** @description A paginated page of question drafts. */
+        PageOfQuestionDraft: {
+            items: components["schemas"]["QuestionDraft"][];
+            /** @description Total number of drafts matching the query. */
+            total: number;
+            /** @description 1-based page number. */
+            page: number;
+            /** @description Number of items per page. */
+            pageSize: number;
+        };
+        /** @description Request to generate question drafts for a subject (optionally scoped to a topic) via the knowledge backend. Generation is async; the API returns a Job whose result is the produced QuestionDraft list. */
+        GenRequest: {
+            /** @description Subject to generate questions for. */
+            subjectId: string;
+            /** @description Optional topic to scope generation to. */
+            topicId?: string;
+            /** @description Number of question drafts to generate. */
+            count: number;
+        };
+        /** @description Per-subject configuration that steers the AI tutor's behaviour for a given subject (spec §2.7). Set/edited by a parent via GET/PUT /subjects/{id}/tutor-instructions. */
+        TutorInstructions: {
+            /** @description Identifier of the Subject these instructions apply to (UUID/cuid). */
+            subjectId: string;
+            /** @description Free-text instructions the parent provides to shape how the tutor explains, questions, and encourages the student for this subject. */
+            customInstructions: string;
+            /** @description Optional desired conversational tone for the tutor (e.g. "encouraging", "socratic", "concise"). */
+            tone?: string;
+            /** @description Optional language the tutor should respond in (e.g. a BCP 47 tag such as "en" or "es"). */
+            targetLanguage?: string;
+            /**
+             * @description Optional difficulty level the tutor should pitch explanations and follow-up questions at.
+             * @enum {string}
+             */
+            difficulty?: "easy" | "medium" | "hard";
+        };
+        /** @description Parent-authored guidance that steers the AI tutor's behaviour (spec §2.10). When scope is "global" it applies to every subject; when scope is "subject" it applies only to the subject named by subjectId. */
+        Guidance: {
+            /** @description Server-assigned unique identifier (UUID/cuid). */
+            id: string;
+            /**
+             * @description Whether this guidance applies to all subjects ("global") or to a single subject ("subject", in which case subjectId is set).
+             * @enum {string}
+             */
+            scope: "global" | "subject";
+            /** @description Identifier of the subject this guidance is scoped to. Present only when scope is "subject". */
+            subjectId?: string;
+            /** @description The free-text guidance the tutor should follow. */
+            text: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339 creation timestamp.
+             */
+            createdAt: string;
+        };
+        /** @description Request body to create or replace parent guidance; the server assigns id/createdAt. subjectId is required when scope is "subject" and must be omitted when scope is "global". */
+        CreateGuidance: {
+            /**
+             * @description Whether this guidance applies to all subjects ("global") or to a single subject ("subject", in which case subjectId is required).
+             * @enum {string}
+             */
+            scope: "global" | "subject";
+            /** @description Identifier of the subject this guidance is scoped to. Required when scope is "subject"; omit when scope is "global". */
+            subjectId?: string;
+            /** @description The free-text guidance the tutor should follow. */
+            text: string;
+        };
+        /** @description A single dated mastery sample for a topic, used to plot how a topic's mastery has changed over time. */
+        MasteryTimelinePoint: {
+            /**
+             * Format: date
+             * @description The calendar date (RFC 3339 full-date) of this sample.
+             */
+            date: string;
+            /** @description The topic this sample belongs to. */
+            topicId: string;
+            /** @description Mastery percentage for the topic on this date (0–100). */
+            mastery: number;
+        };
+        /** @description Aggregated parent-facing view of a student's progress: current per-topic mastery, mastery over time, recent exam history, an overall average score, the current study streak, and any parent guidance to the tutor. Contains no internet-time / reward fields (Guardian is off). */
+        Dashboard: {
+            /** @description Current mastery per topic. */
+            mastery: components["schemas"]["TopicMastery"][];
+            /** @description Dated mastery samples per topic, for trend visualisation. */
+            masteryTimeline: components["schemas"]["MasteryTimelinePoint"][];
+            /** @description The student's recent exam attempts, most recent first. */
+            history: components["schemas"]["ExamAttempt"][];
+            /** @description Overall average score percentage across attempts (0–100). */
+            avgScore: number;
+            /** @description Current consecutive-day study streak, in days. */
+            streak: number;
+            /** @description Parent guidance entries currently steering the tutor. */
+            guidance: components["schemas"]["Guidance"][];
         };
     };
     responses: {
@@ -2011,6 +2666,496 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Progress"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversation"];
+            };
+        };
+        responses: {
+            /** @description The created conversation. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The conversation and its messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationWithMessages"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    postMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description A Server-Sent Events stream of AnswerChunk payloads. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AnswerChunk"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getStudyGuide: {
+        parameters: {
+            query?: {
+                /** @description Optional topic to scope the study guide to. */
+                topicId?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The study guide. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyGuide"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    generateStudyGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuideRequest"];
+            };
+        };
+        responses: {
+            /** @description The generated study guide. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyGuide"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ingestSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSource"];
+            };
+        };
+        responses: {
+            /** @description The async ingestion job. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listJobs: {
+        parameters: {
+            query?: {
+                /** @description Filter jobs to a single subject. */
+                subjectId?: string;
+                /** @description 1-based page number to return. */
+                page?: components["parameters"]["PageParam"];
+                /** @description Maximum number of items per page. */
+                pageSize?: components["parameters"]["PageSizeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of jobs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfJob"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job (single fetch) or a stream of job updates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                    "text/event-stream": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    suggestSyllabus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The async syllabus-derivation job. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    applySyllabus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplySyllabusRequest"];
+            };
+        };
+        responses: {
+            /** @description The created topics. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Topic"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    generateQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenRequest"];
+            };
+        };
+        responses: {
+            /** @description The async question-generation job. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listQuestionDrafts: {
+        parameters: {
+            query?: {
+                /** @description Filter drafts to a single subject. */
+                subjectId?: string;
+                /** @description Filter drafts to a single topic. */
+                topicId?: string;
+                /** @description 1-based page number to return. */
+                page?: components["parameters"]["PageParam"];
+                /** @description Maximum number of items per page. */
+                pageSize?: components["parameters"]["PageSizeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of question drafts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfQuestionDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    approveQuestionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The created question. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Question"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    rejectQuestionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rejected draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionDraft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getTutorInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tutor instructions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorInstructions"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateTutorInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TutorInstructions"];
+            };
+        };
+        responses: {
+            /** @description The updated tutor instructions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorInstructions"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGuidance: {
+        parameters: {
+            query?: {
+                /** @description Filter guidance to a single subject; omit for global guidance. */
+                subjectId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The matching guidance entries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guidance"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateGuidance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGuidance"];
+            };
+        };
+        responses: {
+            /** @description The stored guidance. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guidance"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: {
+                /** @description The student whose dashboard to return. */
+                studentId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dashboard. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
                 };
             };
             default: components["responses"]["Problem"];

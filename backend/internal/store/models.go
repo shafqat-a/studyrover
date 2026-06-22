@@ -18,6 +18,13 @@ type Answer struct {
 	Correct          *bool   `json:"correct"`
 }
 
+type Conversation struct {
+	ID        string    `json:"id"`
+	SubjectID string    `json:"subjectId"`
+	StudentID string    `json:"studentId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Credential struct {
 	ID           string `json:"id"`
 	ParentID     string `json:"parentId"`
@@ -54,6 +61,56 @@ type ExamDefinition struct {
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
+type FileBlob struct {
+	ID          string    `json:"id"`
+	Ref         string    `json:"ref"`
+	Filename    string    `json:"filename"`
+	ContentType string    `json:"contentType"`
+	SizeBytes   int64     `json:"sizeBytes"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type Guidance struct {
+	ID        string    `json:"id"`
+	Scope     string    `json:"scope"`
+	SubjectID *string   `json:"subjectId"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type Job struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	Status    string    `json:"status"`
+	SubjectID *string   `json:"subjectId"`
+	Payload   []byte    `json:"payload"`
+	Result    []byte    `json:"result"`
+	Progress  int32     `json:"progress"`
+	Error     *string   `json:"error"`
+	Attempts  int32     `json:"attempts"`
+	RunAfter  time.Time `json:"runAfter"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type MasterySnapshot struct {
+	ID         string    `json:"id"`
+	StudentID  string    `json:"studentId"`
+	TopicID    string    `json:"topicId"`
+	Mastery    float32   `json:"mastery"`
+	Attempts   int32     `json:"attempts"`
+	CapturedAt time.Time `json:"capturedAt"`
+}
+
+type Message struct {
+	ID             string    `json:"id"`
+	ConversationID string    `json:"conversationId"`
+	Role           string    `json:"role"`
+	Text           string    `json:"text"`
+	Citations      []byte    `json:"citations"`
+	CreatedAt      time.Time `json:"createdAt"`
+}
+
 type Option struct {
 	ID         string `json:"id"`
 	QuestionID string `json:"questionId"`
@@ -77,6 +134,18 @@ type Question struct {
 	Difficulty      string    `json:"difficulty"`
 	Enabled         bool      `json:"enabled"`
 	CreatedAt       time.Time `json:"createdAt"`
+}
+
+type QuestionDraft struct {
+	ID                 string    `json:"id"`
+	SubjectID          string    `json:"subjectId"`
+	TopicID            *string   `json:"topicId"`
+	Text               string    `json:"text"`
+	Options            []byte    `json:"options"`
+	CorrectOptionIndex int32     `json:"correctOptionIndex"`
+	Difficulty         *string   `json:"difficulty"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"createdAt"`
 }
 
 type Setting struct {
@@ -112,6 +181,15 @@ type Student struct {
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
+type StudyGuide struct {
+	ID          string    `json:"id"`
+	SubjectID   string    `json:"subjectId"`
+	TopicID     *string   `json:"topicId"`
+	Markdown    string    `json:"markdown"`
+	Citations   []byte    `json:"citations"`
+	GeneratedAt time.Time `json:"generatedAt"`
+}
+
 type Subject struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -131,4 +209,14 @@ type Topic struct {
 	PageEnd   *int32  `json:"pageEnd"`
 	Order     int32   `json:"order"`
 	Active    bool    `json:"active"`
+}
+
+type TutorInstruction struct {
+	SubjectID          string    `json:"subjectId"`
+	CustomInstructions string    `json:"customInstructions"`
+	Tone               *string   `json:"tone"`
+	TargetLanguage     *string   `json:"targetLanguage"`
+	Difficulty         *string   `json:"difficulty"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
 }

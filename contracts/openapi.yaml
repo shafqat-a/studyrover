@@ -40,6 +40,14 @@ tags:
 - name: attempts
 - name: auth
 - name: progress
+- name: tutor
+- name: studyGuides
+- name: jobs
+- name: syllabus
+- name: questionDrafts
+- name: tutorInstructions
+- name: guidance
+- name: dashboard
 paths:
   /subjects:
     get:
@@ -745,6 +753,439 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Progress'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tutor/conversations:
+    post:
+      operationId: createConversation
+      tags:
+      - tutor
+      summary: Start a new AI tutor conversation
+      description: Creates a tutor chat session scoped to a subject for a student (2-A01).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversation'
+      responses:
+        '201':
+          description: The created conversation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tutor/conversations/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getConversation
+      tags:
+      - tutor
+      summary: Get a conversation and its messages
+      description: Returns the conversation plus its full message history, newest last (2-A03).
+      responses:
+        '200':
+          description: The conversation and its messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationWithMessages'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tutor/conversations/{id}/messages:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: postMessage
+      tags:
+      - tutor
+      summary: Post a student message and stream the AI tutor's answer
+      description: Posts a student message to the conversation and streams the grounded AI tutor answer
+        as Server-Sent Events; each event's data payload is a JSON-encoded AnswerChunk (2-A02).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: A Server-Sent Events stream of AnswerChunk payloads.
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AnswerChunk'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}/study-guide:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getStudyGuide
+      tags:
+      - studyGuides
+      summary: Get the latest study guide for a subject
+      description: Returns the most recently generated study guide for the subject, optionally scoped
+        to a topic (2-A04).
+      parameters:
+      - name: topicId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Optional topic to scope the study guide to.
+      responses:
+        '200':
+          description: The study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuide'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: generateStudyGuide
+      tags:
+      - studyGuides
+      summary: Generate a study guide for a subject
+      description: Generates a citation-grounded markdown study guide for the subject, optionally scoped
+        to a topic (2-A04).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuideRequest'
+      responses:
+        '200':
+          description: The generated study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuide'
+        default:
+          $ref: '#/components/responses/Problem'
+  /sources/ingest:
+    post:
+      operationId: ingestSource
+      tags:
+      - sources
+      summary: Ingest a source asynchronously
+      description: Submits a source for async ingestion/OCR via the knowledge backend, returning a Job
+        that clients poll for processing -> ready/error (2-A05).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSource'
+      responses:
+        '202':
+          description: The async ingestion job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /jobs:
+    get:
+      operationId: listJobs
+      tags:
+      - jobs
+      summary: List async jobs
+      description: Lists async jobs, optionally filtered by subject (2-A06).
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter jobs to a single subject.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of jobs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfJob'
+        default:
+          $ref: '#/components/responses/Problem'
+  /jobs/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getJob
+      tags:
+      - jobs
+      summary: Get an async job (poll or SSE)
+      description: Returns the current state of an async job. With Accept application/json the job is
+        returned once; with Accept text/event-stream the job is streamed as Server-Sent Events whose
+        data payload is a JSON-encoded Job until it reaches ready/error (2-A06).
+      responses:
+        '200':
+          description: The job (single fetch) or a stream of job updates.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}/syllabus/suggest:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: suggestSyllabus
+      tags:
+      - syllabus
+      summary: Derive a suggested syllabus for a subject
+      description: Kicks off async derivation of a suggested topic tree from the subject's ingested
+        sources; returns a Job whose result holds a TopicSuggestion[] (2-A07).
+      responses:
+        '202':
+          description: The async syllabus-derivation job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}/syllabus/apply:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: applySyllabus
+      tags:
+      - syllabus
+      summary: Apply a suggested syllabus to a subject
+      description: Materializes a (possibly parent-edited) suggested topic tree into real Topics (2-A08).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplySyllabusRequest'
+      responses:
+        '200':
+          description: The created topics.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions/generate:
+    post:
+      operationId: generateQuestions
+      tags:
+      - questionDrafts
+      summary: Generate question drafts for a subject
+      description: Kicks off async generation of question drafts for a subject (optionally scoped to a
+        topic); returns a Job whose result holds a QuestionDraft[] (2-A09).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenRequest'
+      responses:
+        '202':
+          description: The async question-generation job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions/drafts:
+    get:
+      operationId: listQuestionDrafts
+      tags:
+      - questionDrafts
+      summary: List question drafts
+      description: Lists generated question drafts awaiting review, optionally filtered by subject and
+        topic (2-A10).
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter drafts to a single subject.
+      - name: topicId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter drafts to a single topic.
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A page of question drafts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfQuestionDraft'
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions/drafts/{id}/approve:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: approveQuestionDraft
+      tags:
+      - questionDrafts
+      summary: Approve a question draft into the live bank
+      description: Approves a pending draft, assigning Option ids and resolving correctOptionId, and
+        returns the created Question (2-A10).
+      responses:
+        '201':
+          description: The created question.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        default:
+          $ref: '#/components/responses/Problem'
+  /questions/drafts/{id}/reject:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: rejectQuestionDraft
+      tags:
+      - questionDrafts
+      summary: Reject a question draft
+      description: Marks a pending draft as rejected so it never enters the live question bank (2-A10).
+      responses:
+        '200':
+          description: The rejected draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionDraft'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}/tutor-instructions:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getTutorInstructions
+      tags:
+      - tutorInstructions
+      summary: Get the per-subject tutor instructions
+      description: Returns the parent-set instructions steering the AI tutor for this subject (2-A11).
+      responses:
+        '200':
+          description: The tutor instructions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorInstructions'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateTutorInstructions
+      tags:
+      - tutorInstructions
+      summary: Set the per-subject tutor instructions
+      description: Creates or replaces the parent-set instructions steering the AI tutor for this
+        subject (2-A11).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TutorInstructions'
+      responses:
+        '200':
+          description: The updated tutor instructions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorInstructions'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guidance:
+    get:
+      operationId: getGuidance
+      tags:
+      - guidance
+      summary: Get parent guidance to the tutor
+      description: Returns the parent guidance steering the AI tutor, optionally scoped to a subject;
+        global guidance is returned when no subjectId is given (2-A12).
+      parameters:
+      - name: subjectId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter guidance to a single subject; omit for global guidance.
+      responses:
+        '200':
+          description: The matching guidance entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guidance'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateGuidance
+      tags:
+      - guidance
+      summary: Create or replace parent guidance
+      description: Creates or replaces parent guidance steering the AI tutor (global or subject-scoped)
+        and returns the stored Guidance (2-A12).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuidance'
+      responses:
+        '200':
+          description: The stored guidance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guidance'
+        default:
+          $ref: '#/components/responses/Problem'
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags:
+      - dashboard
+      summary: Get the parent study dashboard for a student
+      description: Returns the aggregated parent-facing dashboard for a student — mastery, mastery
+        timeline, exam history, average score, streak, and parent guidance (2-A13).
+      parameters:
+      - name: studentId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: The student whose dashboard to return.
+      responses:
+        '200':
+          description: The dashboard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -1933,3 +2374,613 @@ components:
           description: Mastery level as a whole percentage (0–100).
           minimum: 0
           maximum: 100
+    Conversation:
+      type: object
+      description: A tutor chat session between a student and the AI tutor, scoped to a subject.
+      required:
+      - id
+      - subjectId
+      - studentId
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Subject this conversation is grounded in.
+        studentId:
+          type: string
+          description: Student who owns this conversation.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    CreateConversation:
+      type: object
+      description: Request body to start a tutor conversation; the server assigns id/createdAt.
+      additionalProperties: false
+      required:
+      - subjectId
+      - studentId
+      properties:
+        subjectId:
+          type: string
+          description: Subject this conversation is grounded in.
+        studentId:
+          type: string
+          description: Student who owns this conversation.
+    Message:
+      type: object
+      description: A single turn in a tutor Conversation, authored by the student or the AI tutor.
+      required:
+      - id
+      - conversationId
+      - role
+      - text
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        conversationId:
+          type: string
+          description: Conversation this message belongs to.
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+          description: Who authored the message — the student (user) or the AI tutor (assistant).
+        text:
+          type: string
+          description: Full message text.
+        citations:
+          type: array
+          description: Source citations backing an assistant message (empty/absent for user messages).
+          items:
+            $ref: '#/components/schemas/Citation'
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    Citation:
+      type: object
+      description: A reference to a knowledge source backing an assistant answer.
+      required:
+      - sourceId
+      - label
+      properties:
+        sourceId:
+          type: string
+          description: Identifier of the knowledge source being cited.
+        label:
+          type: string
+          description: Human-readable label for the cited source (e.g. document title).
+        locator:
+          type: string
+          description: Optional location within the source (e.g. page number, section, or anchor).
+    AskRequest:
+      type: object
+      description: Request body to post a student message and stream the AI tutor's grounded answer.
+      required:
+      - conversationId
+      - text
+      properties:
+        conversationId:
+          type: string
+          description: Conversation the message is posted to.
+        text:
+          type: string
+          minLength: 1
+          description: The student's question or message.
+        topicId:
+          type: string
+          description: Optional topic to focus/ground the answer on.
+    AnswerChunk:
+      type: object
+      description: |
+        One Server-Sent Event chunk of a streamed AI tutor answer. Emitted as the
+        JSON `data:` payload of a text/event-stream response. Clients concatenate
+        `delta` values; `citations` may arrive on any chunk (typically the final
+        one); `done=true` marks the end of the stream.
+      required:
+      - delta
+      - done
+      properties:
+        delta:
+          type: string
+          description: Incremental text appended to the assistant's answer so far.
+        citations:
+          type: array
+          description: Source citations for the answer, typically included on the final chunk.
+          items:
+            $ref: '#/components/schemas/Citation'
+        done:
+          type: boolean
+          description: True on the terminal chunk, signalling the answer is complete.
+    ConversationWithMessages:
+      type: object
+      description: A conversation together with its full message history (2-A03).
+      additionalProperties: false
+      required:
+      - conversation
+      - messages
+      properties:
+        conversation:
+          $ref: '#/components/schemas/Conversation'
+        messages:
+          type: array
+          description: The conversation's messages, in chronological order (newest last).
+          items:
+            $ref: '#/components/schemas/Message'
+    StudyGuide:
+      type: object
+      description: An AI-generated, citation-grounded markdown study guide for a subject (optionally
+        scoped to a topic).
+      required:
+      - id
+      - subjectId
+      - markdown
+      - citations
+      - generatedAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Identifier of the Subject this study guide belongs to.
+        topicId:
+          type: string
+          description: Optional identifier of the Topic this guide is scoped to; omitted for
+            whole-subject guides.
+        markdown:
+          type: string
+          description: The study guide body rendered as Markdown.
+        citations:
+          type: array
+          description: Source citations grounding the guide's content.
+          items:
+            $ref: '#/components/schemas/Citation'
+        generatedAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the guide was generated.
+    GuideRequest:
+      type: object
+      description: Request to generate (or fetch the latest) StudyGuide for a subject, optionally
+        scoped to a topic.
+      required:
+      - subjectId
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the Subject to generate the study guide for.
+        topicId:
+          type: string
+          description: Optional identifier of the Topic to scope the study guide to.
+    Job:
+      type: object
+      description: >-
+        An async unit of work (ingestion, syllabus derivation, or question
+        generation) processed by the background worker. Clients poll for status.
+      required:
+      - id
+      - type
+      - status
+      - subjectId
+      - progress
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        type:
+          type: string
+          description: The kind of work this job performs.
+          enum:
+          - ingest
+          - syllabus
+          - questions
+        status:
+          type: string
+          description: Lifecycle state of the job.
+          enum:
+          - queued
+          - processing
+          - ready
+          - error
+        subjectId:
+          type: string
+          description: The Subject this job operates on.
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion percentage from 0 to 100.
+        result:
+          type: object
+          additionalProperties: true
+          description: >-
+            Open result payload, present when status is ready. Its concrete shape
+            is typed per job type at the use site (e.g. TopicSuggestion[] for
+            type=syllabus).
+        error:
+          type: string
+          description: Human-readable failure detail, present when status is error.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+        updatedAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of the last status/progress update.
+    PageOfJob:
+      type: object
+      description: A paginated page of async jobs.
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        total:
+          type: integer
+          description: Total number of jobs matching the query.
+          minimum: 0
+        page:
+          type: integer
+          description: 1-based page number.
+          minimum: 1
+        pageSize:
+          type: integer
+          description: Number of items per page.
+          minimum: 1
+    TopicSuggestion:
+      type: object
+      description: >
+        A single suggested syllabus topic derived by the knowledge backend from
+        ingested sources. Topics form a recursive tree via `children`.
+      required:
+      - name
+      - order
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable topic name.
+        sourceId:
+          type: string
+          description: >
+            Optional id of the ingested Source this topic was derived from
+            (UUID/cuid). Absent when the suggestion is not anchored to a source.
+        pageStart:
+          type: integer
+          minimum: 1
+          description: Optional 1-based start page in the source where this topic begins.
+        pageEnd:
+          type: integer
+          minimum: 1
+          description: Optional 1-based end page in the source where this topic ends.
+        order:
+          type: integer
+          minimum: 0
+          description: Zero-based ordering of this topic among its siblings.
+        children:
+          type: array
+          description: Optional nested sub-topics (recursive).
+          items:
+            $ref: '#/components/schemas/TopicSuggestion'
+    SuggestSyllabusResponse:
+      type: object
+      description: >
+        Response to POST /subjects/{id}/syllabus/suggest. Syllabus derivation is
+        async; poll GET /jobs/{jobId} for status. On completion Job.result holds
+        a TopicSuggestion[].
+      required:
+      - jobId
+      properties:
+        jobId:
+          type: string
+          description: Id of the async Job (type=syllabus) driving the derivation.
+    ApplySyllabusRequest:
+      type: object
+      description: >
+        Request body for POST /subjects/{id}/syllabus/apply. Materializes the
+        (possibly parent-edited) suggested topic tree into real Topics.
+      required:
+      - topics
+      properties:
+        topics:
+          type: array
+          description: The suggested topic tree to apply, in display order.
+          items:
+            $ref: '#/components/schemas/TopicSuggestion'
+    QuestionDraftOption:
+      type: object
+      description: A candidate answer option on a generated draft. Plain text only; no id is assigned
+        until the draft is approved into a Question.
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: The option's display text.
+    QuestionDraft:
+      type: object
+      description: >-
+        An AI-generated multiple-choice question awaiting parent review. Mirrors
+        the CreateQuestion authoring shape (options as plain texts plus a
+        correctOptionIndex) so that approving a draft maps cleanly onto a real
+        Question (C05). A draft has status pending until a parent approves
+        (creates a Question) or rejects it.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - text
+      - options
+      - correctOptionIndex
+      - difficulty
+      - status
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier for this draft.
+        subjectId:
+          type: string
+          description: Subject this draft belongs to.
+        topicId:
+          type: string
+          description: Optional topic this draft is scoped to.
+        text:
+          type: string
+          minLength: 1
+          description: The question prompt.
+        options:
+          type: array
+          description: The candidate answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/QuestionDraftOption'
+        correctOptionIndex:
+          type: integer
+          description: Zero-based index into options identifying the correct answer.
+          minimum: 0
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+          default: medium
+        status:
+          type: string
+          description: Review status of the draft.
+          enum:
+          - pending
+          - approved
+          - rejected
+          default: pending
+    PageOfQuestionDraft:
+      type: object
+      description: A paginated page of question drafts.
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionDraft'
+        total:
+          type: integer
+          description: Total number of drafts matching the query.
+          minimum: 0
+        page:
+          type: integer
+          description: 1-based page number.
+          minimum: 1
+        pageSize:
+          type: integer
+          description: Number of items per page.
+          minimum: 1
+    GenRequest:
+      type: object
+      description: >-
+        Request to generate question drafts for a subject (optionally scoped to
+        a topic) via the knowledge backend. Generation is async; the API returns
+        a Job whose result is the produced QuestionDraft list.
+      additionalProperties: false
+      required:
+      - subjectId
+      - count
+      properties:
+        subjectId:
+          type: string
+          description: Subject to generate questions for.
+        topicId:
+          type: string
+          description: Optional topic to scope generation to.
+        count:
+          type: integer
+          description: Number of question drafts to generate.
+          minimum: 1
+    TutorInstructions:
+      type: object
+      description: >-
+        Per-subject configuration that steers the AI tutor's behaviour for a
+        given subject (spec §2.7). Set/edited by a parent via
+        GET/PUT /subjects/{id}/tutor-instructions.
+      required:
+      - subjectId
+      - customInstructions
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the Subject these instructions apply to (UUID/cuid).
+        customInstructions:
+          type: string
+          description: >-
+            Free-text instructions the parent provides to shape how the tutor
+            explains, questions, and encourages the student for this subject.
+        tone:
+          type: string
+          description: >-
+            Optional desired conversational tone for the tutor (e.g.
+            "encouraging", "socratic", "concise").
+        targetLanguage:
+          type: string
+          description: >-
+            Optional language the tutor should respond in (e.g. a BCP 47 tag
+            such as "en" or "es").
+        difficulty:
+          type: string
+          description: >-
+            Optional difficulty level the tutor should pitch explanations and
+            follow-up questions at.
+          enum:
+          - easy
+          - medium
+          - hard
+    Guidance:
+      type: object
+      description: >-
+        Parent-authored guidance that steers the AI tutor's behaviour
+        (spec §2.10). When scope is "global" it applies to every subject;
+        when scope is "subject" it applies only to the subject named by
+        subjectId.
+      required:
+      - id
+      - scope
+      - text
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        scope:
+          type: string
+          enum:
+          - global
+          - subject
+          description: >-
+            Whether this guidance applies to all subjects ("global") or to a
+            single subject ("subject", in which case subjectId is set).
+        subjectId:
+          type: string
+          description: >-
+            Identifier of the subject this guidance is scoped to. Present only
+            when scope is "subject".
+        text:
+          type: string
+          minLength: 1
+          description: The free-text guidance the tutor should follow.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    CreateGuidance:
+      type: object
+      description: >-
+        Request body to create or replace parent guidance; the server assigns
+        id/createdAt. subjectId is required when scope is "subject" and must be
+        omitted when scope is "global".
+      required:
+      - scope
+      - text
+      properties:
+        scope:
+          type: string
+          enum:
+          - global
+          - subject
+          description: >-
+            Whether this guidance applies to all subjects ("global") or to a
+            single subject ("subject", in which case subjectId is required).
+        subjectId:
+          type: string
+          description: >-
+            Identifier of the subject this guidance is scoped to. Required when
+            scope is "subject"; omit when scope is "global".
+        text:
+          type: string
+          minLength: 1
+          description: The free-text guidance the tutor should follow.
+    MasteryTimelinePoint:
+      type: object
+      description: >-
+        A single dated mastery sample for a topic, used to plot how a topic's
+        mastery has changed over time.
+      additionalProperties: false
+      required:
+      - date
+      - topicId
+      - mastery
+      properties:
+        date:
+          type: string
+          format: date
+          description: The calendar date (RFC 3339 full-date) of this sample.
+        topicId:
+          type: string
+          description: The topic this sample belongs to.
+        mastery:
+          type: integer
+          description: Mastery percentage for the topic on this date (0–100).
+          minimum: 0
+          maximum: 100
+    Dashboard:
+      type: object
+      description: >-
+        Aggregated parent-facing view of a student's progress: current per-topic
+        mastery, mastery over time, recent exam history, an overall average
+        score, the current study streak, and any parent guidance to the tutor.
+        Contains no internet-time / reward fields (Guardian is off).
+      additionalProperties: false
+      required:
+      - mastery
+      - masteryTimeline
+      - history
+      - avgScore
+      - streak
+      - guidance
+      properties:
+        mastery:
+          type: array
+          description: Current mastery per topic.
+          items:
+            $ref: '#/components/schemas/TopicMastery'
+        masteryTimeline:
+          type: array
+          description: Dated mastery samples per topic, for trend visualisation.
+          items:
+            $ref: '#/components/schemas/MasteryTimelinePoint'
+        history:
+          type: array
+          description: The student's recent exam attempts, most recent first.
+          items:
+            $ref: '#/components/schemas/ExamAttempt'
+        avgScore:
+          type: integer
+          description: Overall average score percentage across attempts (0–100).
+          minimum: 0
+          maximum: 100
+        streak:
+          type: integer
+          description: Current consecutive-day study streak, in days.
+          minimum: 0
+        guidance:
+          type: array
+          description: Parent guidance entries currently steering the tutor.
+          items:
+            $ref: '#/components/schemas/Guidance'

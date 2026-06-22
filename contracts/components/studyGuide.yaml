@@ -1,0 +1,61 @@
+# StudyRover — StudyGuide schemas (C02)
+#
+# Owns the StudyGuide entity shapes under #/components/schemas. The root document
+# (contracts/openapi.yaml, owned by W01) $refs these into its components block;
+# codegen emits Go types (oapi-codegen -> backend/internal/contracts) and TS
+# types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+#
+# A StudyGuide is an AI-generated, citation-grounded markdown study guide for a
+# subject (optionally scoped to a single topic), produced via the knowledge
+# Source backend (GenerateStudyGuide). Citations reuse the Citation shape
+# defined by 2-C01 (TutorChat).
+
+components:
+  schemas:
+    StudyGuide:
+      type: object
+      description: An AI-generated, citation-grounded markdown study guide for a subject (optionally scoped to a topic).
+      required:
+        - id
+        - subjectId
+        - markdown
+        - citations
+        - generatedAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Identifier of the Subject this study guide belongs to.
+        topicId:
+          type: string
+          description: Optional identifier of the Topic this guide is scoped to; omitted for whole-subject guides.
+        markdown:
+          type: string
+          description: The study guide body rendered as Markdown.
+        citations:
+          type: array
+          description: Source citations grounding the guide's content.
+          items:
+            $ref: 'tutorChat.yaml#/components/schemas/Citation'
+        generatedAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the guide was generated.
+
+    GuideRequest:
+      type: object
+      description: Request to generate (or fetch the latest) StudyGuide for a subject, optionally scoped to a topic.
+      required:
+        - subjectId
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the Subject to generate the study guide for.
+        topicId:
+          type: string
+          description: Optional identifier of the Topic to scope the study guide to.

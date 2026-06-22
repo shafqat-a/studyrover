@@ -1,0 +1,74 @@
+# StudyRover — Job schemas (C03)
+#
+# Owns the async Job entity shapes under #/components/schemas. The root document
+# (contracts/openapi.yaml, owned by W01) $refs these into its components block;
+# codegen emits Go types (oapi-codegen -> backend/internal/contracts) and TS
+# types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+#
+# Async ingestion, syllabus derivation, and question generation are driven by a
+# Postgres-backed job queue + worker (CONTRACTS-P2 "Async jobs"). Clients poll
+# GET /jobs/{id} (optionally SSE) to observe processing -> ready/error.
+
+components:
+  schemas:
+    Job:
+      type: object
+      description: >-
+        An async unit of work (ingestion, syllabus derivation, or question
+        generation) processed by the background worker. Clients poll for status.
+      required:
+        - id
+        - type
+        - status
+        - subjectId
+        - progress
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        type:
+          type: string
+          description: The kind of work this job performs.
+          enum:
+            - ingest
+            - syllabus
+            - questions
+        status:
+          type: string
+          description: Lifecycle state of the job.
+          enum:
+            - queued
+            - processing
+            - ready
+            - error
+        subjectId:
+          type: string
+          description: The Subject this job operates on.
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion percentage from 0 to 100.
+        result:
+          type: object
+          additionalProperties: true
+          description: >-
+            Open result payload, present when status is ready. Its concrete shape
+            is typed per job type at the use site (e.g. TopicSuggestion[] for
+            type=syllabus).
+        error:
+          type: string
+          description: Human-readable failure detail, present when status is error.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+        updatedAt:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of the last status/progress update.

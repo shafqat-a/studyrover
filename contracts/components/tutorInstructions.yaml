@@ -1,0 +1,53 @@
+# StudyRover — TutorInstructions schemas (2-C06)
+#
+# Owns the per-subject TutorInstructions entity shape under #/components/schemas.
+# The root document (contracts/openapi.yaml, owned by W01) $refs these into its
+# components block; codegen emits Go types (oapi-codegen -> backend/internal/contracts)
+# and TS types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+#
+# Spec §2.7: per-subject instructions a parent sets to steer the AI tutor's
+# behaviour. Composed into the tutor system prompt (2-L01) together with the
+# syllabus, student progress, and parent Guidance.
+
+components:
+  schemas:
+    TutorInstructions:
+      type: object
+      description: >-
+        Per-subject configuration that steers the AI tutor's behaviour for a
+        given subject (spec §2.7). Set/edited by a parent via
+        GET/PUT /subjects/{id}/tutor-instructions.
+      required:
+        - subjectId
+        - customInstructions
+      properties:
+        subjectId:
+          type: string
+          description: Identifier of the Subject these instructions apply to (UUID/cuid).
+        customInstructions:
+          type: string
+          description: >-
+            Free-text instructions the parent provides to shape how the tutor
+            explains, questions, and encourages the student for this subject.
+        tone:
+          type: string
+          description: >-
+            Optional desired conversational tone for the tutor (e.g.
+            "encouraging", "socratic", "concise").
+        targetLanguage:
+          type: string
+          description: >-
+            Optional language the tutor should respond in (e.g. a BCP 47 tag
+            such as "en" or "es").
+        difficulty:
+          type: string
+          description: >-
+            Optional difficulty level the tutor should pitch explanations and
+            follow-up questions at.
+          enum:
+            - easy
+            - medium
+            - hard
