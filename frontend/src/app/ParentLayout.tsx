@@ -20,7 +20,7 @@ interface NavItem {
 const PARENT_NAV: NavItem[] = [
   { to: '/parent', label: 'Home', end: true },
   { to: '/parent/subjects', label: 'Subjects' },
-  { to: '/parent/student', label: 'Student' },
+  { to: '/parent/profile', label: 'Student' },
   { to: '/parent/settings', label: 'Settings' },
 ];
 
