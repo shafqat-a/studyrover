@@ -89,6 +89,10 @@ export const routes: RouteObject[] = [
         lazy: lazyPage(() => import('../pages/ParentSetup')),
       },
       {
+        path: 'login',
+        lazy: lazyPage(() => import('../pages/ParentLogin')),
+      },
+      {
         path: 'profile',
         lazy: lazyPage(() => import('../pages/StudentProfile')),
       },

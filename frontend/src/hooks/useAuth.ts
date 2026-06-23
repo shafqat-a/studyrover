@@ -197,16 +197,19 @@ export function useSignInStudent(): UseMutationResult<
 }
 
 /**
- * Read the established Session from the cache. The contract exposes no GET
- * session endpoint; the auth mutations seed this cache on success and the
- * server-side cookie is what actually carries the session. Returns `null` when
- * no one is signed in this session.
+ * Read the active Session from `GET /auth/session`, which reflects the
+ * server-side sr_session cookie. A 401 means "logged out" and maps to `null`
+ * (not an error). Auth mutations also seed this cache on success. Used by the
+ * layouts to gate routes.
  */
 export function useSession(): UseQueryResult<Session | null, Error> {
   return useQuery({
     queryKey: authKeys.session(),
-    queryFn: () => null as Session | null,
-    staleTime: Infinity,
-    gcTime: Infinity,
+    queryFn: async () => {
+      const { data, error } = await api.GET('/auth/session');
+      if (error) return null;
+      return (data ?? null) as Session | null;
+    },
+    staleTime: 30_000,
   });
 }

@@ -710,6 +710,24 @@ paths:
                 $ref: '#/components/schemas/AuthResult'
         default:
           $ref: '#/components/responses/Problem'
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags:
+      - auth
+      summary: Current session
+      description: Returns the active session (parent or student) read from the sr_session cookie, or
+        401 when there is none. The SPA uses this to gate routes and redirect to sign-in.
+      security: []
+      responses:
+        '200':
+          description: The active session identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        default:
+          $ref: '#/components/responses/Problem'
   /auth/student:
     post:
       operationId: authStudent

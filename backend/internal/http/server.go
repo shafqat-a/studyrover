@@ -123,7 +123,7 @@ func apiPath(r *http.Request) string {
 // WebAuthn parent ceremonies and the student sign-in).
 func isPublicPath(path string) bool {
 	switch path {
-	case "/auth/login", "/auth/register", "/auth/student":
+	case "/auth/login", "/auth/register", "/auth/student", "/auth/session":
 		return true
 	default:
 		return false

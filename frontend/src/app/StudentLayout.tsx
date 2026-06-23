@@ -1,4 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
+
+import { useSession } from '../hooks/useAuth';
 
 /**
  * Student area shell (F11).
@@ -27,6 +29,23 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 }
 
 export default function StudentLayout() {
+  const { data: session, isLoading } = useSession();
+  const location = useLocation();
+  const onAuthPage = location.pathname === '/student/signin';
+
+  if (!onAuthPage) {
+    if (isLoading) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background text-foreground-muted">
+          Loading…
+        </div>
+      );
+    }
+    if (session?.role !== 'student') {
+      return <Navigate to="/student/signin" replace />;
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
