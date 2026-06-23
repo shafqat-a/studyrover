@@ -28,6 +28,9 @@ type Config struct {
 	// the bridge endpoint is absent. Selecting "notebooklm" with a nil NotebookLM
 	// falls back to Fake.
 	NotebookLM Source
+	// Ollama is the constructed Ollama Cloud adapter, or nil when the Ollama API
+	// key is absent. Selecting "ollama" with a nil Ollama falls back to Fake.
+	Ollama Source
 	// Fake is the deterministic fallback backend (2-F02). It must be non-nil:
 	// selectBackend returns it whenever the chosen backend is unavailable, so the
 	// platform keeps working without external services. When nil, New substitutes
@@ -74,6 +77,12 @@ func selectBackend(settings contracts.Settings, cfg Config) Source {
 	case contracts.KnowledgeBackendGemini:
 		if cfg.Gemini != nil {
 			return cfg.Gemini
+		}
+		return fallback
+
+	case contracts.KnowledgeBackendOllama:
+		if cfg.Ollama != nil {
+			return cfg.Ollama
 		}
 		return fallback
 

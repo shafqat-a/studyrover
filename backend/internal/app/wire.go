@@ -26,6 +26,7 @@ import (
 	"github.com/shafqat/studyrover/backend/internal/knowledge/fake"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/gemini"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/notebooklm"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/ollama"
 	"github.com/shafqat/studyrover/backend/internal/storage"
 	"github.com/shafqat/studyrover/backend/internal/store"
 )
@@ -135,6 +136,7 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 		knowledge.Config{
 			Gemini:     gemini.New(gemini.Config{APIKey: cfg.GeminiAPIKey, Model: cfg.GeminiModel}),
 			NotebookLM: notebooklm.New(notebooklm.Config{}),
+			Ollama:     ollama.New(ollama.Config{APIKey: cfg.OllamaAPIKey, BaseURL: cfg.OllamaBaseURL, Model: cfg.OllamaModel}),
 			Fake:       fake.New(0),
 		},
 	)

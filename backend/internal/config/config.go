@@ -30,6 +30,15 @@ type Config struct {
 	// empty uses the adapter default. Set when the default model's quota is
 	// exhausted (e.g. "gemini-2.5-flash").
 	GeminiModel string
+	// OllamaAPIKey authenticates the Ollama Cloud knowledge backend (env
+	// OLLAMA_API_KEY). Optional; empty leaves the Ollama adapter unprovisioned.
+	OllamaAPIKey string
+	// OllamaBaseURL overrides the Ollama endpoint (env OLLAMA_BASE_URL). Optional;
+	// empty uses the adapter default (https://ollama.com).
+	OllamaBaseURL string
+	// OllamaModel overrides the Ollama model id (env OLLAMA_MODEL). Optional;
+	// empty uses the adapter default (gpt-oss:120b).
+	OllamaModel string
 }
 
 // Default values applied when an optional env var is unset.
@@ -51,6 +60,9 @@ func Load() (*Config, error) {
 		StorageDir:    os.Getenv("STORAGE_DIR"),
 		GeminiAPIKey:  os.Getenv("GEMINI_API_KEY"),
 		GeminiModel:   os.Getenv("GEMINI_MODEL"),
+		OllamaAPIKey:  os.Getenv("OLLAMA_API_KEY"),
+		OllamaBaseURL: os.Getenv("OLLAMA_BASE_URL"),
+		OllamaModel:   os.Getenv("OLLAMA_MODEL"),
 	}
 
 	var missing []string

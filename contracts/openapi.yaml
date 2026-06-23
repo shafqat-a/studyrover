@@ -1933,6 +1933,7 @@ components:
       enum:
       - notebooklm
       - gemini
+      - ollama
     Settings:
       type: object
       description: The application settings singleton. Holds the spec defaults that gate exam creation

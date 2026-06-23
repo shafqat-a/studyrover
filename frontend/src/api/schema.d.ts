@@ -1174,7 +1174,7 @@ export interface components {
          * @description The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative.
          * @enum {string}
          */
-        KnowledgeBackend: "notebooklm" | "gemini";
+        KnowledgeBackend: "notebooklm" | "gemini" | "ollama";
         /** @description The application settings singleton. Holds the spec defaults that gate exam creation plus the Guardian-side reward knobs (stored now, used in Phase 3). L10 ResolveSettings fills any missing field from these same defaults at runtime. */
         Settings: {
             /** @description Identifier of the settings singleton row. */
