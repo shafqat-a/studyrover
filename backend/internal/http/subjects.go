@@ -14,7 +14,7 @@ import (
 // middleware mounted by W02 guards the route; the context check here keeps the
 // handler safe in isolation and satisfies the "unauthed → 401" acceptance.
 func (h *Handlers) ListSubjects(w http.ResponseWriter, r *http.Request, _ contracts.ListSubjectsParams) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

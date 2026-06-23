@@ -14,7 +14,7 @@ import (
 // (PageOfTopic, CONTRACTS.md §C03/§C11). The subjectId query parameter is
 // required; without it the request is rejected with a 400 Problem{VALIDATION}.
 func (h *Handlers) ListTopics(w http.ResponseWriter, r *http.Request, params contracts.ListTopicsParams) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

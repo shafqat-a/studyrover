@@ -64,3 +64,25 @@ func (m *SessionManager) RequireStudent(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(withStudent(r.Context(), id)))
 	})
 }
+
+// RequireAny authenticates a session of EITHER role and injects the matching
+// identity into the context (recoverable via ParentFromCtx or StudentFromCtx).
+// It does NOT authorize — handlers decide which role(s) an endpoint accepts.
+// Returns 401 when no valid session is present.
+func (m *SessionManager) RequireAny(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := m.Read(r)
+		if err != nil {
+			writeUnauthorized(w, "session required")
+			return
+		}
+		switch id.Role {
+		case RoleParent:
+			next.ServeHTTP(w, r.WithContext(withParent(r.Context(), id)))
+		case RoleStudent:
+			next.ServeHTTP(w, r.WithContext(withStudent(r.Context(), id)))
+		default:
+			writeUnauthorized(w, "session required")
+		}
+	})
+}

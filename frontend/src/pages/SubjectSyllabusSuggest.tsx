@@ -36,7 +36,7 @@ import {
 type TopicSuggestion = components['schemas']['TopicSuggestion'];
 
 export default function SubjectSyllabusSuggest() {
-  const { id: subjectId } = useParams<{ id: string }>();
+  const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 

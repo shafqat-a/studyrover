@@ -9,8 +9,21 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/shafqat/studyrover/backend/internal/auth"
 	"github.com/shafqat/studyrover/backend/internal/contracts"
 )
+
+// hasSession reports whether the request carries an authenticated session of
+// either role (parent or student). Used by student-readable GET handlers
+// (subjects, exam definitions, topics, student profile) that both roles may
+// read; mutations keep their stricter ParentFromCtx checks.
+func hasSession(r *http.Request) bool {
+	if _, ok := auth.ParentFromCtx(r.Context()); ok {
+		return true
+	}
+	_, ok := auth.StudentFromCtx(r.Context())
+	return ok
+}
 
 const (
 	defaultPage     = 1

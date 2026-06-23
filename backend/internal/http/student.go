@@ -17,7 +17,7 @@ import (
 // (newest) student. A 404 Problem{NOT_FOUND} is returned before the profile is
 // created on first save. Parent-guarded.
 func (h *Handlers) GetStudent(w http.ResponseWriter, r *http.Request) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

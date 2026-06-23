@@ -82,29 +82,22 @@ func NewRouter(h *Handlers) http.Handler {
 	return r
 }
 
-// authMiddleware enforces the session role required by each API route, keyed by
-// the request path (with the /api prefix already stripped by Mount):
-//   - /auth/login, /auth/register, /auth/student  → public (no session)
-//   - /attempts..., /tutor...                     → student session
-//   - everything else                            → parent session
+// authMiddleware authenticates the session and injects the identity; per-route
+// AUTHORIZATION is enforced in the handlers (which check ParentFromCtx /
+// StudentFromCtx as appropriate). The auth ceremony + session endpoints are
+// public; every other /api route requires a valid session of either role, so
+// student-facing reads (subjects, exam definitions, profile, progress) and the
+// exam loop work alongside parent-only writes.
 func authMiddleware(sessions *auth.SessionManager) func(http.Handler) http.Handler {
-	requireParent := sessions.RequireParent
-	requireStudent := sessions.RequireStudent
-
 	return func(next http.Handler) http.Handler {
-		parent := requireParent(next)
-		student := requireStudent(next)
+		anyAuth := sessions.RequireAny(next)
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			path := apiPath(r)
-			switch {
-			case isPublicPath(path):
+			if isPublicPath(apiPath(r)) {
 				next.ServeHTTP(w, r)
-			case strings.HasPrefix(path, "/attempts"), strings.HasPrefix(path, "/tutor"):
-				student.ServeHTTP(w, r)
-			default:
-				parent.ServeHTTP(w, r)
+				return
 			}
+			anyAuth.ServeHTTP(w, r)
 		})
 	}
 }

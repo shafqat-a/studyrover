@@ -16,7 +16,7 @@ import (
 // Problem{NOT_FOUND} envelope when it does not exist (CONTRACTS.md §C01/§C11).
 // Parent-guarded.
 func (h *Handlers) GetSubject(w http.ResponseWriter, r *http.Request, id contracts.IdPath) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

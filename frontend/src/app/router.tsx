@@ -101,7 +101,7 @@ export const routes: RouteObject[] = [
         lazy: lazyPage(() => import('../pages/Subjects')),
       },
       {
-        path: 'subjects/:id',
+        path: 'subjects/:subjectId',
         // SubjectDetail (P05) hosts the subject sub-tabs via its own <Outlet/>.
         lazy: lazyPage(() => import('../pages/SubjectDetail')),
         children: [

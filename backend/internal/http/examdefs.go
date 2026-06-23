@@ -18,7 +18,7 @@ import (
 // (PageOfExamDefinition, CONTRACTS.md §C04/§C11). The subjectId query parameter
 // is required; without it the request is rejected with 400 Problem{VALIDATION}.
 func (h *Handlers) ListExamDefinitions(w http.ResponseWriter, r *http.Request, params contracts.ListExamDefinitionsParams) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

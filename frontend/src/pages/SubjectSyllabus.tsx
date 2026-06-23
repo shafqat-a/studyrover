@@ -80,7 +80,7 @@ function byOrder(a: Topic, b: Topic): number {
 }
 
 export default function SubjectSyllabus() {
-  const { id: subjectId } = useParams<{ id: string }>();
+  const { subjectId } = useParams<{ subjectId: string }>();
 
   const topicsQuery = useTopics(subjectId, { pageSize: 200 });
   const sourcesQuery = useSources(subjectId, { pageSize: 200 });
