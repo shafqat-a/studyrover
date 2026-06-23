@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { TextInput } from '../components/TextInput';
-import { iconGlyph } from '../components/ColorIconPicker';
 import type { components } from '../api/schema';
 import {
   useCreateSubject,
@@ -250,7 +250,6 @@ function SubjectCard({
   onDelete,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
-  const icon = iconGlyph(subject.icon);
   return (
     <Card
       padding="md"
@@ -258,16 +257,16 @@ function SubjectCard({
       style={{ borderTopColor: color, borderTopWidth: 4 }}
     >
       <div className="flex items-start justify-between gap-3">
-        <a
-          href={`/parent/subjects/${subject.id}`}
+        <Link
+          to={`/parent/subjects/${subject.id}`}
           className="group flex min-w-0 flex-1 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span
             aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-2xl"
-            style={{ backgroundColor: `${color}22` }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-lg font-bold uppercase text-white"
+            style={{ backgroundColor: color }}
           >
-            {icon}
+            {subject.name.trim().charAt(0) || '?'}
           </span>
           <span className="min-w-0">
             <span className="block truncate font-display font-bold text-foreground group-hover:underline">
@@ -279,7 +278,7 @@ function SubjectCard({
               </span>
             ) : null}
           </span>
-        </a>
+        </Link>
         {subject.archived && (
           <Badge tone="neutral" size="sm">
             Archived

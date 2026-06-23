@@ -46,12 +46,7 @@ const SUBJECT_TABS: ReadonlyArray<SubjectTab> = [
   { to: 'syllabus', label: 'Syllabus' },
   { to: 'exams', label: 'Exams' },
   { to: 'questions', label: 'Questions' },
-  {
-    to: 'tutor',
-    label: 'Tutor',
-    disabled: true,
-    disabledReason: 'The tutor arrives in a later phase.',
-  },
+  { to: 'tutor-instructions', label: 'Tutor' },
 ];
 
 /** Centered helper used for empty / loading / error panels. */

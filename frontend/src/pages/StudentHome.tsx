@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { iconGlyph } from '../components/ColorIconPicker';
 import type { components } from '../api/schema';
 import { useSubjects } from '../hooks/useSubjects';
 import { useExamDefinitions } from '../hooks/useExamDefinitions';
@@ -202,7 +201,6 @@ function SubjectCard({
   onTakeExam,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
-  const icon = iconGlyph(subject.icon);
   return (
     <Card
       padding="md"
@@ -217,10 +215,10 @@ function SubjectCard({
       >
         <span
           aria-hidden="true"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-2xl"
-          style={{ backgroundColor: `${color}22` }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-lg font-bold uppercase text-white"
+          style={{ backgroundColor: color }}
         >
-          {icon}
+          {subject.name.trim().charAt(0) || "?"}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-display font-bold text-foreground group-hover:underline">
