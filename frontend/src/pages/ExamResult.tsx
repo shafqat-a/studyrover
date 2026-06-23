@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Badge } from '../components/Badge';
@@ -6,6 +6,8 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import type { components } from '../api/schema';
 import { useAttemptResult } from '../hooks/useExamAttempt';
+import { useExamDefinition } from '../hooks/useExamDefinitions';
+import { useTopics } from '../hooks/useTopics';
 
 /**
  * P14 — Exam result (screen 3.5)
@@ -119,6 +121,21 @@ function ResultReport({
   onStudyWeakTopics,
   onHome,
 }: ResultReportProps) {
+  // Resolve topic ids -> human names (attempt only carries ids): exam def gives
+  // the subject, the subject gives its topics.
+  const examDefQuery = useExamDefinition(attempt.examDefinitionId);
+  const topicsQuery = useTopics(examDefQuery.data?.subjectId);
+  const topicNameById = useMemo(
+    () =>
+      new Map((topicsQuery.data?.items ?? []).map((t) => [t.id, t.name])),
+    [topicsQuery.data],
+  );
+  const topicLabel = useCallback(
+    (id: string) =>
+      topicNameById.get(id) ?? (id === 'untopiced' ? 'General' : 'Topic'),
+    [topicNameById],
+  );
+
   const scorePct = Math.round(attempt.scorePct ?? 0);
   const passed = attempt.passed === true;
   const perTopic = attempt.perTopic ?? [];
@@ -170,7 +187,7 @@ function ResultReport({
           <ul className="space-y-3" aria-label="Per-topic scores">
             {perTopic.map((topic) => (
               <li key={topic.topicId}>
-                <TopicRow topic={topic} />
+                <TopicRow topic={topic} name={topicLabel(topic.topicId)} />
               </li>
             ))}
           </ul>
@@ -190,7 +207,7 @@ function ResultReport({
             {weakTopics.map((topic) => (
               <li key={topic.topicId}>
                 <Badge tone="warning" size="md">
-                  {topic.topicId} · {topic.correct}/{topic.total}
+                  {topicLabel(topic.topicId)} · {topic.correct}/{topic.total}
                 </Badge>
               </li>
             ))}
@@ -224,10 +241,11 @@ function ResultReport({
 
 interface TopicRowProps {
   topic: PerTopicScore;
+  name: string;
 }
 
 /** A single topic's correct/total ratio rendered as a labelled bar. */
-function TopicRow({ topic }: TopicRowProps) {
+function TopicRow({ topic, name }: TopicRowProps) {
   const ratio = topic.total > 0 ? topic.correct / topic.total : 0;
   const pct = Math.round(ratio * 100);
   const tone =
@@ -240,7 +258,7 @@ function TopicRow({ topic }: TopicRowProps) {
     <div>
       <div className="flex items-center justify-between gap-3 text-sm">
         <span className="min-w-0 truncate font-medium text-foreground">
-          {topic.topicId}
+          {name}
         </span>
         <span className="shrink-0 tabular-nums text-foreground-muted">
           {topic.correct}/{topic.total} · {pct}%
@@ -251,7 +269,7 @@ function TopicRow({ topic }: TopicRowProps) {
         aria-valuemin={0}
         aria-valuemax={topic.total}
         aria-valuenow={topic.correct}
-        aria-label={`${topic.topicId}: ${topic.correct} of ${topic.total} correct`}
+        aria-label={`${name}: ${topic.correct} of ${topic.total} correct`}
         className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface-muted"
       >
         <div
