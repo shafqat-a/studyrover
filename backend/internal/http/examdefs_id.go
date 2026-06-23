@@ -16,7 +16,7 @@ import (
 // definition or a 404 Problem{NOT_FOUND} when it does not exist (CONTRACTS.md
 // §C04/§C11). Parent-guarded.
 func (h *Handlers) GetExamDefinition(w http.ResponseWriter, r *http.Request, id contracts.IdPath) {
-	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+	if !hasSession(r) {
 		unauthorized(w)
 		return
 	}

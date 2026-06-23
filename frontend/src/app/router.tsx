@@ -178,15 +178,18 @@ export const routes: RouteObject[] = [
         lazy: lazyPage(() => import('../pages/StudyTutor')),
       },
       {
-        path: 'exam/start',
+        // ExamStart reads :examId; opened from StudentHome "Take exam".
+        path: 'exams/:examId/start',
         lazy: lazyPage(() => import('../pages/ExamStart')),
       },
       {
-        path: 'exam/:id',
+        // ExamRun reads :attemptId; opened after ExamStart creates an attempt.
+        path: 'attempts/:attemptId',
         lazy: lazyPage(() => import('../pages/ExamRun')),
       },
       {
-        path: 'exam/:id/result',
+        // ExamResult reads :attemptId.
+        path: 'attempts/:attemptId/result',
         lazy: lazyPage(() => import('../pages/ExamResult')),
       },
     ],
