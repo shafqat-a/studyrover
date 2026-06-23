@@ -45,8 +45,8 @@ SELECT * FROM question
 WHERE subject_id = $1
   AND enabled = true
   AND (
-        cardinality(sqlc.arg('scope_topic_ids')::uuid[]) = 0
-        OR topic_id = ANY(sqlc.arg('scope_topic_ids')::uuid[])
+        cardinality(coalesce(sqlc.arg('scope_topic_ids')::text[], '{}'::text[])) = 0
+        OR topic_id = ANY(sqlc.arg('scope_topic_ids')::text[])
       )
 ORDER BY created_at DESC, id;
 

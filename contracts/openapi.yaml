@@ -1182,6 +1182,24 @@ paths:
                 $ref: '#/components/schemas/Guidance'
         default:
           $ref: '#/components/responses/Problem'
+  /guidance/{id}:
+    delete:
+      operationId: deleteGuidance
+      tags:
+      - guidance
+      summary: Delete a parent guidance entry
+      description: Removes a single guidance entry by id (2-A12).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Guidance deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /dashboard:
     get:
       operationId: getDashboard

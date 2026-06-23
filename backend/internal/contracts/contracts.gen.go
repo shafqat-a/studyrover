@@ -1611,6 +1611,9 @@ type ServerInterface interface {
 	// Create or replace parent guidance
 	// (PUT /guidance)
 	UpdateGuidance(w http.ResponseWriter, r *http.Request)
+	// Delete a parent guidance entry
+	// (DELETE /guidance/{id})
+	DeleteGuidance(w http.ResponseWriter, r *http.Request, id string)
 	// List async jobs
 	// (GET /jobs)
 	ListJobs(w http.ResponseWriter, r *http.Request, params ListJobsParams)
@@ -1836,6 +1839,12 @@ func (_ Unimplemented) GetGuidance(w http.ResponseWriter, r *http.Request, param
 // Create or replace parent guidance
 // (PUT /guidance)
 func (_ Unimplemented) UpdateGuidance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a parent guidance entry
+// (DELETE /guidance/{id})
+func (_ Unimplemented) DeleteGuidance(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2595,6 +2604,38 @@ func (siw *ServerInterfaceWrapper) UpdateGuidance(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateGuidance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGuidance operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGuidance(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGuidance(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4151,6 +4192,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/guidance", wrapper.UpdateGuidance)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/guidance/{id}", wrapper.DeleteGuidance)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/jobs", wrapper.ListJobs)
 	})
 	r.Group(func(r chi.Router) {
@@ -4923,6 +4967,39 @@ type UpdateGuidancedefaultJSONResponse struct {
 }
 
 func (response UpdateGuidancedefaultJSONResponse) VisitUpdateGuidanceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGuidanceRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteGuidanceResponseObject interface {
+	VisitDeleteGuidanceResponse(w http.ResponseWriter) error
+}
+
+type DeleteGuidance204Response struct {
+}
+
+func (response DeleteGuidance204Response) VisitDeleteGuidanceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteGuidancedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteGuidancedefaultJSONResponse) VisitDeleteGuidanceResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -6601,6 +6678,9 @@ type StrictServerInterface interface {
 	// Create or replace parent guidance
 	// (PUT /guidance)
 	UpdateGuidance(ctx context.Context, request UpdateGuidanceRequestObject) (UpdateGuidanceResponseObject, error)
+	// Delete a parent guidance entry
+	// (DELETE /guidance/{id})
+	DeleteGuidance(ctx context.Context, request DeleteGuidanceRequestObject) (DeleteGuidanceResponseObject, error)
 	// List async jobs
 	// (GET /jobs)
 	ListJobs(ctx context.Context, request ListJobsRequestObject) (ListJobsResponseObject, error)
@@ -7229,6 +7309,32 @@ func (sh *strictHandler) UpdateGuidance(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateGuidanceResponseObject); ok {
 		if err := validResponse.VisitUpdateGuidanceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGuidance operation middleware
+func (sh *strictHandler) DeleteGuidance(w http.ResponseWriter, r *http.Request, id string) {
+	var request DeleteGuidanceRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGuidance(ctx, request.(DeleteGuidanceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGuidance")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGuidanceResponseObject); ok {
+		if err := validResponse.VisitDeleteGuidanceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -8543,42 +8649,43 @@ var swaggerSpec = []string{
 	"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",
-	"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",
-	"weqzVD0a4cd5KOHmn4Vqvx9//Pj/AgAA//8=",
+	"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",
+	"qh6N8OM8VM/zz0Kh5Y8/fvx/AQAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

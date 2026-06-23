@@ -95,12 +95,7 @@ export default function ParentDashboard() {
   }
 
   function handleDeleteGuidance(id: string) {
-    const target = guidanceItems.find((g) => g.id === id);
-    if (!target) return;
-    void deleteGuidance.mutateAsync({
-      scope: target.scope,
-      subjectId: target.subjectId,
-    });
+    void deleteGuidance.mutateAsync(id);
   }
 
   const studentName = studentQuery.data?.name;

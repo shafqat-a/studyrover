@@ -154,6 +154,20 @@ func (h *Handlers) UpdateGuidance(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, contracts.UpdateGuidance200JSONResponse(toContractGuidance(created)))
 }
 
+// DeleteGuidance handles DELETE /guidance/{id}: removes a single guidance entry.
+// Parent-guarded; idempotent at the SQL layer, returns 204.
+func (h *Handlers) DeleteGuidance(w http.ResponseWriter, r *http.Request, id contracts.IdPath) {
+	if _, ok := auth.ParentFromCtx(r.Context()); !ok {
+		unauthorized(w)
+		return
+	}
+	if err := h.Store.DeleteGuidance(r.Context(), id); err != nil {
+		internalError(w, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // toContractGuidance maps a sqlc store.Guidance to the generated contract type.
 // Both use string ids; subjectId is nullable (*string) on each side.
 func toContractGuidance(g store.Guidance) contracts.Guidance {

@@ -66,7 +66,7 @@ func (h *SyllabusHandler) Handle(ctx context.Context, job Job, prog ProgressFunc
 
 	// Marshal as the contract shape (TopicSuggestion[]) so Job.result is wire
 	// consistent with what the apply endpoint (2-A08) consumes.
-	result, err := json.Marshal(toContractTopicSuggestions(suggestions))
+	result, err := json.Marshal(map[string]any{"topics": toContractTopicSuggestions(suggestions)})
 	if err != nil {
 		return nil, fmt.Errorf("syllabus: marshal result: %w", err)
 	}

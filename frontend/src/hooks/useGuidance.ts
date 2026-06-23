@@ -107,41 +107,24 @@ export function useCreateGuidance(): UseMutationResult<
   });
 }
 
-/** Variables identifying which guidance scope to clear. */
-export interface DeleteGuidanceVars {
-  scope: Guidance['scope'];
-  subjectId?: string;
-}
-
 /**
- * Clear parent guidance for a scope. The contract has no DELETE endpoint, so
- * this replaces the guidance text with an empty string via `PUT /guidance`,
- * which the server treats as removing that scope's guidance. Invalidates the
- * list for the affected scope.
+ * Delete a single guidance entry by id via `DELETE /guidance/{id}`. Invalidates
+ * all guidance lists so the removed note disappears.
  */
-export function useDeleteGuidance(): UseMutationResult<
-  Guidance,
-  Error,
-  DeleteGuidanceVars
-> {
+export function useDeleteGuidance(): UseMutationResult<void, Error, string> {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ scope, subjectId }: DeleteGuidanceVars) => {
-      const body: CreateGuidance =
-        scope === 'subject'
-          ? { scope, subjectId, text: '' }
-          : { scope, text: '' };
-      const { data, error } = await api.PUT('/guidance', { body });
+    mutationFn: async (id: string) => {
+      const { error } = await api.DELETE('/guidance/{id}', {
+        params: { path: { id } },
+      });
       if (error) {
         throw new Error(problemMessage(error, 'Failed to delete guidance'));
       }
-      return data;
     },
-    onSuccess: (_guidance, { scope, subjectId }) => {
-      void queryClient.invalidateQueries({
-        queryKey: guidanceKeys.list(scope === 'subject' ? subjectId : undefined),
-      });
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: guidanceKeys.all });
     },
     onError: (error) => {
       toast(error.message, { variant: 'danger' });

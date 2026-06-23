@@ -58,9 +58,9 @@ components:
           type: object
           additionalProperties: true
           description: >-
-            Open result payload, present when status is ready. Its concrete shape
-            is typed per job type at the use site (e.g. TopicSuggestion[] for
-            type=syllabus).
+            Open result object, present when status is ready. Shape is typed per
+            job type at the use site — e.g. { topics: TopicSuggestion[] } for
+            type=syllabus, { drafts: QuestionDraft[] } for type=questions.
         error:
           type: string
           description: Human-readable failure detail, present when status is error.

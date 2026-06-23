@@ -7,8 +7,6 @@ package store
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
 
 const countQuestionsBySubject = `-- name: CountQuestionsBySubject :one
@@ -119,15 +117,15 @@ SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, c
 WHERE subject_id = $1
   AND enabled = true
   AND (
-        cardinality($2::uuid[]) = 0
-        OR topic_id = ANY($2::uuid[])
+        cardinality(coalesce($2::text[], '{}'::text[])) = 0
+        OR topic_id = ANY($2::text[])
       )
 ORDER BY created_at DESC, id
 `
 
 type ListEligibleForExamParams struct {
-	SubjectID     string      `json:"subjectId"`
-	ScopeTopicIds []uuid.UUID `json:"scopeTopicIds"`
+	SubjectID     string   `json:"subjectId"`
+	ScopeTopicIds []string `json:"scopeTopicIds"`
 }
 
 // Eligible question bank for exam assembly (L04 / L08): enabled questions in the

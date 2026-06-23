@@ -101,7 +101,7 @@ func (h *Handlers) PostMessage(w http.ResponseWriter, r *http.Request, id contra
 		ConversationID: id,
 		Role:           string(contracts.User),
 		Text:           body.Text,
-		Citations:      nil,
+		Citations:      []byte("[]"),
 	}); err != nil {
 		internalError(w, err.Error())
 		return

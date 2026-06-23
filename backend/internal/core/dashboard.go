@@ -40,7 +40,7 @@ func BuildDashboard(
 		MasteryTimeline: sortedTimeline(snapshots),
 		History:         attemptsByRecency(attempts),
 		AvgScore:        averageScore(attempts),
-		Guidance:        append([]contracts.Guidance(nil), guidance...),
+		Guidance:        append([]contracts.Guidance{}, guidance...),
 	}
 	d.Streak, _ = ComputeStreak(attempts, now, loc)
 	return d

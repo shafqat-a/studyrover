@@ -759,6 +759,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/guidance/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a parent guidance entry
+         * @description Removes a single guidance entry by id (2-A12).
+         */
+        delete: operations["deleteGuidance"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dashboard": {
         parameters: {
             query?: never;
@@ -3174,6 +3194,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Guidance"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteGuidance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Guidance deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
