@@ -74,7 +74,10 @@ func (h *Handlers) authRegisterBegin(w http.ResponseWriter, r *http.Request, bod
 		return
 	}
 
-	options, err := registerToCeremony(creation)
+	// Return the INNER PublicKeyCredentialCreationOptions (creation.Response),
+	// not the {"publicKey": ...} wrapper — @simplewebauthn/browser expects the
+	// options (challenge, user, rp, ...) at the top level of optionsJSON.
+	options, err := registerToCeremony(creation.Response)
 	if err != nil {
 		internalError(w, err.Error())
 		return

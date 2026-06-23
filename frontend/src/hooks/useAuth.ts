@@ -117,9 +117,15 @@ export function useRegisterParent(): UseMutationResult<
         optionsJSON:
           started.options as unknown as RegistrationOptionsJSON,
       });
-      const finished = await postRegister(
-        attestation as unknown as WebAuthnCeremony,
-      );
+      // Finish must echo back the ceremonyId (issued in the begin options) and
+      // the email so the server can find the pending ceremony + parent.
+      const ceremonyId = (started.options as Record<string, unknown>)
+        .ceremonyId;
+      const finished = await postRegister({
+        ...(attestation as unknown as Record<string, unknown>),
+        ceremonyId,
+        email: begin.email,
+      } as unknown as WebAuthnCeremony);
       if (!finished.session) {
         throw new Error('Registration did not complete');
       }
@@ -141,22 +147,28 @@ export function useRegisterParent(): UseMutationResult<
  * browser assertion and post the authenticator response back to establish the
  * Session.
  */
-export function useLoginParent(): UseMutationResult<Session, Error, void> {
+export function useLoginParent(): UseMutationResult<Session, Error, string> {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async () => {
-      const started = await postLogin({} as WebAuthnCeremony);
+    mutationFn: async (email: string) => {
+      const started = await postLogin({ email } as unknown as WebAuthnCeremony);
       if (!started.options) {
         throw new Error('Server did not return authentication options');
       }
+      const ceremonyId = (started.options as Record<string, unknown>)
+        .ceremonyId;
       const assertion = await startAuthentication({
         optionsJSON:
           started.options as unknown as AuthenticationOptionsJSON,
       });
-      const finished = await postLogin(
-        assertion as unknown as WebAuthnCeremony,
-      );
+      // Finish carries the email, the echoed ceremonyId, and the assertion
+      // nested under "assertion" (the shape the server's finish step expects).
+      const finished = await postLogin({
+        email,
+        ceremonyId,
+        assertion,
+      } as unknown as WebAuthnCeremony);
       if (!finished.session) {
         throw new Error('Sign-in did not complete');
       }

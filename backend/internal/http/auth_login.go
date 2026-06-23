@@ -73,9 +73,11 @@ func (h *Handlers) authLoginBegin(w http.ResponseWriter, r *http.Request, email 
 		return
 	}
 
-	// Serialize the go-webauthn options into the opaque ceremony map and attach
-	// the server-issued ceremony id the client must echo on finish.
-	options, err := registerToCeremony(assertion)
+	// Serialize the INNER PublicKeyCredentialRequestOptions (assertion.Response),
+	// not the {"publicKey": ...} wrapper, so @simplewebauthn/browser sees the
+	// challenge/allowCredentials at the top level. Attach the server-issued
+	// ceremony id the client must echo on finish.
+	options, err := registerToCeremony(assertion.Response)
 	if err != nil {
 		internalError(w, err.Error())
 		return
