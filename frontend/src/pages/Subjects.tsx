@@ -5,6 +5,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { TextInput } from '../components/TextInput';
+import { iconGlyph } from '../components/ColorIconPicker';
 import type { components } from '../api/schema';
 import {
   useCreateSubject,
@@ -249,7 +250,7 @@ function SubjectCard({
   onDelete,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
-  const icon = subject.icon ?? DEFAULT_ICON;
+  const icon = iconGlyph(subject.icon);
   return (
     <Card
       padding="md"

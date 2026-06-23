@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { iconGlyph } from '../components/ColorIconPicker';
 import type { components } from '../api/schema';
 import { useSubjects } from '../hooks/useSubjects';
 import { useExamDefinitions } from '../hooks/useExamDefinitions';
@@ -33,7 +34,6 @@ type ExamDefinition = components['schemas']['ExamDefinition'];
 type Topic = components['schemas']['Topic'];
 
 const DEFAULT_COLOR = '#6366f1';
-const DEFAULT_ICON = '📚';
 
 export default function StudentHome() {
   const navigate = useNavigate();
@@ -202,7 +202,7 @@ function SubjectCard({
   onTakeExam,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
-  const icon = subject.icon ?? DEFAULT_ICON;
+  const icon = iconGlyph(subject.icon);
   return (
     <Card
       padding="md"

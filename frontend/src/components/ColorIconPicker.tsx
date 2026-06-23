@@ -89,6 +89,26 @@ export const DEFAULT_ICONS: IconOption[] = [
   { value: 'pencil', glyph: '✏️', label: 'Pencil' },
 ];
 
+const ICON_GLYPHS: Record<string, string> = Object.fromEntries(
+  DEFAULT_ICONS.flatMap((i) =>
+    typeof i.glyph === 'string' ? [[i.value, i.glyph] as const] : [],
+  ),
+);
+
+/**
+ * Resolve a stored icon value to a displayable glyph. Subjects may store either
+ * a token (e.g. "calculator", from the picker / seed) or an emoji directly.
+ * Tokens map to their glyph; emoji pass through; an unknown word falls back to a
+ * book. This keeps cards from rendering a raw token like "calculator".
+ */
+export function iconGlyph(value?: string | null): string {
+  if (!value) return '📚';
+  if (ICON_GLYPHS[value]) return ICON_GLYPHS[value];
+  // No ASCII letters → already an emoji/glyph, render as-is.
+  if (!/[a-zA-Z]/.test(value)) return value;
+  return '📚';
+}
+
 /** Moves selection within a group via Arrow/Home/End keys (roving tabindex). */
 function handleArrowNav<T extends { value: string }>(
   event: React.KeyboardEvent,

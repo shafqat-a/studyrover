@@ -42,6 +42,7 @@ const KNOWLEDGE_BACKEND_OPTIONS: Array<{
 }> = [
   { value: 'notebooklm', label: 'NotebookLM (default)' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'ollama', label: 'Ollama Cloud' },
 ];
 
 function formFromSettings(settings: Settings): FormState {
@@ -232,7 +233,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
 
         <SettingRow
           title="Backend"
-          description="NotebookLM is the default; Gemini is the direct alternative."
+          description="The AI provider for the tutor and generation (Ollama Cloud, Gemini, or NotebookLM)."
           htmlFor="setting-knowledge-backend"
         >
           <Select
