@@ -26,6 +26,10 @@ type Config struct {
 	// Optional; when empty the Gemini adapter is not provisioned and the selector
 	// falls back to another backend.
 	GeminiAPIKey string
+	// GeminiModel overrides the Gemini model id (env GEMINI_MODEL). Optional;
+	// empty uses the adapter default. Set when the default model's quota is
+	// exhausted (e.g. "gemini-2.5-flash").
+	GeminiModel string
 }
 
 // Default values applied when an optional env var is unset.
@@ -46,6 +50,7 @@ func Load() (*Config, error) {
 		RPOrigin:      os.Getenv("RP_ORIGIN"),
 		StorageDir:    os.Getenv("STORAGE_DIR"),
 		GeminiAPIKey:  os.Getenv("GEMINI_API_KEY"),
+		GeminiModel:   os.Getenv("GEMINI_MODEL"),
 	}
 
 	var missing []string

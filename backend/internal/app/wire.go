@@ -123,11 +123,17 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 	// Knowledge backend selected at wiring time. The adapters are constructed
 	// unconditionally and injected into the selector; a missing Gemini key /
 	// NotebookLM endpoint leaves those adapters unprovisioned, and New falls back
-	// to the deterministic fake. Defaults pick NotebookLM per the contract.
+	// to the deterministic fake. The ACTIVE backend is read from the stored
+	// (parent-set) settings — changing it takes effect on restart — defaulting to
+	// NotebookLM when settings are unset.
+	backend := contracts.KnowledgeBackendNotebooklm
+	if set, err := db.GetSettings(context.Background()); err == nil && set.KnowledgeBackend != "" {
+		backend = contracts.KnowledgeBackend(set.KnowledgeBackend)
+	}
 	knowledgeSrc := knowledge.New(
-		contracts.Settings{KnowledgeBackend: contracts.KnowledgeBackendNotebooklm},
+		contracts.Settings{KnowledgeBackend: backend},
 		knowledge.Config{
-			Gemini:     gemini.New(gemini.Config{APIKey: cfg.GeminiAPIKey}),
+			Gemini:     gemini.New(gemini.Config{APIKey: cfg.GeminiAPIKey, Model: cfg.GeminiModel}),
 			NotebookLM: notebooklm.New(notebooklm.Config{}),
 			Fake:       fake.New(0),
 		},
