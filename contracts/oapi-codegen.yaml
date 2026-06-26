@@ -1,0 +1,38 @@
+# StudyRover — oapi-codegen configuration (F06)
+#
+# Generates Go types (`models`) and a chi server interface (`chi-server`) from
+# the assembled OpenAPI root (contracts/openapi.yaml, owned by W01) into the
+# backend's generated-contracts package.
+#
+# Invoked by `make gen-go`, which runs `go generate ./...`; W01 owns the
+# `//go:generate` directive that points oapi-codegen at this config. Run from
+# the backend module directory, hence the ../contracts relative paths.
+#
+# Output: backend/internal/contracts (package `contracts`). Handlers (A-tasks)
+# import these generated types and implement the generated ServerInterface;
+# they never redefine a contract shape.
+
+# Go package name for the generated file.
+package: contracts
+
+# Single combined output file inside the W01-registered output dir.
+output: ../backend/internal/contracts/contracts.gen.go
+
+# Reproducible output across runs (sorted maps, etc.).
+output-options:
+  skip-fmt: false
+  skip-prune: false
+
+generate:
+  # Go structs for every schema under #/components/schemas (camelCase JSON tags).
+  models: true
+  # chi-compatible ServerInterface + request/response wiring.
+  chi-server: true
+  # Strict, type-safe handler signatures over the chi server.
+  strict-server: true
+  # Embed the spec so the running server can self-describe if needed.
+  embedded-spec: true
+
+# Keep operationIds verbatim so generated method names match the contract.
+compatibility:
+  always-prefix-enum-values: false

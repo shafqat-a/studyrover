@@ -1,0 +1,79 @@
+# StudyRover — SyllabusSuggestion schemas (2-C04)
+#
+# Owns the AI-derived syllabus suggestion shapes under #/components/schemas.
+# The root document (contracts/openapi.yaml, owned by W01) $refs these into its
+# components block; codegen emits Go types (oapi-codegen -> backend/internal/
+# contracts) and TS types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+#
+# Flow: POST /subjects/{id}/syllabus/suggest -> Job (async). When the Job
+# completes, Job.result holds a TopicSuggestion[] (a recursive tree). The parent
+# reviews/edits it, then POST /subjects/{id}/syllabus/apply with TopicSuggestion[]
+# materializes real Topics.
+
+components:
+  schemas:
+    TopicSuggestion:
+      type: object
+      description: >
+        A single suggested syllabus topic derived by the knowledge backend from
+        ingested sources. Topics form a recursive tree via `children`.
+      required:
+        - name
+        - order
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable topic name.
+        sourceId:
+          type: string
+          description: >
+            Optional id of the ingested Source this topic was derived from
+            (UUID/cuid). Absent when the suggestion is not anchored to a source.
+        pageStart:
+          type: integer
+          minimum: 1
+          description: Optional 1-based start page in the source where this topic begins.
+        pageEnd:
+          type: integer
+          minimum: 1
+          description: Optional 1-based end page in the source where this topic ends.
+        order:
+          type: integer
+          minimum: 0
+          description: Zero-based ordering of this topic among its siblings.
+        children:
+          type: array
+          description: Optional nested sub-topics (recursive).
+          items:
+            $ref: '#/components/schemas/TopicSuggestion'
+
+    SuggestSyllabusResponse:
+      type: object
+      description: >
+        Response to POST /subjects/{id}/syllabus/suggest. Syllabus derivation is
+        async; poll GET /jobs/{jobId} for status. On completion Job.result holds
+        a TopicSuggestion[].
+      required:
+        - jobId
+      properties:
+        jobId:
+          type: string
+          description: Id of the async Job (type=syllabus) driving the derivation.
+
+    ApplySyllabusRequest:
+      type: object
+      description: >
+        Request body for POST /subjects/{id}/syllabus/apply. Materializes the
+        (possibly parent-edited) suggested topic tree into real Topics.
+      required:
+        - topics
+      properties:
+        topics:
+          type: array
+          description: The suggested topic tree to apply, in display order.
+          items:
+            $ref: '#/components/schemas/TopicSuggestion'

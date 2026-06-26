@@ -1,0 +1,105 @@
+# StudyRover — Dashboard schema (2-C08)
+#
+# Owns the parent Dashboard entity shapes under #/components/schemas. The root
+# document (contracts/openapi.yaml, owned by W01) $refs these into its components
+# block; codegen emits Go types (oapi-codegen -> backend/internal/contracts) and
+# TS types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. ExamAttempt is reused from attempt.yaml and
+# Guidance from guidance.yaml via relative $ref; never redefined here.
+#
+# NOTE: This is the parent-facing study dashboard ONLY (spec — Study Platform,
+# Guardian OFF). It intentionally carries NO internet-time, minutes, or reward
+# fields.
+
+components:
+  schemas:
+    TopicMastery:
+      type: object
+      description: >-
+        Current mastery for a single topic, derived from the student's scoring
+        history (0–100). Used to render the dashboard mastery breakdown.
+      additionalProperties: false
+      required:
+        - topicId
+        - mastery
+      properties:
+        topicId:
+          type: string
+          description: The topic this mastery value belongs to.
+        mastery:
+          type: integer
+          description: Current mastery percentage for the topic (0–100).
+          minimum: 0
+          maximum: 100
+
+    MasteryTimelinePoint:
+      type: object
+      description: >-
+        A single dated mastery sample for a topic, used to plot how a topic's
+        mastery has changed over time.
+      additionalProperties: false
+      required:
+        - date
+        - topicId
+        - mastery
+      properties:
+        date:
+          type: string
+          format: date
+          description: The calendar date (RFC 3339 full-date) of this sample.
+        topicId:
+          type: string
+          description: The topic this sample belongs to.
+        mastery:
+          type: integer
+          description: Mastery percentage for the topic on this date (0–100).
+          minimum: 0
+          maximum: 100
+
+    Dashboard:
+      type: object
+      description: >-
+        Aggregated parent-facing view of a student's progress: current per-topic
+        mastery, mastery over time, recent exam history, an overall average
+        score, the current study streak, and any parent guidance to the tutor.
+        Contains no internet-time / reward fields (Guardian is off).
+      additionalProperties: false
+      required:
+        - mastery
+        - masteryTimeline
+        - history
+        - avgScore
+        - streak
+        - guidance
+      properties:
+        mastery:
+          type: array
+          description: Current mastery per topic.
+          items:
+            $ref: './dashboard.yaml#/components/schemas/TopicMastery'
+        masteryTimeline:
+          type: array
+          description: Dated mastery samples per topic, for trend visualisation.
+          items:
+            $ref: './dashboard.yaml#/components/schemas/MasteryTimelinePoint'
+        history:
+          type: array
+          description: The student's recent exam attempts, most recent first.
+          items:
+            $ref: './attempt.yaml#/components/schemas/ExamAttempt'
+        avgScore:
+          type: integer
+          description: Overall average score percentage across attempts (0–100).
+          minimum: 0
+          maximum: 100
+        streak:
+          type: integer
+          description: Current consecutive-day study streak, in days.
+          minimum: 0
+        guidance:
+          type: array
+          description: Parent guidance entries currently steering the tutor.
+          items:
+            $ref: './guidance.yaml#/components/schemas/Guidance'

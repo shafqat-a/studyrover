@@ -1,0 +1,82 @@
+# StudyRover — Settings schema (C09)
+#
+# The application settings singleton: the single source of truth for the spec
+# defaults (spec §6/§10). Go's `L10 ResolveSettings` re-applies these same
+# values at runtime as the fallback for any missing field.
+#
+# Cross-language rule: shapes are defined here once; oapi-codegen (Go) and
+# openapi-typescript (TS) both consume the generated output. JSON is camelCase;
+# IDs are strings.
+#
+# Reward rate + daily cap are Guardian-side fields: they are stored now but go
+# unused until Phase 3 (the Guardian consumes them). Phase 1 keeps them on the
+# Settings record so the contract is stable across phases.
+
+components:
+  schemas:
+    KnowledgeBackend:
+      type: string
+      description: >-
+        The swappable knowledge backend used by the AI tutor / ingestion
+        (Phase 2). NotebookLM is the default; Gemini is the direct alternative.
+      enum:
+        - notebooklm
+        - gemini
+        - ollama
+
+    Settings:
+      type: object
+      description: >-
+        The application settings singleton. Holds the spec defaults that gate
+        exam creation plus the Guardian-side reward knobs (stored now, used in
+        Phase 3). L10 ResolveSettings fills any missing field from these same
+        defaults at runtime.
+      additionalProperties: false
+      required:
+        - id
+        - rewardRateMinPerQ
+        - dailyCapHours
+        - defaultExamSize
+        - defaultPassBar
+        - defaultCooldownMin
+        - knowledgeBackend
+        - difficultyRamp
+      properties:
+        id:
+          type: string
+          description: Identifier of the settings singleton row.
+        rewardRateMinPerQ:
+          type: integer
+          description: >-
+            Guardian-side: minutes of earned time per correct question.
+            Stored now, unused until Phase 3.
+          default: 3
+        dailyCapHours:
+          type: integer
+          description: >-
+            Guardian-side: maximum hours of earned time per day.
+            Stored now, unused until Phase 3.
+          default: 3
+        defaultExamSize:
+          type: integer
+          description: Default number of questions for a new exam definition.
+          default: 20
+        defaultPassBar:
+          type: integer
+          description: Default pass threshold (percent) for a new exam definition.
+          default: 70
+        defaultCooldownMin:
+          type: integer
+          description: Default cooldown (minutes) after a failed attempt.
+          default: 10
+        knowledgeBackend:
+          allOf:
+            - $ref: '#/components/schemas/KnowledgeBackend'
+          description: The selected knowledge backend.
+          default: notebooklm
+        difficultyRamp:
+          type: boolean
+          description: >-
+            Whether exam assembly ramps difficulty (easy -> hard) across the
+            delivered questions.
+          default: false

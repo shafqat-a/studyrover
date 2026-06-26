@@ -1,0 +1,120 @@
+# StudyRover — Parent / auth schemas (C08)
+#
+# Owns the auth + parent identity shapes under #/components/schemas. The root
+# document (contracts/openapi.yaml, owned by W01) references these via $ref.
+#
+# Cross-language rule: JSON is camelCase; IDs are strings; timestamps are RFC
+# 3339 strings. WebAuthn ceremony payloads (registration/authentication options
+# and responses) are passed through opaque — typed as free-form `object` here
+# and handled by go-webauthn (server) / @simplewebauthn/browser (client).
+
+components:
+  schemas:
+    Parent:
+      type: object
+      description: A parent/guardian account, authenticated via WebAuthn (FIDO2).
+      additionalProperties: false
+      required:
+        - id
+        - displayName
+        - email
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique parent id (UUID/cuid).
+        displayName:
+          type: string
+          description: Human-readable name shown in the UI.
+        email:
+          type: string
+          format: email
+          description: Parent email address (also the WebAuthn user name).
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    Credential:
+      type: object
+      description: >-
+        A registered WebAuthn (FIDO2) credential belonging to a parent.
+        Stores the public key + signature counter used to verify assertions.
+      additionalProperties: false
+      required:
+        - id
+        - parentId
+        - credentialId
+        - publicKey
+        - counter
+        - isBackup
+      properties:
+        id:
+          type: string
+          description: Unique credential record id (UUID/cuid).
+        parentId:
+          type: string
+          description: Id of the owning Parent.
+        credentialId:
+          type: string
+          description: Base64url-encoded WebAuthn credential id.
+        publicKey:
+          type: string
+          description: Base64url-encoded COSE public key.
+        counter:
+          type: integer
+          format: int64
+          description: Signature counter, used to detect cloned authenticators.
+        isBackup:
+          type: boolean
+          default: false
+          description: Whether the authenticator is backup-eligible / a backup device.
+
+    RegisterBegin:
+      type: object
+      description: >-
+        Body that starts the parent WebAuthn registration ceremony. The server
+        replies with opaque registration options (handled by go-webauthn).
+      additionalProperties: false
+      required:
+        - displayName
+        - email
+      properties:
+        displayName:
+          type: string
+          description: Human-readable name for the new parent account.
+        email:
+          type: string
+          format: email
+          description: Parent email address (the WebAuthn user name).
+
+    Session:
+      type: object
+      description: >-
+        The active session identity returned after a successful auth ceremony.
+        Mirrors what the server stores behind the sr_session cookie.
+      additionalProperties: false
+      required:
+        - role
+        - id
+      properties:
+        role:
+          type: string
+          description: Whether the session belongs to a parent or a student.
+          enum:
+            - parent
+            - student
+        id:
+          type: string
+          description: Id of the authenticated parent or student.
+
+    # WebAuthn ceremony payloads are opaque JSON passed straight through to
+    # go-webauthn / @simplewebauthn. Typed as free-form objects so codegen does
+    # not impose a shape on the library-managed structures.
+    WebAuthnCeremony:
+      type: object
+      description: >-
+        Free-form WebAuthn ceremony payload (registration/authentication options
+        or the authenticator's response). Opaque — the structure is owned by the
+        WebAuthn libraries, not this contract.
+      additionalProperties: true

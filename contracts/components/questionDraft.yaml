@@ -1,0 +1,107 @@
+# StudyRover — QuestionDraft + GenRequest schemas (2-C05)
+#
+# Owns the AI question-generation draft shapes under #/components/schemas:
+# QuestionDraft, QuestionDraftOption, and GenRequest. W01 assembles this
+# fragment into the OpenAPI root (contracts/openapi.yaml) and runs codegen,
+# emitting Go types (backend/internal/contracts) and TS types
+# (frontend/src/api/schema.d.ts).
+#
+# Cross-language rule: each shape is defined ONCE here. Field names are
+# camelCase in JSON; IDs are strings; timestamps are RFC 3339 strings.
+#
+# Design note: a QuestionDraft is the AI-generated, pre-approval form of a
+# Question (C05). It deliberately mirrors CreateQuestion's authoring shape —
+# options carry plain text and the correct one is identified by
+# correctOptionIndex — and reuses the Difficulty enum from question.yaml. On
+# approval the server assigns Option ids and resolves correctOptionId, turning
+# the draft into a real Question. Drafts require parent approval before
+# entering the live question bank (§6 anti-gaming).
+
+components:
+  schemas:
+    QuestionDraftOption:
+      type: object
+      description: A candidate answer option on a generated draft. Plain text only; no id is assigned until the draft is approved into a Question.
+      additionalProperties: false
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: The option's display text.
+
+    QuestionDraft:
+      type: object
+      description: >-
+        An AI-generated multiple-choice question awaiting parent review. Mirrors
+        the CreateQuestion authoring shape (options as plain texts plus a
+        correctOptionIndex) so that approving a draft maps cleanly onto a real
+        Question (C05). A draft has status pending until a parent approves
+        (creates a Question) or rejects it.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - text
+        - options
+        - correctOptionIndex
+        - difficulty
+        - status
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier for this draft.
+        subjectId:
+          type: string
+          description: Subject this draft belongs to.
+        topicId:
+          type: string
+          description: Optional topic this draft is scoped to.
+        text:
+          type: string
+          minLength: 1
+          description: The question prompt.
+        options:
+          type: array
+          description: The candidate answer options. At least four are required.
+          minItems: 4
+          items:
+            $ref: '#/components/schemas/QuestionDraftOption'
+        correctOptionIndex:
+          type: integer
+          description: Zero-based index into options identifying the correct answer.
+          minimum: 0
+        difficulty:
+          $ref: './question.yaml#/components/schemas/Difficulty'
+          default: medium
+        status:
+          type: string
+          description: Review status of the draft.
+          enum:
+            - pending
+            - approved
+            - rejected
+          default: pending
+
+    GenRequest:
+      type: object
+      description: >-
+        Request to generate question drafts for a subject (optionally scoped to
+        a topic) via the knowledge backend. Generation is async; the API returns
+        a Job whose result is the produced QuestionDraft list.
+      additionalProperties: false
+      required:
+        - subjectId
+        - count
+      properties:
+        subjectId:
+          type: string
+          description: Subject to generate questions for.
+        topicId:
+          type: string
+          description: Optional topic to scope generation to.
+        count:
+          type: integer
+          description: Number of question drafts to generate.
+          minimum: 1

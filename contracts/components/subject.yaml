@@ -1,0 +1,89 @@
+# StudyRover — Subject schemas (C01)
+#
+# Owns the Subject entity shapes under #/components/schemas. The root document
+# (contracts/openapi.yaml, owned by W01) $refs these into its components block;
+# codegen emits Go types (oapi-codegen -> backend/internal/contracts) and TS
+# types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+
+components:
+  schemas:
+    Subject:
+      type: object
+      description: A unit of study a parent configures (e.g. "Algebra I").
+      required:
+        - id
+        - name
+        - archived
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable subject name.
+        color:
+          type: string
+          description: Optional display color (e.g. hex token) for the subject.
+        icon:
+          type: string
+          description: Optional icon identifier for the subject.
+        description:
+          type: string
+          description: Optional longer description of the subject.
+        archived:
+          type: boolean
+          default: false
+          description: Whether the subject is archived (hidden from active lists).
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    CreateSubject:
+      type: object
+      description: Request body to create a Subject; server assigns id/createdAt and defaults archived=false.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable subject name.
+        color:
+          type: string
+          description: Optional display color (e.g. hex token) for the subject.
+        icon:
+          type: string
+          description: Optional icon identifier for the subject.
+        description:
+          type: string
+          description: Optional longer description of the subject.
+
+    PageOfSubject:
+      type: object
+      description: A single page of Subject results (Page<Subject> per the common pagination pattern).
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          description: The Subjects in this page.
+          items:
+            $ref: '#/components/schemas/Subject'
+        total:
+          type: integer
+          description: Total number of Subjects matching the query across all pages.
+        page:
+          type: integer
+          description: 1-based page number of this result.
+        pageSize:
+          type: integer
+          description: Maximum number of items per page.

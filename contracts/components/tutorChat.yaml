@@ -1,0 +1,130 @@
+# StudyRover — TutorChat schemas (2-C01)
+#
+# Owns the AI tutor chat entity shapes under #/components/schemas. The root
+# document (contracts/openapi.yaml, owned by W01) $refs these into its
+# components block; codegen emits Go types (oapi-codegen -> backend/internal/
+# contracts) and TS types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase, IDs are strings (UUID/cuid),
+# timestamps are RFC 3339 strings. Defined once here; never redefined elsewhere.
+#
+# Streaming: POST /tutor/conversations/{id}/messages returns Server-Sent
+# Events whose `data:` payload is a JSON-encoded AnswerChunk (text/event-stream).
+
+components:
+  schemas:
+    Conversation:
+      type: object
+      description: A tutor chat session between a student and the AI tutor, scoped to a subject.
+      required:
+        - id
+        - subjectId
+        - studentId
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        subjectId:
+          type: string
+          description: Subject this conversation is grounded in.
+        studentId:
+          type: string
+          description: Student who owns this conversation.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    Message:
+      type: object
+      description: A single turn in a tutor Conversation, authored by the student or the AI tutor.
+      required:
+        - id
+        - conversationId
+        - role
+        - text
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier (UUID/cuid).
+        conversationId:
+          type: string
+          description: Conversation this message belongs to.
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+          description: Who authored the message — the student (user) or the AI tutor (assistant).
+        text:
+          type: string
+          description: Full message text.
+        citations:
+          type: array
+          description: Source citations backing an assistant message (empty/absent for user messages).
+          items:
+            $ref: '#/components/schemas/Citation'
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    Citation:
+      type: object
+      description: A reference to a knowledge source backing an assistant answer.
+      required:
+        - sourceId
+        - label
+      properties:
+        sourceId:
+          type: string
+          description: Identifier of the knowledge source being cited.
+        label:
+          type: string
+          description: Human-readable label for the cited source (e.g. document title).
+        locator:
+          type: string
+          description: Optional location within the source (e.g. page number, section, or anchor).
+
+    AskRequest:
+      type: object
+      description: Request body to post a student message and stream the AI tutor's grounded answer.
+      required:
+        - conversationId
+        - text
+      properties:
+        conversationId:
+          type: string
+          description: Conversation the message is posted to.
+        text:
+          type: string
+          minLength: 1
+          description: The student's question or message.
+        topicId:
+          type: string
+          description: Optional topic to focus/ground the answer on.
+
+    AnswerChunk:
+      type: object
+      description: |
+        One Server-Sent Event chunk of a streamed AI tutor answer. Emitted as the
+        JSON `data:` payload of a text/event-stream response. Clients concatenate
+        `delta` values; `citations` may arrive on any chunk (typically the final
+        one); `done=true` marks the end of the stream.
+      required:
+        - delta
+        - done
+      properties:
+        delta:
+          type: string
+          description: Incremental text appended to the assistant's answer so far.
+        citations:
+          type: array
+          description: Source citations for the answer, typically included on the final chunk.
+          items:
+            $ref: '#/components/schemas/Citation'
+        done:
+          type: boolean
+          description: True on the terminal chunk, signalling the answer is complete.

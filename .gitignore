@@ -1,0 +1,49 @@
+# ---- Go (backend) ----
+/backend/bin/
+/backend/server
+/backend/cmd/server/server
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Embedded SPA build output (generated into the backend at build time)
+/backend/internal/http/dist/
+/backend/internal/http/static/dist/
+
+# ---- Node / Frontend (build-time only) ----
+node_modules/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/coverage/
+/frontend/playwright-report/
+/frontend/test-results/
+.pnpm-store/
+
+# ---- Generated code (codegen output) ----
+# Tracked or regenerated depending on workflow; ignore local build artifacts.
+/backend/internal/contracts/*.gen.go.tmp
+/frontend/src/api/*.tmp
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Editor / OS ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ---- Logs / tmp ----
+*.log
+/tmp/
+
+# ---- Deploy runtime secrets (generated) ----
+/deploy/studyrover.env

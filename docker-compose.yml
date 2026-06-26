@@ -1,0 +1,32 @@
+# StudyRover — local dev/test infrastructure (F03).
+#
+# Brings up a PostgreSQL instance matching the default DATABASE_URL used by the
+# Makefile and migrate/seed targets:
+#   postgres://studyrover:studyrover@localhost:5432/studyrover?sslmode=disable
+#
+# Usage:
+#   docker compose up -d db        # start Postgres in the background
+#   make migrate                   # apply migrations against it
+#   docker compose down            # stop (add -v to wipe the volume)
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: studyrover-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studyrover
+      POSTGRES_PASSWORD: studyrover
+      POSTGRES_DB: studyrover
+    ports:
+      - "5432:5432"
+    volumes:
+      - studyrover-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studyrover -d studyrover"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  studyrover-pgdata:

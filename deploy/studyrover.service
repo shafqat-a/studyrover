@@ -1,0 +1,21 @@
+[Unit]
+Description=StudyRover backend (Go API + embedded SPA)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=shafqat
+WorkingDirectory=/home/shafqat/git/studyrover
+EnvironmentFile=/home/shafqat/git/studyrover/deploy/studyrover.env
+ExecStart=/home/shafqat/git/studyrover/backend/bin/studyrover
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

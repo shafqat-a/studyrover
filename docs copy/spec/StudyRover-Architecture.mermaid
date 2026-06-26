@@ -1,0 +1,54 @@
+flowchart LR
+    parent(["Parent"])
+    student(["Student<br/>(daughter)"])
+
+    subgraph SP["STUDY PLATFORM — standalone product (works with or without the Guardian)"]
+        direction TB
+        A["A · Study Administration<br/>profile · content &amp; syllabus · exam scopes · settings"]
+        B["B · AI Tutor<br/>study guides · per-subject instructions"]
+        C["C · Exam System<br/>gate quizzes · exams · grading"]
+    end
+
+    KB[("Knowledge Backend<br/>NotebookLM / Gemini<br/>sources · OCR · grounded answers")]
+
+    subgraph GUARD["GUARDIAN — optional add-on"]
+        direction TB
+        RE{{"Reward Engine<br/>score → minutes"}}
+        subgraph NW["Network Wall"]
+            direction TB
+            DT["Device Targeting<br/>MAC / IP / hostname"]
+            GATE["Captive-Portal Gate<br/>+ session timers"]
+            MT["MikroTik Integration"]
+        end
+    end
+
+    router["MikroTik Router"]
+    dev["Daughter's device<br/>GATED"]
+    house["Other household devices<br/>PASS FREELY"]
+
+    parent --> A
+    parent -. "guidance" .-> B
+    student --> B
+    A <--> B
+    A <--> C
+    A -. "link / upload sources" .-> KB
+    KB -. "grounded answers, study guides" .-> B
+    KB -. "generated quizzes" .-> C
+    student -- "connects, hits gate" --> GATE
+    GATE -. "redirect to quiz" .-> C
+    C ==>|"scores — the only contract"| RE
+    RE -- "grant device, N min" --> MT
+    DT --> GATE
+    MT --> router
+    router -- "open for N min" --> dev
+    router -. "allow-by-default" .-> house
+
+    classDef platform fill:#e8f0fe,stroke:#4285f4,color:#1a1a1a;
+    classDef wall fill:#fde8e8,stroke:#ea4335,color:#1a1a1a;
+    classDef seam fill:#fef7e0,stroke:#f9ab00,color:#1a1a1a;
+    classDef external fill:#e6f4ea,stroke:#34a853,color:#1a1a1a;
+    class A,B,C platform;
+    class DT,GATE,MT wall;
+    class RE seam;
+    class KB external;
+    style GUARD stroke-dasharray: 6 4,stroke:#ea4335,stroke-width:2px;

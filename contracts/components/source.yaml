@@ -1,0 +1,122 @@
+# StudyRover — Source schema fragment (C02)
+#
+# Authoritative definition of the Source entity and its enums. Declares schemas
+# under #/components/schemas; the root document (contracts/openapi.yaml, owned
+# by W01) assembles these via $ref. Codegen emits Go structs (oapi-codegen ->
+# backend/internal/contracts) and TS types (openapi-typescript -> frontend/src/api).
+#
+# Cross-language rule: JSON is camelCase; IDs are strings (UUID/cuid);
+# timestamps are RFC 3339 strings.
+#
+# Phase 1 manual: text/notebooklm/file are all accepted; a file source stores
+# only fileRef (ingestion/OCR is Phase 2). status defaults to `ready`.
+
+components:
+  schemas:
+    SourceType:
+      type: string
+      description: The kind of study source.
+      enum:
+        - file
+        - notebooklm
+        - text
+
+    SourceStatus:
+      type: string
+      description: >-
+        Processing state of a source. Phase 1 sources are created `ready`;
+        `processing` is reserved for Phase 2 async ingestion/OCR.
+      enum:
+        - processing
+        - ready
+
+    Source:
+      type: object
+      description: A study source attached to a subject.
+      additionalProperties: false
+      required:
+        - id
+        - subjectId
+        - type
+        - title
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique source id (UUID/cuid).
+        subjectId:
+          type: string
+          description: Id of the subject this source belongs to.
+        type:
+          $ref: '#/components/schemas/SourceType'
+        title:
+          type: string
+          description: Human-readable title for the source.
+        status:
+          $ref: '#/components/schemas/SourceStatus'
+          default: ready
+        fileRef:
+          type: string
+          description: Storage reference for a `file` source (set only for files).
+        url:
+          type: string
+          description: URL for a `notebooklm` source.
+        text:
+          type: string
+          description: Inline content for a `text` source.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+
+    CreateSource:
+      type: object
+      description: Payload to create a new source. Server assigns id/status/createdAt.
+      additionalProperties: false
+      required:
+        - subjectId
+        - type
+        - title
+      properties:
+        subjectId:
+          type: string
+          description: Id of the subject this source belongs to.
+        type:
+          $ref: '#/components/schemas/SourceType'
+        title:
+          type: string
+          description: Human-readable title for the source.
+        fileRef:
+          type: string
+          description: Storage reference for a `file` source.
+        url:
+          type: string
+          description: URL for a `notebooklm` source.
+        text:
+          type: string
+          description: Inline content for a `text` source.
+
+    PageOfSource:
+      type: object
+      description: A page of sources (Page<Source>).
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+        total:
+          type: integer
+          description: Total number of sources matching the query.
+        page:
+          type: integer
+          description: 1-based page number.
+        pageSize:
+          type: integer
+          description: Number of items per page.

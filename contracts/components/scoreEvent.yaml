@@ -1,0 +1,76 @@
+# StudyRover — ScoreEvent schema (C10) — the cross-boundary seam.
+#
+# This is the ONLY interface the future Guardian (Phase 3) consumes. Phase 1
+# produces a ScoreEvent on every graded exam submission (L11 BuildScoreEvent,
+# emitted by A15 POST /attempts/{id}/submit) and then STOPS — there is no
+# Guardian, no reward, no network gating in Phase 1 (spec §4, §14).
+#
+# Deliberately contains NO minutes / reward / cooldown / time fields. Translating
+# a score into earned time, daily caps, or wall sessions is Guardian-only logic
+# (Phase 3). Keeping reward semantics out of this seam is what lets the Guardian
+# be an optional, fully decoupled add-on that subscribes to score outcomes alone.
+#
+# Cross-language rule: defined ONCE here; oapi-codegen emits the Go struct and
+# openapi-typescript emits the TS type. JSON is camelCase; IDs are strings;
+# `timestamp` is an RFC 3339 string. `perTopic` reuses PerTopicScore from
+# attempt.yaml (C06) via $ref — it is NOT redefined here.
+
+components:
+  schemas:
+    ScoreEvent:
+      type: object
+      description: >-
+        Immutable record of a single graded exam outcome. Emitted by Phase 1 on
+        exam submission and consumed only by the Phase 3 Guardian. Carries the
+        score and per-topic breakdown but no reward/minutes/time fields, which
+        are Guardian-only.
+      additionalProperties: false
+      required:
+        - attemptId
+        - studentId
+        - subjectId
+        - examDefinitionId
+        - scopeTopicIds
+        - size
+        - scorePct
+        - passed
+        - perTopic
+        - timestamp
+      properties:
+        attemptId:
+          type: string
+          description: ID of the ExamAttempt (C06) this score came from.
+        studentId:
+          type: string
+          description: ID of the Student (C07) who took the exam.
+        subjectId:
+          type: string
+          description: ID of the Subject (C01) the exam belongs to.
+        examDefinitionId:
+          type: string
+          description: ID of the ExamDefinition (C04) that produced the attempt.
+        scopeTopicIds:
+          type: array
+          description: >-
+            Topic IDs the exam was scoped to. Empty array means the whole
+            subject (mirrors ExamDefinition.scopeTopicIds).
+          items:
+            type: string
+        size:
+          type: integer
+          description: Number of questions in the attempt.
+        scorePct:
+          type: integer
+          description: Final score as a whole percentage (0–100).
+        passed:
+          type: boolean
+          description: Whether the attempt met the exam's pass bar.
+        perTopic:
+          type: array
+          description: Per-topic correct/total breakdown for the attempt.
+          items:
+            $ref: './attempt.yaml#/components/schemas/PerTopicScore'
+        timestamp:
+          type: string
+          format: date-time
+          description: RFC 3339 timestamp of when the score was recorded.
