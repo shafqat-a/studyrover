@@ -35,6 +35,7 @@ import { useToast } from '../app/providers';
 type Session = components['schemas']['Session'];
 type RegisterBegin = components['schemas']['RegisterBegin'];
 type StudentSignIn = components['schemas']['StudentSignIn'];
+type PasswordSignIn = components['schemas']['PasswordSignIn'];
 type WebAuthnCeremony = components['schemas']['WebAuthnCeremony'];
 type AuthResult = components['schemas']['AuthResult'];
 type Problem = components['schemas']['Problem'];
@@ -173,6 +174,36 @@ export function useLoginParent(): UseMutationResult<Session, Error, string> {
         throw new Error('Sign-in did not complete');
       }
       return finished.session;
+    },
+    onSuccess: (session) => {
+      queryClient.setQueryData(authKeys.session(), session);
+    },
+    onError: (error) => {
+      toast(error.message, { variant: 'danger' });
+    },
+  });
+}
+
+/**
+ * Log a parent in with email + password — the fallback for devices where
+ * passkeys are unavailable. Single round-trip to POST /auth/password; the
+ * server accepts the account password or, when none is set, the built-in
+ * default. Sets the session cookie + cache like the passkey flow.
+ */
+export function useLoginParentPassword(): UseMutationResult<
+  Session,
+  Error,
+  PasswordSignIn
+> {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (body: PasswordSignIn) => {
+      const { data, error } = await api.POST('/auth/password', { body });
+      if (error) {
+        throw new Error(problemMessage(error, 'Sign-in failed'));
+      }
+      return data;
     },
     onSuccess: (session) => {
       queryClient.setQueryData(authKeys.session(), session);

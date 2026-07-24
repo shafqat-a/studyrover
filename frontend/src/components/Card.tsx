@@ -58,23 +58,23 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 const paddingClasses: Record<CardPadding, string> = {
   none: 'p-0',
   sm: 'p-3',
-  md: 'p-5',
-  lg: 'p-7',
+  md: 'p-4',
+  lg: 'p-6',
 };
 
 const dividerPadding: Record<CardPadding, string> = {
   none: 'px-0 py-0',
   sm: 'px-3 py-2',
-  md: 'px-5 py-3',
-  lg: 'px-7 py-4',
+  md: 'px-4 py-3',
+  lg: 'px-6 py-4',
 };
 
 const base =
-  'block overflow-hidden bg-surface border border-border rounded-card ' +
-  'shadow-card text-left text-foreground';
+  'block overflow-hidden bg-surface border border-border/70 rounded-card ' +
+  'shadow-xs text-left text-foreground';
 
 const interactive =
-  'transition-colors duration-150 hover:bg-surface-muted ' +
+  'transition-colors duration-150 hover:bg-surface-muted/60 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
   'focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'cursor-pointer';
@@ -98,7 +98,7 @@ export const Card = forwardRef<HTMLElement, CardProps>(function Card(props, ref)
       {header != null && (
         <div
           className={cx(
-            'border-b border-border font-display font-bold',
+            'border-b border-border font-display text-sm font-semibold',
             dividerPadding[padding],
           )}
         >

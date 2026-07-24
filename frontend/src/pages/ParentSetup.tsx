@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Logo } from '../components/Logo';
 import { TextInput } from '../components/TextInput';
 import { useToast } from '../app/providers';
 import { useRegisterParent } from '../hooks/useAuth';
@@ -108,12 +110,10 @@ export default function ParentSetup() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center py-12">
-      <header className="mb-8 text-center">
-        <p className="text-4xl" aria-hidden="true">
-          🚀
-        </p>
-        <h1 className="mt-3 font-display text-display text-foreground">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center py-12 bg-[radial-gradient(60rem_60rem_at_50%_-10%,hsl(var(--sr-primary)/0.08),transparent)]">
+      <header className="mb-8 flex flex-col items-center text-center">
+        <Logo size={40} />
+        <h1 className="mt-6 font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
           Welcome to StudyRover
         </h1>
         <p className="mt-2 text-sm text-foreground-muted">
@@ -127,7 +127,7 @@ export default function ParentSetup() {
         <Card padding="lg" aria-labelledby="account-heading">
           <h2
             id="account-heading"
-            className="font-display text-display-sm text-foreground"
+            className="font-display text-base font-semibold text-foreground"
           >
             Create your account
           </h2>
@@ -171,6 +171,7 @@ export default function ParentSetup() {
               fullWidth
               loading={registerParent.isPending}
               loadingLabel="Creating passkey…"
+              leadingIcon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
             >
               Create passkey
             </Button>
@@ -180,7 +181,7 @@ export default function ParentSetup() {
         <Card padding="lg" aria-labelledby="backup-heading">
           <h2
             id="backup-heading"
-            className="font-display text-display-sm text-foreground"
+            className="font-display text-base font-semibold text-foreground"
           >
             Add a backup passkey
           </h2>
@@ -189,10 +190,11 @@ export default function ParentSetup() {
             role="note"
             className="mt-4 rounded-card border border-warning/40 bg-warning-soft p-4"
           >
-            <p className="text-sm font-semibold text-warning-foreground">
+            <p className="flex items-center gap-2 text-sm font-semibold text-warning">
+              <ShieldAlert className="h-4 w-4" aria-hidden="true" />
               Strongly recommended
             </p>
-            <p className="mt-1 text-sm text-warning-foreground">
+            <p className="mt-1 text-sm text-warning">
               If you only have one passkey and lose that device, you could be
               locked out of the family account permanently. Add a second
               authenticator now — a phone, another laptop, or a hardware
@@ -206,6 +208,7 @@ export default function ParentSetup() {
               fullWidth
               loading={registerParent.isPending}
               loadingLabel="Adding backup…"
+              leadingIcon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
               onClick={() => void handleAddBackup()}
             >
               Add backup passkey

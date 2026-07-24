@@ -289,12 +289,12 @@ export const GuidanceEditor = forwardRef<HTMLDivElement, GuidanceEditorProps>(
               type="submit"
               disabled={!canSubmit}
               className={cx(
-                'inline-flex h-11 items-center justify-center gap-2 rounded-pill border border-transparent px-5',
-                'bg-primary font-semibold text-primary-foreground shadow-card',
-                'transition-colors duration-150 hover:bg-primary/90 active:bg-primary/80',
+                'inline-flex h-10 items-center justify-center gap-2 rounded-md border border-transparent px-4',
+                'bg-primary font-medium text-primary-foreground shadow-xs',
+                'transition-colors duration-150 hover:bg-primary/90 active:bg-primary/95',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                'disabled:cursor-not-allowed disabled:opacity-60',
+                'disabled:cursor-not-allowed disabled:opacity-55',
               )}
             >
               Add guidance
@@ -329,10 +329,10 @@ export const GuidanceEditor = forwardRef<HTMLDivElement, GuidanceEditorProps>(
                     <div className="min-w-0 flex-1">
                       <span
                         className={cx(
-                          'mb-1 inline-flex items-center rounded-pill px-2 py-0.5 text-xs font-semibold',
+                          'mb-1 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
                           item.scope === 'global'
-                            ? 'bg-secondary/15 text-secondary-foreground'
-                            : 'bg-primary/15 text-primary',
+                            ? 'border-transparent bg-surface-muted text-foreground-muted'
+                            : 'border-transparent bg-secondary-soft text-secondary',
                         )}
                       >
                         {scopeLabel}

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { RotateCcw, Sparkles, Wand2 } from 'lucide-react';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { JobStatus } from '../components/JobStatus';
 import { NumberStepper } from '../components/NumberStepper';
+import { PageHeader } from '../components/PageHeader';
 import { QuestionDraftCard } from '../components/QuestionDraftCard';
 import { Select } from '../components/Select';
 import type { components } from '../api/schema';
@@ -96,23 +98,17 @@ export default function SubjectQuestionGen() {
   }
 
   const drafts: QuestionDraft[] = draftsQuery.data?.items ?? [];
-  // Show pending drafts at the top of the review queue; settled ones below.
+  // Only drafts awaiting review belong in the queue. Once a draft is approved
+  // or rejected it settles and drops out of this view entirely.
   const pendingDrafts = drafts.filter((d) => d.status === 'pending');
-  const settledDrafts = drafts.filter((d) => d.status !== 'pending');
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="font-display text-display-sm text-foreground">
-            Generate questions
-          </h2>
-          <p className="mt-1 max-w-prose text-sm text-foreground-muted">
-            Use the knowledge base to draft multiple-choice questions. Review and
-            approve each draft before it joins the live question bank.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        as="h2"
+        title="Generate questions"
+        subtitle="AI drafts multiple-choice questions from the subject’s syllabus — no uploaded sources needed. Review and approve each draft before it joins the live question bank."
+      />
 
       {/* Generation controls */}
       <Card padding="md" className="flex flex-col gap-4">
@@ -153,6 +149,7 @@ export default function SubjectQuestionGen() {
             onClick={() => void handleGenerate()}
             loading={generating}
             disabled={!subjectId}
+            leadingIcon={<Wand2 className="h-4 w-4" aria-hidden="true" />}
           >
             {generating ? 'Generating…' : 'Generate questions'}
           </Button>
@@ -177,7 +174,7 @@ export default function SubjectQuestionGen() {
       {/* Review queue */}
       <section className="space-y-4" aria-label="Question drafts for review">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-lg font-bold text-foreground">
+          <h3 className="font-display text-base font-semibold text-foreground">
             Review drafts
           </h3>
           {pendingDrafts.length > 0 && (
@@ -195,65 +192,46 @@ export default function SubjectQuestionGen() {
             onRetry={() => void draftsQuery.refetch()}
             retrying={draftsQuery.isFetching}
           />
-        ) : drafts.length === 0 ? (
+        ) : pendingDrafts.length === 0 ? (
           <EmptyState
-            icon={<span aria-hidden="true">✨</span>}
-            title="No drafts yet"
-            description="Generate a batch above to start reviewing AI-drafted questions. Approved drafts appear in the question bank."
+            icon={<Sparkles className="h-5 w-5" />}
+            title="No drafts awaiting review"
+            description="Generate a batch above to start reviewing AI-drafted questions. Approved drafts appear in the question bank; rejected ones are discarded."
           />
         ) : (
-          <div className="space-y-6">
-            {pendingDrafts.length > 0 && (
-              <ul className="space-y-4" aria-label="Pending drafts">
-                {pendingDrafts.map((draft) => (
-                  <li key={draft.id}>
-                    <DraftReview
-                      draft={draft}
-                      subjectId={subjectId as string}
-                      topicName={
-                        draft.topicId
-                          ? topicById.get(draft.topicId)?.name
-                          : undefined
-                      }
-                      approving={
-                        approve.isPending && approve.variables?.id === draft.id
-                      }
-                      rejecting={
-                        reject.isPending && reject.variables?.id === draft.id
-                      }
-                      onApprove={(edited) =>
-                        void approve.mutateAsync({
-                          id: edited.id,
-                          subjectId: subjectId as string,
-                        })
-                      }
-                      onReject={(id) =>
-                        void reject.mutateAsync({
-                          id,
-                          subjectId: subjectId as string,
-                        })
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {settledDrafts.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-foreground-muted">
-                  Recently reviewed
-                </h4>
-                <ul className="space-y-4" aria-label="Reviewed drafts">
-                  {settledDrafts.map((draft) => (
-                    <li key={draft.id}>
-                      <QuestionDraftCard draft={draft} disabled />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          <ul className="space-y-4" aria-label="Pending drafts">
+            {pendingDrafts.map((draft) => (
+              <li key={draft.id}>
+                <DraftReview
+                  draft={draft}
+                  subjectId={subjectId as string}
+                  topicName={
+                    draft.topicId
+                      ? topicById.get(draft.topicId)?.name
+                      : undefined
+                  }
+                  approving={
+                    approve.isPending && approve.variables?.id === draft.id
+                  }
+                  rejecting={
+                    reject.isPending && reject.variables?.id === draft.id
+                  }
+                  onApprove={(edited) =>
+                    void approve.mutateAsync({
+                      id: edited.id,
+                      subjectId: subjectId as string,
+                    })
+                  }
+                  onReject={(id) =>
+                    void reject.mutateAsync({
+                      id,
+                      subjectId: subjectId as string,
+                    })
+                  }
+                />
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>
@@ -285,8 +263,8 @@ function DraftReview({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 px-1 text-xs text-foreground-muted">
-        <span className="font-medium uppercase tracking-wide">Topic</span>
-        <span className="rounded-pill bg-surface-muted px-2 py-0.5">
+        <span className="font-semibold uppercase tracking-wide">Topic</span>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5">
           {topicName ?? 'Whole subject'}
         </span>
       </div>
@@ -311,7 +289,7 @@ function DraftsSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-48 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-48 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
     </div>
@@ -328,14 +306,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h3 className="font-display text-display-sm text-danger">
+      <h3 className="font-display text-base font-semibold text-danger">
         Couldn&rsquo;t load drafts
       </h3>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

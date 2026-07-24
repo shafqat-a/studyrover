@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GraduationCap, LogIn } from 'lucide-react';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
+import { Logo } from '../components/Logo';
 import { TextInput } from '../components/TextInput';
 import { useToast } from '../app/providers';
 import type { components } from '../api/schema';
@@ -77,12 +80,10 @@ export default function StudentSignIn() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center py-12">
-      <header className="mb-8 text-center">
-        <p className="text-4xl" aria-hidden="true">
-          👋
-        </p>
-        <h1 className="mt-3 font-display text-display-md text-foreground">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center py-12 bg-[radial-gradient(60rem_60rem_at_50%_-10%,hsl(var(--sr-primary)/0.08),transparent)]">
+      <header className="mb-8 flex flex-col items-center text-center">
+        <Logo size={40} />
+        <h1 className="mt-6 font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           Who&rsquo;s studying?
         </h1>
         <p className="mt-2 text-sm text-foreground-muted">
@@ -99,7 +100,11 @@ export default function StudentSignIn() {
           retrying={studentQuery.isFetching}
         />
       ) : !studentQuery.data ? (
-        <EmptyState />
+        <EmptyState
+          icon={<GraduationCap className="h-5 w-5" aria-hidden="true" />}
+          title="No student profile yet"
+          description="Ask a parent to add a student profile in StudyRover settings before signing in."
+        />
       ) : selected && isPinProtected(studentQuery.data) ? (
         <PinPrompt
           student={selected}
@@ -157,7 +162,7 @@ function StudentChoice({ student, busy, onSelect }: StudentChoiceProps) {
     >
       <StudentAvatar student={student} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-lg font-bold text-foreground">
+        <span className="block truncate font-display text-lg font-semibold text-foreground">
           {student.name}
         </span>
         {student.gradeLevel ? (
@@ -180,7 +185,7 @@ function StudentAvatar({ student }: { student: Student }) {
       <img
         src={student.avatarUrl}
         alt=""
-        className="h-14 w-14 shrink-0 rounded-full object-cover"
+        className="h-14 w-14 shrink-0 rounded-full border border-border object-cover"
       />
     );
   }
@@ -188,7 +193,7 @@ function StudentAvatar({ student }: { student: Student }) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-xl font-bold text-primary"
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-surface-muted font-display text-xl font-semibold text-foreground"
     >
       {initial}
     </span>
@@ -218,7 +223,7 @@ function PinPrompt({
         <StudentAvatar student={student} />
         <h2
           id="pin-heading"
-          className="mt-3 font-display text-display-sm text-foreground"
+          className="mt-3 font-display text-base font-semibold text-foreground"
         >
           Hi, {student.name}
         </h2>
@@ -244,6 +249,7 @@ function PinPrompt({
           loading={submitting}
           loadingLabel="Signing in…"
           disabled={pin.trim().length === 0}
+          leadingIcon={<LogIn className="h-4 w-4" aria-hidden="true" />}
         >
           Sign in
         </Button>
@@ -275,25 +281,6 @@ function SignInSkeleton() {
   );
 }
 
-function EmptyState() {
-  return (
-    <Card padding="lg">
-      <div className="text-center">
-        <p className="text-4xl" aria-hidden="true">
-          🧑‍🎓
-        </p>
-        <h2 className="mt-3 font-display text-display-sm text-foreground">
-          No student profile yet
-        </h2>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-          Ask a parent to add a student profile in StudyRover settings before
-          signing in.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
 interface ErrorStateProps {
   message: string;
   onRetry: () => void;
@@ -302,19 +289,25 @@ interface ErrorStateProps {
 
 function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
-    <Card padding="lg">
-      <div role="alert" className="text-center">
-        <h2 className="font-display text-display-sm text-danger">
-          Couldn&rsquo;t load profile
-        </h2>
-        <p className="mt-1 text-sm text-foreground-muted">{message}</p>
-        <div className="mt-5">
-          <Button variant="secondary" onClick={onRetry} loading={retrying}>
-            Try again
-          </Button>
-        </div>
+    <div
+      role="alert"
+      className="border border-danger bg-danger-soft rounded-card p-4"
+    >
+      <h2 className="text-base font-semibold text-danger">
+        Couldn&rsquo;t load profile
+      </h2>
+      <p className="mt-1 text-sm font-medium text-danger">{message}</p>
+      <div className="mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+        >
+          Try again
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 

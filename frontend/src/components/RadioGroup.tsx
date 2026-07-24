@@ -1,5 +1,5 @@
 import { forwardRef, useId, useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 
 /**
  * U05 — RadioGroup (MCQ)
@@ -24,8 +24,10 @@ import type { KeyboardEvent } from 'react';
 export interface RadioOption {
   /** Stable identifier; this is the value emitted via `onChange`. */
   id: string;
-  /** Visible label for the option. */
-  label: string;
+  /** Visible label for the option (may be rich content, e.g. rendered math). */
+  label: ReactNode;
+  /** Plain-text accessible name; use when `label` is rich/non-text content. */
+  ariaLabel?: string;
   /** When true, the option cannot be selected or focused. */
   disabled?: boolean;
 }
@@ -210,6 +212,7 @@ export const RadioGroup = forwardRef<HTMLDivElement, RadioGroupProps>(
               role="radio"
               name={name}
               aria-checked={checked}
+              aria-label={opt.ariaLabel}
               disabled={!optionEnabled}
               tabIndex={index === tabStopIndex ? 0 : -1}
               onClick={() => select(index)}

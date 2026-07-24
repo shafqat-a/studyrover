@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { FileText, Plus, RotateCcw } from 'lucide-react';
 
-import { Badge } from '../components';
-import { Button } from '../components';
-import { Card } from '../components';
-import { Select } from '../components';
-import { TextInput } from '../components';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  PageHeader,
+  Select,
+  Textarea,
+  TextInput,
+} from '../components';
 import type { components } from '../api/schema';
 import {
   useCreateSource,
@@ -174,13 +181,11 @@ export default function SubjectSources() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="font-display text-display-sm text-foreground">Sources</h2>
-        <p className="mt-1 text-sm text-foreground-muted">
-          Add the study material for this subject. Sources are entered manually
-          for now; automatic ingestion arrives later.
-        </p>
-      </header>
+      <PageHeader
+        as="h2"
+        title="Sources"
+        subtitle="Add the study material for this subject. Sources are entered manually for now; automatic ingestion arrives later."
+      />
 
       <Card padding="md">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -206,11 +211,11 @@ export default function SubjectSources() {
 
           {form.type === 'file' && (
             <div>
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-medium text-foreground">
                 File
               </span>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted focus-within:ring-2 focus-within:ring-ring">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted focus-within:ring-2 focus-within:ring-ring">
                   <span>Choose file</span>
                   <input
                     type="file"
@@ -248,36 +253,20 @@ export default function SubjectSources() {
           )}
 
           {form.type === 'text' && (
-            <div>
-              <label
-                htmlFor="source-text"
-                className="text-sm font-semibold text-foreground"
-              >
-                Text
-                <span aria-hidden="true" className="text-danger">
-                  {' '}
-                  *
-                </span>
-              </label>
-              <textarea
-                id="source-text"
-                required
-                rows={6}
-                value={form.text}
-                onChange={(e) => patch({ text: e.target.value })}
-                onBlur={() => setTouched(true)}
-                placeholder="Paste notes, definitions, or any reference text…"
-                aria-invalid={
-                  touched && form.text.trim() === '' ? true : undefined
-                }
-                className="mt-2 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {touched && form.text.trim() === '' && (
-                <p role="alert" className="mt-1 text-sm text-danger">
-                  Paste some text.
-                </p>
-              )}
-            </div>
+            <Textarea
+              label="Text"
+              required
+              rows={6}
+              value={form.text}
+              error={
+                touched && form.text.trim() === ''
+                  ? 'Paste some text.'
+                  : undefined
+              }
+              placeholder="Paste notes, definitions, or any reference text…"
+              onChange={(e) => patch({ text: e.target.value })}
+              onBlur={() => setTouched(true)}
+            />
           )}
 
           <div className="flex justify-end">
@@ -285,6 +274,7 @@ export default function SubjectSources() {
               type="submit"
               loading={createSource.isPending}
               disabled={submitDisabled}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
             >
               Add source
             </Button>
@@ -301,7 +291,11 @@ export default function SubjectSources() {
           retrying={sourcesQuery.isFetching}
         />
       ) : sourcesQuery.data.items.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title="No sources yet"
+          description="Add a file, a NotebookLM link, or pasted text above to give this subject something to study from."
+        />
       ) : (
         <ul className="space-y-3" aria-label="Sources">
           {sourcesQuery.data.items.map((source) => (
@@ -315,16 +309,19 @@ export default function SubjectSources() {
         </ul>
       )}
 
-      {confirm && (
-        <ConfirmDialog
-          title="Remove source"
-          body={`Remove “${confirm.title}” from this subject? This cannot be undone.`}
-          confirmLabel="Remove"
-          busy={deleteSource.isPending}
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => void handleDelete()}
-        />
-      )}
+      <ConfirmDialog
+        open={confirm != null}
+        title="Remove source"
+        message={
+          confirm
+            ? `Remove “${confirm.title}” from this subject? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Remove"
+        danger
+        onCancel={() => setConfirm(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
@@ -359,86 +356,15 @@ function SourceRow({ source, onRemove }: SourceRowProps) {
   );
 }
 
-interface ConfirmDialogProps {
-  title: string;
-  body: string;
-  confirmLabel: string;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}
-
-function ConfirmDialog({
-  title,
-  body,
-  confirmLabel,
-  busy,
-  onCancel,
-  onConfirm,
-}: ConfirmDialogProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
-      onClick={onCancel}
-    >
-      <div
-        role="alertdialog"
-        aria-labelledby="remove-source-title"
-        aria-describedby="remove-source-body"
-        className="w-full max-w-sm rounded-card bg-surface p-6 shadow-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2
-          id="remove-source-title"
-          className="font-display text-display-sm text-foreground"
-        >
-          {title}
-        </h2>
-        <p
-          id="remove-source-body"
-          className="mt-2 text-sm text-foreground-muted"
-        >
-          {body}
-        </p>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-          <Button variant="danger" loading={busy} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function SourcesSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Loading sources">
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-16 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-16 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <p className="text-4xl" aria-hidden="true">
-        📄
-      </p>
-      <h3 className="mt-3 font-display text-display-sm text-foreground">
-        No sources yet
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-        Add a file, a NotebookLM link, or pasted text above to give this subject
-        something to study from.
-      </p>
     </div>
   );
 }
@@ -453,14 +379,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4"
     >
-      <h3 className="font-display text-display-sm text-danger">
+      <h3 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load sources
       </h3>
-      <p className="mt-1 text-sm text-foreground-muted">{message}</p>
-      <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+      <p className="mt-1 text-sm font-medium text-danger">{message}</p>
+      <div className="mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

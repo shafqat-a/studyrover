@@ -44,11 +44,86 @@ tags:
 - name: studyGuides
 - name: jobs
 - name: syllabus
+- name: syllabuses
 - name: questionDrafts
 - name: tutorInstructions
 - name: guidance
 - name: dashboard
 paths:
+  /syllabuses:
+    get:
+      operationId: listSyllabuses
+      tags:
+      - syllabuses
+      summary: List syllabuses
+      description: Returns every syllabus (the curriculum grouping above subjects, e.g. "Class V"),
+        oldest first. Ungrouped subjects simply have no syllabusId; there are few syllabuses per
+        household so the list is not paginated.
+      responses:
+        '200':
+          description: All syllabuses.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Syllabus'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createSyllabus
+      tags:
+      - syllabuses
+      summary: Create a syllabus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSyllabus'
+      responses:
+        '201':
+          description: The created syllabus.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Syllabus'
+        default:
+          $ref: '#/components/responses/Problem'
+  /syllabuses/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    put:
+      operationId: updateSyllabus
+      tags:
+      - syllabuses
+      summary: Update a syllabus (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Syllabus'
+      responses:
+        '200':
+          description: The updated syllabus.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Syllabus'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteSyllabus
+      tags:
+      - syllabuses
+      summary: Delete a syllabus
+      description: Deletes the syllabus. Its subjects are un-grouped (syllabusId cleared), not deleted.
+      responses:
+        '204':
+          description: The syllabus was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /subjects:
     get:
       operationId: listSubjects
@@ -338,6 +413,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExamDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+  /exam-definitions/generate:
+    post:
+      operationId: generateExam
+      tags:
+      - examDefinitions
+      summary: Generate a ready-to-take exam directly from topics (no question bank)
+      description: Kicks off async generation of an exam. The AI authors the requested number of
+        questions per topic from its curriculum knowledge, and the exam is pinned to exactly those
+        questions — no ingested sources or curated question bank are required. Returns a Job whose
+        result holds the created ExamDefinition's id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateExamRequest'
+      responses:
+        '202':
+          description: The async exam-generation job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /exam-definitions/{id}/preview:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: previewExam
+      tags:
+      - examDefinitions
+      summary: Preview an exam as the parent (with answers)
+      description: Assembles the exam exactly as a student attempt would (pinned or scoped/shuffled),
+        but INCLUDING the answer key, so the parent can sit and self-check the exam ad-hoc without
+        a student account, saved attempt, cooldown or reward. Parent-guarded.
+      responses:
+        '200':
+          description: The assembled exam questions, with the correct option marked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamPreview'
         default:
           $ref: '#/components/responses/Problem'
   /exam-definitions/{id}:
@@ -708,6 +828,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResult'
+        default:
+          $ref: '#/components/responses/Problem'
+  /auth/password:
+    post:
+      operationId: authPassword
+      tags:
+      - auth
+      summary: Parent password sign-in (passkey fallback)
+      description: Signs a parent in with email + password for devices where passkeys are unavailable.
+        When the parent has no password configured, the built-in default password is accepted. On
+        success a Session is returned and the session cookie is set.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordSignIn'
+      responses:
+        '200':
+          description: The parent session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
         default:
           $ref: '#/components/responses/Problem'
   /auth/session:
@@ -1638,10 +1783,74 @@ components:
         rewardStyle:
           $ref: '#/components/schemas/RewardStyle'
           default: flat
+        questionIds:
+          type: array
+          description: When non-empty, the exam is pinned to exactly these questions (a generated
+            exam). When empty, the exam samples the question bank by scope/size at attempt time.
+          items:
+            type: string
+          default: []
         createdAt:
           type: string
           format: date-time
           description: When the exam template was created (RFC 3339).
+    ExamPreview:
+      type: object
+      description: A parent-side preview of an exam — the assembled questions WITH the answer key,
+        for ad-hoc self-checking. Never returned to a student.
+      additionalProperties: false
+      required:
+      - questions
+      properties:
+        questions:
+          type: array
+          description: The assembled questions in delivery order, each with its correct option.
+          items:
+            $ref: '#/components/schemas/Question'
+    GenerateExamRequest:
+      type: object
+      description: Request to generate a ready-to-take exam from topics, with the AI authoring the
+        questions (no question bank needed).
+      additionalProperties: false
+      required:
+      - subjectId
+      - name
+      - topics
+      properties:
+        subjectId:
+          type: string
+          description: The subject the exam belongs to.
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable name for the generated exam.
+        topics:
+          type: array
+          minItems: 1
+          description: The topics to draw from and how many questions to generate from each.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - topicId
+            - count
+            properties:
+              topicId:
+                type: string
+                description: The topic to generate questions from.
+              count:
+                type: integer
+                minimum: 1
+                maximum: 50
+                description: How many questions to generate from this topic.
+        passBar:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Minimum score percentage to pass (defaults to the settings default).
+        difficulty:
+          type: string
+          description: Optional target difficulty hint ("easy"|"medium"|"hard").
     CreateExamDefinition:
       type: object
       description: Request body to create an ExamDefinition. The server assigns `id` and `createdAt` and
@@ -1929,11 +2138,13 @@ components:
     KnowledgeBackend:
       type: string
       description: The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM
-        is the default; Gemini is the direct alternative.
+        is the default; Gemini is the direct alternative. Ollama (DeepSeek) and z.ai (GLM) author
+        questions/guides from curriculum knowledge without ingested sources.
       enum:
       - notebooklm
       - gemini
       - ollama
+      - zai
     Settings:
       type: object
       description: The application settings singleton. Holds the spec defaults that gate exam creation
@@ -2137,6 +2348,42 @@ components:
         notes:
           type: string
           description: Optional free-form notes the parent keeps about the student.
+    Syllabus:
+      type: object
+      description: A curriculum grouping above subjects, modelled on an education system's class level
+        — e.g. "Class V", whose subjects are "Math Class V", "Science Class V", and so on.
+      required:
+      - id
+      - name
+      - createdAt
+      properties:
+        id:
+          type: string
+          description: Server-assigned unique identifier.
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable syllabus name (e.g. "Class V").
+        description:
+          type: string
+          description: Optional longer description of the syllabus.
+        createdAt:
+          type: string
+          format: date-time
+          description: RFC 3339 creation timestamp.
+    CreateSyllabus:
+      type: object
+      description: Request body to create a Syllabus; server assigns id/createdAt.
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable syllabus name (e.g. "Class V").
+        description:
+          type: string
+          description: Optional longer description of the syllabus.
     Subject:
       type: object
       description: A unit of study a parent configures (e.g. "Algebra I").
@@ -2166,6 +2413,11 @@ components:
           type: boolean
           default: false
           description: Whether the subject is archived (hidden from active lists).
+        syllabusId:
+          type: string
+          description: Optional syllabus (curriculum grouping, e.g. "Class V") this subject belongs
+            to. On update, an empty string clears the assignment (un-groups the subject); omitting
+            the field leaves it unchanged.
         createdAt:
           type: string
           format: date-time
@@ -2189,6 +2441,9 @@ components:
         description:
           type: string
           description: Optional longer description of the subject.
+        syllabusId:
+          type: string
+          description: Optional syllabus (curriculum grouping, e.g. "Class V") this subject belongs to.
     PageOfSubject:
       type: object
       description: A single page of Subject results (Page<Subject> per the common pagination pattern).
@@ -2356,6 +2611,20 @@ components:
         pin:
           type: string
           description: Optional PIN gating the student sign-in.
+    PasswordSignIn:
+      type: object
+      description: Body for the parent password sign-in fallback, used when passkeys are unavailable.
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          description: The parent's account email.
+        password:
+          type: string
+          description: The parent's password (or the built-in default when none is configured).
     AuthResult:
       type: object
       description: The response of a WebAuthn ceremony step. During the begin step it carries opaque ceremony

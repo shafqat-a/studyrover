@@ -1,8 +1,21 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { DragEvent, FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  GripVertical,
+  ListTree,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 
-import { Badge, Button, Card, Select, TextInput } from '../components';
+import { Badge, Button, PageHeader, Select, TextInput } from '../components';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Dialog } from '../components/Dialog';
 import { EmptyState } from '../components/EmptyState';
@@ -79,6 +92,14 @@ function byOrder(a: Topic, b: Topic): number {
   return a.name.localeCompare(b.name);
 }
 
+/**
+ * The leading integer section of a topic name ("1.4 Density" → "1"), or null
+ * when the name does not start with a number (used to group numbered syllabi).
+ */
+function sectionOf(name: string): string | null {
+  return name.match(/^\s*(\d+)/)?.[1] ?? null;
+}
+
 export default function SubjectSyllabus() {
   const { subjectId } = useParams<{ subjectId: string }>();
 
@@ -97,6 +118,8 @@ export default function SubjectSyllabus() {
   const [pendingDelete, setPendingDelete] = useState<Topic | null>(null);
   // Index of the row currently being dragged (for drop computation + styling).
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // Index of the row currently hovered during a drag (for the drop indicator).
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const topics = useMemo(
     () => (topicsQuery.data ? [...topicsQuery.data.items].sort(byOrder) : []),
@@ -110,6 +133,20 @@ export default function SubjectSyllabus() {
   }, [sources]);
 
   const reordering = reorderTopics.isPending;
+  const activeCount = topics.filter((t) => t.active).length;
+
+  // Group rows by their leading syllabus section number (e.g. every "1.x"
+  // topic under a "Section 1" header). Only kicks in when the topics are
+  // numbered and span ≥2 sections — subjects with unnumbered topics (English,
+  // A Level component codes) just render as one flat list.
+  const { showGroups, sectionCounts } = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of topics) {
+      const s = sectionOf(t.name);
+      if (s) counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
+    return { showGroups: counts.size >= 2, sectionCounts: counts };
+  }, [topics]);
 
   /** Persist a fully reordered list by writing each changed position. */
   function persistOrder(next: Topic[]) {
@@ -185,30 +222,29 @@ export default function SubjectSyllabus() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-display-sm text-foreground">
-            Syllabus
-          </h1>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Build the ordered list of topics this subject covers. Active topics
-            are in scope for exams.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            disabled
-            title="Coming soon"
-            aria-disabled="true"
-          >
-            Auto-suggest topics
-          </Button>
-          <Button onClick={() => setEditor({ mode: 'create' })}>
-            Add topic
-          </Button>
-        </div>
-      </header>
+      <PageHeader
+        title="Syllabus"
+        subtitle="Build the ordered list of topics this subject covers. Active topics are in scope for exams."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              disabled
+              title="Coming soon"
+              aria-disabled="true"
+              leadingIcon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
+            >
+              Auto-suggest topics
+            </Button>
+            <Button
+              onClick={() => setEditor({ mode: 'create' })}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              Add topic
+            </Button>
+          </>
+        }
+      />
 
       {topicsQuery.isPending ? (
         <SyllabusSkeleton />
@@ -220,47 +256,104 @@ export default function SubjectSyllabus() {
         />
       ) : topics.length === 0 ? (
         <EmptyState
-          icon="🧭"
+          icon={<ListTree className="h-5 w-5" />}
           title="No topics yet"
           description="Add topics manually to define what this subject covers and which sources each topic is drawn from."
           action={
-            <Button onClick={() => setEditor({ mode: 'create' })}>
+            <Button
+              onClick={() => setEditor({ mode: 'create' })}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
               Add topic
             </Button>
           }
         />
       ) : (
-        <ol className="space-y-2" aria-label="Syllabus topics" aria-busy={reordering}>
-          {topics.map((topic, index) => (
-            <li
-              key={topic.id}
-              draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragEnd={() => setDragIndex(null)}
-              onDragOver={(e: DragEvent) => e.preventDefault()}
-              onDrop={(e: DragEvent) => {
-                e.preventDefault();
-                handleDrop(index);
-              }}
-              className={dragIndex === index ? 'opacity-50' : undefined}
-            >
-              <TopicRow
-                topic={topic}
-                position={index + 1}
-                source={topic.sourceId ? sourceById.get(topic.sourceId) : undefined}
-                isFirst={index === 0}
-                isLast={index === topics.length - 1}
-                busy={reordering}
-                toggling={updateTopic.isPending}
-                onMoveUp={() => moveTopic(index, index - 1)}
-                onMoveDown={() => moveTopic(index, index + 1)}
-                onToggleActive={(active) => void toggleActive(topic, active)}
-                onEdit={() => setEditor({ mode: 'edit', topic })}
-                onDelete={() => setPendingDelete(topic)}
-              />
-            </li>
-          ))}
-        </ol>
+        <div className="space-y-3">
+          <p className="text-sm text-foreground-muted" aria-live="polite">
+            <span className="font-medium text-foreground">{topics.length}</span>{' '}
+            {topics.length === 1 ? 'topic' : 'topics'}
+            {activeCount < topics.length && (
+              <> · {activeCount} active</>
+            )}
+          </p>
+
+          <ol
+            className="overflow-hidden rounded-card border border-border bg-surface shadow-xs"
+            aria-label="Syllabus topics"
+            aria-busy={reordering}
+          >
+            {topics.map((topic, index) => {
+              const section = sectionOf(topic.name);
+              const prevSection =
+                index > 0 ? sectionOf(topics[index - 1].name) : null;
+              const showHeader =
+                showGroups && section != null && section !== prevSection;
+              return (
+                <Fragment key={topic.id}>
+                  {showHeader && (
+                    <li className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/90 px-3 py-1.5 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+                        Section {section}
+                      </span>
+                      <Badge tone="neutral" size="sm">
+                        {sectionCounts.get(section)}
+                      </Badge>
+                    </li>
+                  )}
+                  <li
+                    draggable
+                    onDragStart={() => setDragIndex(index)}
+                    onDragEnd={() => {
+                      setDragIndex(null);
+                      setDragOverIndex(null);
+                    }}
+                    onDragOver={(e: DragEvent) => {
+                      e.preventDefault();
+                      setDragOverIndex(index);
+                    }}
+                    onDrop={(e: DragEvent) => {
+                      e.preventDefault();
+                      handleDrop(index);
+                    }}
+                    className={[
+                      'group relative flex min-h-12 items-center gap-2 px-3 py-2 transition-colors',
+                      'border-b border-border last:border-b-0',
+                      'hover:bg-surface-muted/50 focus-within:bg-surface-muted/50',
+                      dragIndex === index && 'opacity-40',
+                      !topic.active && 'opacity-60',
+                      dragOverIndex === index &&
+                        dragIndex !== index &&
+                        'before:absolute before:inset-x-0 before:-top-px before:z-10 before:h-0.5 before:bg-primary',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <TopicRow
+                      topic={topic}
+                      source={
+                        topic.sourceId
+                          ? sourceById.get(topic.sourceId)
+                          : undefined
+                      }
+                      isFirst={index === 0}
+                      isLast={index === topics.length - 1}
+                      busy={reordering}
+                      toggling={updateTopic.isPending}
+                      onMoveUp={() => moveTopic(index, index - 1)}
+                      onMoveDown={() => moveTopic(index, index + 1)}
+                      onToggleActive={(active) =>
+                        void toggleActive(topic, active)
+                      }
+                      onEdit={() => setEditor({ mode: 'edit', topic })}
+                      onDelete={() => setPendingDelete(topic)}
+                    />
+                  </li>
+                </Fragment>
+              );
+            })}
+          </ol>
+        </div>
       )}
 
       {editor && (
@@ -301,7 +394,6 @@ export default function SubjectSyllabus() {
 
 interface TopicRowProps {
   topic: Topic;
-  position: number;
   source: Source | undefined;
   isFirst: boolean;
   isLast: boolean;
@@ -314,9 +406,14 @@ interface TopicRowProps {
   onDelete: () => void;
 }
 
+// Controls that only appear on row hover / keyboard focus, so the resting list
+// stays clean. Always visible on touch (no hover) via the media query.
+const revealOnHover =
+  'opacity-0 transition-opacity group-hover:opacity-100 ' +
+  'focus-within:opacity-100 [@media(hover:none)]:opacity-100';
+
 function TopicRow({
   topic,
-  position,
   source,
   isFirst,
   isLast,
@@ -330,54 +427,64 @@ function TopicRow({
 }: TopicRowProps) {
   const pageRange = formatPages(topic.pageStart, topic.pageEnd);
   return (
-    <Card
-      padding="sm"
-      className="flex items-center gap-3"
-    >
-      <div className="flex flex-col items-center gap-0.5">
-        <button
-          type="button"
-          aria-label="Move topic up"
-          disabled={isFirst || busy}
-          onClick={onMoveUp}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-foreground-muted transition hover:bg-surface-muted disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span aria-hidden="true">▲</span>
-        </button>
-        <button
-          type="button"
-          aria-label="Move topic down"
-          disabled={isLast || busy}
-          onClick={onMoveDown}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-foreground-muted transition hover:bg-surface-muted disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span aria-hidden="true">▼</span>
-        </button>
-      </div>
-
+    <>
+      {/* Drag handle — the primary reorder affordance. */}
       <span
         aria-hidden="true"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-sm font-bold text-foreground-muted"
+        className={
+          'flex h-8 w-4 shrink-0 cursor-grab items-center justify-center ' +
+          'text-foreground-muted/50 active:cursor-grabbing ' +
+          revealOnHover
+        }
       >
-        {position}
+        <GripVertical className="h-4 w-4" />
       </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-display font-bold text-foreground">
-            {topic.name}
-          </span>
-          {!topic.active && (
-            <Badge tone="neutral" size="sm">
-              Inactive
-            </Badge>
-          )}
-        </div>
-        <div className="mt-0.5 truncate text-sm text-foreground-muted">
-          {source ? source.title : 'No source'}
-          {pageRange ? ` · ${pageRange}` : ''}
-        </div>
+      {/* Keyboard-accessible reorder, revealed with the handle. */}
+      <div className={'flex shrink-0 flex-col ' + revealOnHover}>
+        <button
+          type="button"
+          aria-label={`Move ${topic.name} up`}
+          disabled={isFirst || busy}
+          onClick={onMoveUp}
+          className="flex h-4 w-5 items-center justify-center rounded text-foreground-muted transition-colors hover:text-foreground disabled:opacity-30 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label={`Move ${topic.name} down`}
+          disabled={isLast || busy}
+          onClick={onMoveDown}
+          className="flex h-4 w-5 items-center justify-center rounded text-foreground-muted transition-colors hover:text-foreground disabled:opacity-30 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
       </div>
+
+      {/* Name — the syllabus code is already the start of the name. */}
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">
+          {topic.name}
+        </span>
+      </div>
+
+      {!topic.active && (
+        <Badge tone="neutral" size="sm">
+          Inactive
+        </Badge>
+      )}
+
+      {/* Source — only when linked; hidden on narrow screens. */}
+      {source && (
+        <span className="hidden max-w-[14rem] items-center gap-1 text-xs text-foreground-muted sm:flex">
+          <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">
+            {source.title}
+            {pageRange ? ` · ${pageRange}` : ''}
+          </span>
+        </span>
+      )}
 
       <Toggle
         checked={topic.active}
@@ -387,15 +494,26 @@ function TopicRow({
         aria-label={`Toggle ${topic.name} active`}
       />
 
-      <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" onClick={onEdit}>
-          Edit
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onDelete}>
-          Delete
-        </Button>
+      {/* Edit / delete — hover-reveal icon buttons. */}
+      <div className={'flex shrink-0 items-center gap-0.5 ' + revealOnHover}>
+        <button
+          type="button"
+          aria-label={`Edit ${topic.name}`}
+          onClick={onEdit}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label={`Delete ${topic.name}`}
+          onClick={onDelete}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
-    </Card>
+    </>
   );
 }
 
@@ -469,7 +587,12 @@ function TopicDialog({
           >
             Cancel
           </Button>
-          <Button type="submit" form="topic-form" loading={submitting}>
+          <Button
+            type="submit"
+            form="topic-form"
+            loading={submitting}
+            leadingIcon={<Check className="h-4 w-4" aria-hidden="true" />}
+          >
             Save
           </Button>
         </>
@@ -516,7 +639,7 @@ function TopicDialog({
         {form.hasPages && (
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-medium text-foreground">
                 Start page
               </span>
               <NumberStepper
@@ -534,7 +657,7 @@ function TopicDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-medium text-foreground">
                 End page
               </span>
               <NumberStepper
@@ -562,12 +685,23 @@ function TopicDialog({
 
 function SyllabusSkeleton() {
   return (
-    <div className="space-y-2" aria-busy="true" aria-label="Loading syllabus">
-      {Array.from({ length: 5 }).map((_, i) => (
+    <div
+      className="overflow-hidden rounded-card border border-border bg-surface"
+      aria-busy="true"
+      aria-label="Loading syllabus"
+    >
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="h-16 animate-pulse rounded-card border border-border bg-surface-muted"
-        />
+          className="flex min-h-12 items-center gap-3 border-b border-border px-3 py-2 last:border-b-0"
+        >
+          <div className="h-4 w-4 shrink-0 rounded bg-surface-muted" />
+          <div
+            className="h-3.5 animate-pulse rounded bg-surface-muted"
+            style={{ width: `${40 + ((i * 7) % 45)}%` }}
+          />
+          <div className="ml-auto h-5 w-9 shrink-0 rounded-pill bg-surface-muted" />
+        </div>
       ))}
     </div>
   );
@@ -583,14 +717,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load the syllabus
       </h2>
-      <p className="mt-1 text-sm text-foreground-muted">{message}</p>
-      <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+      <p className="mt-1 text-sm font-medium text-danger">{message}</p>
+      <div className="mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

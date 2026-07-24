@@ -39,6 +39,15 @@ type Config struct {
 	// OllamaModel overrides the Ollama model id (env OLLAMA_MODEL). Optional;
 	// empty uses the adapter default (gpt-oss:120b).
 	OllamaModel string
+	// ZaiAPIKey authenticates the z.ai (Zhipu GLM) knowledge backend (env
+	// ZAI_API_KEY). Optional; empty leaves the z.ai adapter unprovisioned.
+	ZaiAPIKey string
+	// ZaiBaseURL overrides the z.ai endpoint root (env ZAI_BASE_URL). Optional;
+	// empty uses the adapter default (https://api.z.ai/api/paas/v4).
+	ZaiBaseURL string
+	// ZaiModel overrides the z.ai model id (env ZAI_MODEL). Optional; empty uses
+	// the adapter default (glm-5.2).
+	ZaiModel string
 }
 
 // Default values applied when an optional env var is unset.
@@ -63,6 +72,9 @@ func Load() (*Config, error) {
 		OllamaAPIKey:  os.Getenv("OLLAMA_API_KEY"),
 		OllamaBaseURL: os.Getenv("OLLAMA_BASE_URL"),
 		OllamaModel:   os.Getenv("OLLAMA_MODEL"),
+		ZaiAPIKey:     os.Getenv("ZAI_API_KEY"),
+		ZaiBaseURL:    os.Getenv("ZAI_BASE_URL"),
+		ZaiModel:      os.Getenv("ZAI_MODEL"),
 	}
 
 	var missing []string

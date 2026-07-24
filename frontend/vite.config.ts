@@ -11,11 +11,13 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // In dev, forward API requests to the Go backend.
-      // In prod the Go binary serves both the API and the embedded SPA.
-      '/api': {
+      // In dev, forward API requests to the Go backend, stripping the
+      // /studyrover prefix the same way nginx does in prod (the Go server
+      // mounts the API at /api, not /studyrover/api).
+      '/studyrover/api': {
         target: BACKEND_TARGET,
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/studyrover/, ''),
       },
     },
   },

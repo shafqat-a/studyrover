@@ -33,7 +33,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 
 const base =
   'flex flex-col items-center justify-center text-center ' +
-  'gap-3 px-6 py-12 rounded-card border border-dashed border-border ' +
+  'gap-3 px-6 py-10 rounded-card border border-dashed border-border ' +
   'bg-surface text-foreground';
 
 export const EmptyState = forwardRef<HTMLDivElement, EmptyStateProps>(
@@ -45,23 +45,23 @@ export const EmptyState = forwardRef<HTMLDivElement, EmptyStateProps>(
       <div ref={ref} className={cx(base, className)} {...rest}>
         {icon != null && (
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-foreground-muted text-2xl"
+            className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted text-foreground-muted text-lg"
             aria-hidden="true"
           >
             {icon}
           </div>
         )}
-        <div className="flex flex-col gap-1">
-          <h3 className="font-display text-lg font-bold text-foreground">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="font-display text-base font-semibold text-foreground">
             {title}
           </h3>
           {description != null && (
-            <p className="max-w-prose text-sm text-foreground-muted">
+            <p className="max-w-sm text-sm text-foreground-muted">
               {description}
             </p>
           )}
         </div>
-        {action != null && <div className="mt-2">{action}</div>}
+        {action != null && <div className="mt-1.5">{action}</div>}
       </div>
     );
   },

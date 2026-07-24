@@ -82,11 +82,11 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       <div className={cx('flex flex-col gap-1.5', fullWidth && 'w-full', className)}>
         <label
           htmlFor={inputId}
-          className="text-sm font-semibold text-foreground"
+          className="text-sm font-medium text-foreground"
         >
           {label}
           {required && (
-            <span className="ml-1 text-danger" aria-hidden="true">
+            <span className="ml-0.5 text-danger" aria-hidden="true">
               *
             </span>
           )}
@@ -100,8 +100,8 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
             'focus-within:ring-offset-background',
             hasError
               ? 'border-danger focus-within:ring-danger'
-              : 'border-border',
-            disabled && 'cursor-not-allowed opacity-60',
+              : 'border-border focus-within:border-ring',
+            disabled && 'cursor-not-allowed opacity-55',
           )}
         >
           {leadingIcon != null && (
@@ -123,7 +123,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
             aria-describedby={describedBy}
             aria-required={required || undefined}
             className={cx(
-              'h-11 w-full bg-transparent text-base text-foreground',
+              'h-10 w-full bg-transparent text-sm text-foreground',
               'placeholder:text-foreground-muted',
               'focus-visible:outline-none',
               'disabled:cursor-not-allowed',
@@ -143,11 +143,11 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         </div>
 
         {hasError ? (
-          <p id={errorId} role="alert" className="text-sm font-medium text-danger">
+          <p id={errorId} role="alert" className="text-xs font-medium text-danger">
             {error}
           </p>
         ) : showHint ? (
-          <p id={hintId} className="text-sm text-foreground-muted">
+          <p id={hintId} className="text-xs text-foreground-muted">
             {hint}
           </p>
         ) : null}

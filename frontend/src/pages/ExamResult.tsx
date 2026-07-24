@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { BookOpen, CheckCircle2, Eye, RotateCcw, Target, XCircle } from 'lucide-react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { ProgressBar } from '../components/ProgressBar';
 import type { components } from '../api/schema';
 import { useAttemptResult } from '../hooks/useExamAttempt';
 import { useExamDefinition } from '../hooks/useExamDefinitions';
@@ -153,7 +155,7 @@ function ResultReport({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
-        <h1 className="font-display text-display-sm text-foreground">
+        <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           Exam results
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
@@ -164,11 +166,34 @@ function ResultReport({
       {/* Score + pass/fail */}
       <Card padding="lg">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-8">
-          <ScoreRing value={scorePct} passed={passed} />
-          <div className="text-center sm:text-left">
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            {passed ? (
+              <CheckCircle2
+                className="h-10 w-10 text-success"
+                aria-hidden="true"
+              />
+            ) : (
+              <XCircle className="h-10 w-10 text-danger" aria-hidden="true" />
+            )}
+            <span
+              className={`font-display font-semibold tracking-tight text-4xl tabular-nums ${
+                passed ? 'text-success' : 'text-danger'
+              }`}
+              aria-label={`Score ${scorePct} percent`}
+            >
+              {scorePct}%
+            </span>
             <Badge tone={passed ? 'success' : 'danger'} size="md" dot>
               {passed ? 'Passed' : 'Not passed'}
             </Badge>
+          </div>
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <ProgressBar
+              value={scorePct}
+              showValue={false}
+              tone={passed ? 'success' : 'danger'}
+              aria-label={`Score ${scorePct} percent`}
+            />
             <p className="mt-3 text-sm text-foreground-muted">
               {passed
                 ? 'Great work — you met the pass bar for this exam.'
@@ -181,7 +206,7 @@ function ResultReport({
       {/* Per-topic breakdown */}
       {perTopic.length > 0 && (
         <Card padding="lg" className="space-y-4">
-          <h2 className="font-display text-lg font-bold text-foreground">
+          <h2 className="font-display text-base font-semibold text-foreground">
             Topic breakdown
           </h2>
           <ul className="space-y-3" aria-label="Per-topic scores">
@@ -197,8 +222,11 @@ function ResultReport({
       {/* What to review */}
       {weakTopics.length > 0 && (
         <Card padding="lg" className="space-y-3">
-          <h2 className="font-display text-lg font-bold text-foreground">
-            What to review
+          <h2 className="font-display text-base font-semibold text-foreground">
+            <span className="inline-flex items-center gap-2">
+              <Eye className="h-4 w-4 text-foreground-muted" aria-hidden="true" />
+              What to review
+            </span>
           </h2>
           <p className="text-sm text-foreground-muted">
             Focus your next study session on these topics:
@@ -217,11 +245,19 @@ function ResultReport({
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="secondary" onClick={onToggleReview}>
+        <Button
+          variant="secondary"
+          onClick={onToggleReview}
+          leadingIcon={<Eye className="h-4 w-4" aria-hidden="true" />}
+        >
           {reviewing ? 'Hide answers' : 'Review answers'}
         </Button>
         {weakTopics.length > 0 && (
-          <Button variant="secondary" onClick={onStudyWeakTopics}>
+          <Button
+            variant="secondary"
+            onClick={onStudyWeakTopics}
+            leadingIcon={<BookOpen className="h-4 w-4" aria-hidden="true" />}
+          >
             Study weak topics
           </Button>
         )}
@@ -257,8 +293,14 @@ function TopicRow({ topic, name }: TopicRowProps) {
   return (
     <div>
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="min-w-0 truncate font-medium text-foreground">
-          {name}
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <Target
+            className="h-4 w-4 shrink-0 text-foreground-muted"
+            aria-hidden="true"
+          />
+          <span className="min-w-0 truncate font-medium text-foreground">
+            {name}
+          </span>
         </span>
         <span className="shrink-0 tabular-nums text-foreground-muted">
           {topic.correct}/{topic.total} · {pct}%
@@ -281,37 +323,6 @@ function TopicRow({ topic, name }: TopicRowProps) {
   );
 }
 
-interface ScoreRingProps {
-  value: number;
-  passed: boolean;
-}
-
-/** U15 score role: a circular gauge showing the overall percentage. */
-function ScoreRing({ value, passed }: ScoreRingProps) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const ringColor = passed
-    ? 'hsl(var(--sr-success))'
-    : 'hsl(var(--sr-danger))';
-  const trackColor = 'hsl(var(--sr-surface-muted))';
-  return (
-    <div
-      role="img"
-      aria-label={`Score ${clamped} percent`}
-      className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full"
-      style={{
-        background: `conic-gradient(${ringColor} ${clamped * 3.6}deg, ${trackColor} 0deg)`,
-      }}
-    >
-      <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-surface">
-        <span className="font-display text-display-sm font-bold text-foreground tabular-nums">
-          {clamped}%
-        </span>
-        <span className="text-xs text-foreground-muted">score</span>
-      </div>
-    </div>
-  );
-}
-
 interface RetryButtonProps {
   attempt: ExamAttempt;
   onRetry: () => void;
@@ -322,7 +333,11 @@ function RetryButton({ attempt, onRetry }: RetryButtonProps) {
   const remaining = useCooldownRemaining(attempt.cooldownUntil);
   const blocked = remaining > 0;
   return (
-    <Button onClick={onRetry} disabled={blocked}>
+    <Button
+      onClick={onRetry}
+      disabled={blocked}
+      leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+    >
       {blocked ? `Retry in ${formatCountdown(remaining)}` : 'Retry exam'}
     </Button>
   );
@@ -392,8 +407,11 @@ function ReviewList({ attempt, correct, total }: ReviewListProps) {
 
   return (
     <Card padding="lg" className="space-y-4">
-      <h2 className="font-display text-lg font-bold text-foreground">
-        Answer review
+      <h2 className="font-display text-base font-semibold text-foreground">
+        <span className="inline-flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-foreground-muted" aria-hidden="true" />
+          Answer review
+        </span>
       </h2>
       <p className="text-sm text-foreground-muted">
         {correct} of {total} answered correctly.
@@ -458,8 +476,8 @@ function ResultSkeleton() {
       aria-label="Loading results"
     >
       <div className="h-8 w-48 animate-pulse rounded-md bg-surface-muted" />
-      <div className="h-40 animate-pulse rounded-card border border-border bg-surface-muted" />
-      <div className="h-48 animate-pulse rounded-card border border-border bg-surface-muted" />
+      <div className="h-40 animate-pulse rounded-md bg-surface-muted" />
+      <div className="h-48 animate-pulse rounded-md bg-surface-muted" />
       <div className="flex gap-3">
         <div className="h-10 w-32 animate-pulse rounded-md bg-surface-muted" />
         <div className="h-10 w-32 animate-pulse rounded-md bg-surface-muted" />
@@ -478,14 +496,14 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load your results
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button variant="secondary" size="sm" onClick={onRetry} loading={retrying}>
           Try again
         </Button>
       </div>
@@ -503,7 +521,7 @@ interface FatalStateProps {
 function FatalState({ title, body, actionLabel, onAction }: FatalStateProps) {
   return (
     <div className="mx-auto max-w-md rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <h2 className="font-display text-display-sm text-foreground">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-foreground">{title}</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
         {body}
       </p>

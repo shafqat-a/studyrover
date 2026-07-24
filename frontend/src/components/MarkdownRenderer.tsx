@@ -341,12 +341,12 @@ function renderBlocks(src: string): ReactNode[] {
 
 function renderHeading(level: number, content: ReactNode): ReactNode {
   const cls = [
-    'mt-5 mb-2 font-display font-extrabold text-foreground text-3xl',
-    'mt-5 mb-2 font-display font-bold text-foreground text-2xl',
-    'mt-4 mb-2 font-display font-bold text-foreground text-xl',
-    'mt-4 mb-1 font-display font-bold text-foreground text-lg',
-    'mt-3 mb-1 font-display font-semibold text-foreground text-base',
-    'mt-3 mb-1 font-display font-semibold text-foreground-muted text-sm uppercase tracking-wide',
+    'mt-6 mb-3 font-display font-semibold tracking-tight text-foreground text-2xl',
+    'mt-6 mb-2 font-display font-semibold tracking-tight text-foreground text-xl',
+    'mt-5 mb-2 font-display font-semibold text-foreground text-lg',
+    'mt-4 mb-1 font-display font-semibold text-foreground text-base',
+    'mt-3 mb-1 font-display font-semibold text-foreground text-sm',
+    'mt-3 mb-1 font-semibold text-foreground-muted text-xs uppercase tracking-wide',
   ][level - 1];
   const k = key();
   switch (level) {

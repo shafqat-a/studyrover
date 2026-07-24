@@ -120,9 +120,21 @@ type SyllabusRequest struct {
 type GenRequest struct {
 	// SubjectID is the subject to draw source material from.
 	SubjectID string
+	// SubjectName is the human-readable subject name (e.g. "Chemistry O Level").
+	// Backends that generate from their own curriculum knowledge (no ingested
+	// sources / question bank) use this to ground questions; the raw SubjectID
+	// UUID is meaningless to a model.
+	SubjectName string
 	// TopicID optionally narrows generation to a single topic; empty means the
 	// whole subject.
 	TopicID string
+	// TopicName is the human-readable name of the scoped topic when TopicID is
+	// set (e.g. "1.1 Solids, liquids and gases").
+	TopicName string
+	// TopicNames lists the subject's active topic names when generating for the
+	// whole subject (TopicID empty). It gives knowledge-only backends the
+	// syllabus scope to spread questions across.
+	TopicNames []string
 	// Count is the desired number of question drafts.
 	Count int
 	// Difficulty is an optional target difficulty hint (for example "easy",

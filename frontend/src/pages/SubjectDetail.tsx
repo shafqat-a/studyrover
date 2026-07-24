@@ -7,19 +7,25 @@
 // <Outlet/>. The Tutor tab is intentionally disabled in Phase 1/2.
 //
 // Business logic lives entirely in the H01 hooks; this page only composes them
-// with the shared design-system primitives (Button / TextInput / Card / Badge)
-// and React Router. The U09 (Tabs) and U20 (PageHeader) primitives are not yet
-// in the shared component set, so their roles are composed inline here from the
-// available primitives and design tokens. This file does NOT edit router.tsx —
-// route registration (this element + its child tabs) is owned by W03.
+// with the shared design-system primitives. Route registration is owned by W03.
 
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { NavLink, Outlet, useParams } from 'react-router-dom';
+import { Outlet, useParams } from 'react-router-dom';
+import {
+  ClipboardList,
+  FileText,
+  HelpCircle,
+  ListTree,
+  Pencil,
+  Sparkles,
+} from 'lucide-react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { PageHeader } from '../components/PageHeader';
+import { Tabs } from '../components/Tabs';
 import { TextInput } from '../components/TextInput';
 
 import { useSubject, useUpdateSubject } from '../hooks/useSubjects';
@@ -30,6 +36,8 @@ interface SubjectTab {
   to: string;
   /** Tab label. */
   label: string;
+  /** Optional decorative icon rendered before the label. */
+  icon?: ReactNode;
   /** When true the tab is rendered but not navigable (Phase-gated). */
   disabled?: boolean;
   /** Hint shown via `title` when the tab is disabled. */
@@ -42,68 +50,42 @@ interface SubjectTab {
  * The Tutor tab is disabled until Phase 2 wires the tutor experience.
  */
 const SUBJECT_TABS: ReadonlyArray<SubjectTab> = [
-  { to: 'sources', label: 'Sources' },
-  { to: 'syllabus', label: 'Syllabus' },
-  { to: 'exams', label: 'Exams' },
-  { to: 'questions', label: 'Questions' },
-  { to: 'tutor-instructions', label: 'Tutor' },
+  {
+    to: 'sources',
+    label: 'Sources',
+    icon: <FileText className="h-4 w-4" aria-hidden="true" />,
+  },
+  {
+    // Keeps the /syllabus route, but the tab is the subject's topic outline —
+    // "Syllabus" now names the class-level grouping above subjects (Class V).
+    to: 'syllabus',
+    label: 'Topics',
+    icon: <ListTree className="h-4 w-4" aria-hidden="true" />,
+  },
+  {
+    to: 'exams',
+    label: 'Exams',
+    icon: <ClipboardList className="h-4 w-4" aria-hidden="true" />,
+  },
+  {
+    to: 'questions',
+    label: 'Questions',
+    icon: <HelpCircle className="h-4 w-4" aria-hidden="true" />,
+  },
+  {
+    to: 'tutor-instructions',
+    label: 'Tutor',
+    icon: <Sparkles className="h-4 w-4" aria-hidden="true" />,
+  },
 ];
 
-/** Centered helper used for empty / loading / error panels. */
-function StatePanel({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-32 items-center justify-center px-4 py-8 text-center text-sm text-foreground-muted">
-      {children}
-    </div>
-  );
-}
-
-const tabBase =
-  'inline-flex items-center whitespace-nowrap border-b-2 px-1 pb-3 pt-2 ' +
-  'text-sm font-semibold transition-colors focus-visible:outline-none ' +
-  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ' +
-  'focus-visible:ring-offset-background rounded-sm';
-
-const tabActive = 'border-primary text-primary';
-const tabInactive =
-  'border-transparent text-foreground-muted hover:border-border hover:text-foreground';
-const tabDisabled =
-  'border-transparent text-foreground-muted/60 cursor-not-allowed';
-
-/** The horizontal tab bar wiring each sub-route via NavLink. */
-function SubjectTabBar() {
-  return (
-    <nav
-      className="-mb-px flex gap-6 overflow-x-auto border-b border-border"
-      aria-label="Subject sections"
-    >
-      {SUBJECT_TABS.map((tab) =>
-        tab.disabled ? (
-          <span
-            key={tab.to}
-            className={`${tabBase} ${tabDisabled}`}
-            aria-disabled="true"
-            title={tab.disabledReason}
-          >
-            {tab.label}
-          </span>
-        ) : (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            // `sources` is the index tab; mark it active at the subject root too.
-            end={tab.to === 'sources' ? false : undefined}
-            className={({ isActive }) =>
-              `${tabBase} ${isActive ? tabActive : tabInactive}`
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ),
-      )}
-    </nav>
-  );
-}
+const SUBJECT_TAB_ITEMS = SUBJECT_TABS.map((tab) => ({
+  id: tab.to,
+  label: tab.label,
+  icon: tab.icon,
+  to: tab.to,
+  disabled: tab.disabled,
+}));
 
 export default function SubjectDetail() {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -165,21 +147,34 @@ export default function SubjectDetail() {
 
   if (!subjectId) {
     return (
-      <StatePanel>
+      <div className="rounded-card border border-border bg-surface p-4 text-sm text-foreground-muted">
         No subject selected. Open a subject from the Subjects list.
-      </StatePanel>
+      </div>
     );
   }
 
   if (subjectQuery.isLoading) {
-    return <StatePanel>Loading subject…</StatePanel>;
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading subject">
+        <div className="space-y-3">
+          <div className="h-7 w-64 animate-pulse rounded-md bg-surface-muted" />
+          <div className="h-4 w-96 max-w-full animate-pulse rounded-md bg-surface-muted" />
+        </div>
+        <div className="h-10 w-full animate-pulse rounded-md bg-surface-muted" />
+      </div>
+    );
   }
 
   if (subjectQuery.isError) {
     return (
-      <StatePanel>
-        <div className="flex flex-col items-center gap-3">
-          <span className="text-danger">{subjectQuery.error.message}</span>
+      <div
+        role="alert"
+        className="rounded-card border border-danger bg-danger-soft p-4"
+      >
+        <p className="text-sm font-medium text-danger">
+          {subjectQuery.error.message}
+        </p>
+        <div className="mt-3">
           <Button
             variant="secondary"
             size="sm"
@@ -188,25 +183,25 @@ export default function SubjectDetail() {
             Retry
           </Button>
         </div>
-      </StatePanel>
+      </div>
     );
   }
 
   if (!subject) {
     return (
-      <StatePanel>
+      <div className="rounded-card border border-border bg-surface p-4 text-sm text-foreground-muted">
         That subject could not be found. It may have been deleted.
-      </StatePanel>
+      </div>
     );
   }
 
   const saveDisabled = name.trim().length === 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       {/* Header: inline-editable name + description (H01 useUpdateSubject). */}
-      <Card padding="lg">
-        {editing ? (
+      {editing ? (
+        <Card padding="lg">
           <form className="flex flex-col gap-4" onSubmit={handleSave}>
             <TextInput
               label="Subject name"
@@ -219,7 +214,7 @@ export default function SubjectDetail() {
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="subject-description"
-                className="text-sm font-semibold text-foreground"
+                className="text-sm font-medium text-foreground"
               >
                 Description
               </label>
@@ -229,7 +224,7 @@ export default function SubjectDetail() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="What does this subject cover?"
-                className="w-full rounded-md border border-border bg-surface p-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="w-full rounded-md border border-border bg-surface p-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -250,45 +245,44 @@ export default function SubjectDetail() {
               </Button>
             </div>
           </form>
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-3">
-                {subject.color ? (
-                  <span
-                    className="inline-block h-4 w-4 shrink-0 rounded-full border border-border"
-                    style={{ backgroundColor: subject.color }}
-                    aria-hidden="true"
-                  />
-                ) : null}
-                <h1 className="font-display text-2xl font-bold text-foreground">
-                  {subject.name}
-                </h1>
-                {subject.archived ? (
-                  <Badge tone="neutral">Archived</Badge>
-                ) : null}
-              </div>
-              {subject.description ? (
-                <p className="max-w-prose text-sm text-foreground-muted">
-                  {subject.description}
-                </p>
-              ) : (
-                <p className="text-sm italic text-foreground-muted">
-                  No description yet.
-                </p>
-              )}
-            </div>
-            <div className="shrink-0">
-              <Button variant="secondary" size="sm" onClick={startEditing}>
-                Edit
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <PageHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              {subject.color ? (
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full border border-border"
+                  style={{ backgroundColor: subject.color }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span>{subject.name}</span>
+              {subject.archived ? <Badge tone="neutral">Archived</Badge> : null}
+            </span>
+          }
+          subtitle={
+            subject.description ? (
+              subject.description
+            ) : (
+              <span className="italic">No description yet.</span>
+            )
+          }
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={startEditing}
+              leadingIcon={<Pencil className="h-4 w-4" aria-hidden="true" />}
+            >
+              Edit
+            </Button>
+          }
+        />
+      )}
 
       {/* Sub-tab navigation. */}
-      <SubjectTabBar />
+      <Tabs routed items={SUBJECT_TAB_ITEMS} aria-label="Subject sections" />
 
       {/* The active child tab (P06–P09) renders here. */}
       <div>

@@ -11,7 +11,7 @@ import (
 
 const countQuestionsBySubject = `-- name: CountQuestionsBySubject :one
 SELECT count(*) FROM question
-WHERE subject_id = $1
+WHERE subject_id = $1 AND generated = false
 `
 
 func (q *Queries) CountQuestionsBySubject(ctx context.Context, subjectID string) (int64, error) {
@@ -41,11 +41,15 @@ INSERT INTO question (
     text,
     correct_option_id,
     difficulty,
-    enabled
+    enabled,
+    generated
 ) VALUES (
-    $1, $2, $3, $4, COALESCE($5, 'medium'), COALESCE($6, true)
+    $1, $2, $3, $4,
+    COALESCE($5, 'medium'),
+    COALESCE($6, true),
+    COALESCE($7, false)
 )
-RETURNING id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at
+RETURNING id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated
 `
 
 type CreateQuestionParams struct {
@@ -55,6 +59,7 @@ type CreateQuestionParams struct {
 	CorrectOptionID string      `json:"correctOptionId"`
 	Difficulty      interface{} `json:"difficulty"`
 	Enabled         interface{} `json:"enabled"`
+	Generated       interface{} `json:"generated"`
 }
 
 // D05 — Question queries (matches §C05). Options live in D06.
@@ -66,6 +71,7 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 		arg.CorrectOptionID,
 		arg.Difficulty,
 		arg.Enabled,
+		arg.Generated,
 	)
 	var i Question
 	err := row.Scan(
@@ -77,6 +83,7 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 		&i.Difficulty,
 		&i.Enabled,
 		&i.CreatedAt,
+		&i.Generated,
 	)
 	return i, err
 }
@@ -92,7 +99,7 @@ func (q *Queries) DeleteQuestion(ctx context.Context, id string) error {
 }
 
 const getQuestion = `-- name: GetQuestion :one
-SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at FROM question
+SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated FROM question
 WHERE id = $1
 `
 
@@ -108,12 +115,50 @@ func (q *Queries) GetQuestion(ctx context.Context, id string) (Question, error) 
 		&i.Difficulty,
 		&i.Enabled,
 		&i.CreatedAt,
+		&i.Generated,
 	)
 	return i, err
 }
 
+const getQuestionsByIDs = `-- name: GetQuestionsByIDs :many
+SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated FROM question
+WHERE id = ANY($1::text[])
+`
+
+// Fetch a specific set of questions by id (used by pinned/generated exams),
+// regardless of enabled state.
+func (q *Queries) GetQuestionsByIDs(ctx context.Context, ids []string) ([]Question, error) {
+	rows, err := q.db.Query(ctx, getQuestionsByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Question{}
+	for rows.Next() {
+		var i Question
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubjectID,
+			&i.TopicID,
+			&i.Text,
+			&i.CorrectOptionID,
+			&i.Difficulty,
+			&i.Enabled,
+			&i.CreatedAt,
+			&i.Generated,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEligibleForExam = `-- name: ListEligibleForExam :many
-SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at FROM question
+SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated FROM question
 WHERE subject_id = $1
   AND enabled = true
   AND (
@@ -149,6 +194,7 @@ func (q *Queries) ListEligibleForExam(ctx context.Context, arg ListEligibleForEx
 			&i.Difficulty,
 			&i.Enabled,
 			&i.CreatedAt,
+			&i.Generated,
 		); err != nil {
 			return nil, err
 		}
@@ -161,8 +207,8 @@ func (q *Queries) ListEligibleForExam(ctx context.Context, arg ListEligibleForEx
 }
 
 const listQuestionsBySubject = `-- name: ListQuestionsBySubject :many
-SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at FROM question
-WHERE subject_id = $1
+SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated FROM question
+WHERE subject_id = $1 AND generated = false
 ORDER BY created_at DESC, id
 LIMIT $2 OFFSET $3
 `
@@ -173,6 +219,8 @@ type ListQuestionsBySubjectParams struct {
 	Offset    int32  `json:"offset"`
 }
 
+// The manual question bank: excludes generated questions (which back generated
+// exams and are never hand-curated here).
 func (q *Queries) ListQuestionsBySubject(ctx context.Context, arg ListQuestionsBySubjectParams) ([]Question, error) {
 	rows, err := q.db.Query(ctx, listQuestionsBySubject, arg.SubjectID, arg.Limit, arg.Offset)
 	if err != nil {
@@ -191,6 +239,7 @@ func (q *Queries) ListQuestionsBySubject(ctx context.Context, arg ListQuestionsB
 			&i.Difficulty,
 			&i.Enabled,
 			&i.CreatedAt,
+			&i.Generated,
 		); err != nil {
 			return nil, err
 		}
@@ -203,7 +252,7 @@ func (q *Queries) ListQuestionsBySubject(ctx context.Context, arg ListQuestionsB
 }
 
 const listQuestionsByTopic = `-- name: ListQuestionsByTopic :many
-SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at FROM question
+SELECT id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated FROM question
 WHERE topic_id = $1
 ORDER BY created_at DESC, id
 LIMIT $2 OFFSET $3
@@ -233,6 +282,7 @@ func (q *Queries) ListQuestionsByTopic(ctx context.Context, arg ListQuestionsByT
 			&i.Difficulty,
 			&i.Enabled,
 			&i.CreatedAt,
+			&i.Generated,
 		); err != nil {
 			return nil, err
 		}
@@ -253,7 +303,7 @@ SET
     difficulty        = COALESCE($4, difficulty),
     enabled           = COALESCE($5, enabled)
 WHERE id = $6
-RETURNING id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at
+RETURNING id, subject_id, topic_id, text, correct_option_id, difficulty, enabled, created_at, generated
 `
 
 type UpdateQuestionParams struct {
@@ -284,6 +334,7 @@ func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) 
 		&i.Difficulty,
 		&i.Enabled,
 		&i.CreatedAt,
+		&i.Generated,
 	)
 	return i, err
 }

@@ -62,9 +62,11 @@ function lazyPage(
 
 function NotFound() {
   return (
-    <div className="mx-auto max-w-md p-8 text-center">
-      <p className="font-display text-display text-primary">404</p>
-      <p className="mt-2 text-foreground-muted">
+    <div className="mx-auto flex max-w-md flex-col items-center gap-3 p-16 text-center">
+      <p className="font-display text-display tracking-tight text-foreground">
+        404
+      </p>
+      <p className="text-sm text-foreground-muted">
         We couldn&rsquo;t find that page.
       </p>
     </div>
@@ -146,6 +148,11 @@ export const routes: RouteObject[] = [
         // Phase-2: AI question generation (reads the `:subjectId` param).
         path: 'subjects/:subjectId/question-gen',
         lazy: lazyPage(() => import('../pages/SubjectQuestionGen')),
+      },
+      {
+        // Parent ad-hoc exam preview ("sit the exam" from the parent view).
+        path: 'subjects/:subjectId/exams/:examId/preview',
+        lazy: lazyPage(() => import('../pages/ParentExamPreview')),
       },
       {
         // Phase-2: parent dashboard.

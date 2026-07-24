@@ -30,11 +30,12 @@ INSERT INTO exam_definition (
     size,
     pass_bar,
     cooldown_min,
-    reward_style
+    reward_style,
+    question_ids
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::text[], '{}')
 )
-RETURNING id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at
+RETURNING id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at, question_ids
 `
 
 type CreateExamDefinitionParams struct {
@@ -46,6 +47,7 @@ type CreateExamDefinitionParams struct {
 	PassBar       int32    `json:"passBar"`
 	CooldownMin   int32    `json:"cooldownMin"`
 	RewardStyle   string   `json:"rewardStyle"`
+	QuestionIds   []string `json:"questionIds"`
 }
 
 func (q *Queries) CreateExamDefinition(ctx context.Context, arg CreateExamDefinitionParams) (ExamDefinition, error) {
@@ -58,6 +60,7 @@ func (q *Queries) CreateExamDefinition(ctx context.Context, arg CreateExamDefini
 		arg.PassBar,
 		arg.CooldownMin,
 		arg.RewardStyle,
+		arg.QuestionIds,
 	)
 	var i ExamDefinition
 	err := row.Scan(
@@ -71,6 +74,7 @@ func (q *Queries) CreateExamDefinition(ctx context.Context, arg CreateExamDefini
 		&i.CooldownMin,
 		&i.RewardStyle,
 		&i.CreatedAt,
+		&i.QuestionIds,
 	)
 	return i, err
 }
@@ -86,7 +90,7 @@ func (q *Queries) DeleteExamDefinition(ctx context.Context, id string) error {
 }
 
 const getExamDefinition = `-- name: GetExamDefinition :one
-SELECT id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at FROM exam_definition
+SELECT id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at, question_ids FROM exam_definition
 WHERE id = $1
 `
 
@@ -104,12 +108,13 @@ func (q *Queries) GetExamDefinition(ctx context.Context, id string) (ExamDefinit
 		&i.CooldownMin,
 		&i.RewardStyle,
 		&i.CreatedAt,
+		&i.QuestionIds,
 	)
 	return i, err
 }
 
 const listExamDefinitionsBySubject = `-- name: ListExamDefinitionsBySubject :many
-SELECT id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at FROM exam_definition
+SELECT id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at, question_ids FROM exam_definition
 WHERE subject_id = $1
 ORDER BY created_at DESC, id
 LIMIT $2 OFFSET $3
@@ -141,6 +146,7 @@ func (q *Queries) ListExamDefinitionsBySubject(ctx context.Context, arg ListExam
 			&i.CooldownMin,
 			&i.RewardStyle,
 			&i.CreatedAt,
+			&i.QuestionIds,
 		); err != nil {
 			return nil, err
 		}
@@ -163,7 +169,7 @@ SET
     cooldown_min    = $7,
     reward_style    = $8
 WHERE id = $1
-RETURNING id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at
+RETURNING id, subject_id, name, type, scope_topic_ids, size, pass_bar, cooldown_min, reward_style, created_at, question_ids
 `
 
 type UpdateExamDefinitionParams struct {
@@ -200,6 +206,7 @@ func (q *Queries) UpdateExamDefinition(ctx context.Context, arg UpdateExamDefini
 		&i.CooldownMin,
 		&i.RewardStyle,
 		&i.CreatedAt,
+		&i.QuestionIds,
 	)
 	return i, err
 }

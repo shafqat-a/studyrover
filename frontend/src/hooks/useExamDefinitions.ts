@@ -27,6 +27,8 @@ import { useToast } from '../app/providers';
 type ExamDefinition = components['schemas']['ExamDefinition'];
 type CreateExamDefinition = components['schemas']['CreateExamDefinition'];
 type PageOfExamDefinition = components['schemas']['PageOfExamDefinition'];
+type GenerateExamRequest = components['schemas']['GenerateExamRequest'];
+type Job = components['schemas']['Job'];
 type Problem = components['schemas']['Problem'];
 
 /** Optional pagination for the exam-definition list. */
@@ -142,6 +144,61 @@ export function useCreateExamDefinition(): UseMutationResult<
       void queryClient.invalidateQueries({
         queryKey: examDefinitionKeys.lists(examDef.subjectId),
       });
+    },
+    onError: (error) => {
+      toast(error.message, { variant: 'danger' });
+    },
+  });
+}
+
+type ExamPreview = components['schemas']['ExamPreview'];
+
+/**
+ * Parent-only preview of an exam (assembled questions WITH the answer key), so
+ * the parent can sit and self-check it ad-hoc. `GET /exam-definitions/{id}/preview`.
+ * `staleTime: 0` so each visit re-assembles a fresh (re-shuffled) attempt.
+ */
+export function useExamPreview(
+  id: string | undefined,
+): UseQueryResult<ExamPreview, Error> {
+  return useQuery({
+    queryKey: [...examDefinitionKeys.all, 'preview', id ?? ''] as const,
+    enabled: Boolean(id),
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await api.GET('/exam-definitions/{id}/preview', {
+        params: { path: { id: id as string } },
+        signal,
+      });
+      if (error) {
+        throw new Error(problemMessage(error, 'Failed to load exam preview'));
+      }
+      return data;
+    },
+  });
+}
+
+/**
+ * Generate a ready-to-take exam directly from topics (no question bank).
+ * `POST /exam-definitions/generate`. Returns the async Job; poll it with
+ * `useJob`, and invalidate the exam list when it reaches `ready`.
+ */
+export function useGenerateExam(): UseMutationResult<
+  Job,
+  Error,
+  GenerateExamRequest
+> {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (body: GenerateExamRequest) => {
+      const { data, error } = await api.POST('/exam-definitions/generate', {
+        body,
+      });
+      if (error) {
+        throw new Error(problemMessage(error, 'Failed to generate exam'));
+      }
+      return data;
     },
     onError: (error) => {
       toast(error.message, { variant: 'danger' });

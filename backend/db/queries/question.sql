@@ -7,25 +7,37 @@ INSERT INTO question (
     text,
     correct_option_id,
     difficulty,
-    enabled
+    enabled,
+    generated
 ) VALUES (
-    $1, $2, $3, $4, COALESCE(sqlc.narg('difficulty'), 'medium'), COALESCE(sqlc.narg('enabled'), true)
+    $1, $2, $3, $4,
+    COALESCE(sqlc.narg('difficulty'), 'medium'),
+    COALESCE(sqlc.narg('enabled'), true),
+    COALESCE(sqlc.narg('generated'), false)
 )
 RETURNING *;
+
+-- name: GetQuestionsByIDs :many
+-- Fetch a specific set of questions by id (used by pinned/generated exams),
+-- regardless of enabled state.
+SELECT * FROM question
+WHERE id = ANY(sqlc.arg('ids')::text[]);
 
 -- name: GetQuestion :one
 SELECT * FROM question
 WHERE id = $1;
 
 -- name: ListQuestionsBySubject :many
+-- The manual question bank: excludes generated questions (which back generated
+-- exams and are never hand-curated here).
 SELECT * FROM question
-WHERE subject_id = $1
+WHERE subject_id = $1 AND generated = false
 ORDER BY created_at DESC, id
 LIMIT $2 OFFSET $3;
 
 -- name: CountQuestionsBySubject :one
 SELECT count(*) FROM question
-WHERE subject_id = $1;
+WHERE subject_id = $1 AND generated = false;
 
 -- name: ListQuestionsByTopic :many
 SELECT * FROM question

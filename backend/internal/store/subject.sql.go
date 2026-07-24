@@ -23,9 +23,9 @@ func (q *Queries) CountSubjects(ctx context.Context, archived *bool) (int64, err
 
 const createSubject = `-- name: CreateSubject :one
 
-INSERT INTO subject (name, color, icon, description)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, color, icon, description, archived, created_at
+INSERT INTO subject (name, color, icon, description, syllabus_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, color, icon, description, archived, created_at, syllabus_id
 `
 
 type CreateSubjectParams struct {
@@ -33,6 +33,7 @@ type CreateSubjectParams struct {
 	Color       *string `json:"color"`
 	Icon        *string `json:"icon"`
 	Description *string `json:"description"`
+	SyllabusID  *string `json:"syllabusId"`
 }
 
 // Subject queries (D01) — contract C01.
@@ -42,6 +43,7 @@ func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) (S
 		arg.Color,
 		arg.Icon,
 		arg.Description,
+		arg.SyllabusID,
 	)
 	var i Subject
 	err := row.Scan(
@@ -52,6 +54,7 @@ func (q *Queries) CreateSubject(ctx context.Context, arg CreateSubjectParams) (S
 		&i.Description,
 		&i.Archived,
 		&i.CreatedAt,
+		&i.SyllabusID,
 	)
 	return i, err
 }
@@ -67,7 +70,7 @@ func (q *Queries) DeleteSubject(ctx context.Context, id string) error {
 }
 
 const getSubject = `-- name: GetSubject :one
-SELECT id, name, color, icon, description, archived, created_at FROM subject
+SELECT id, name, color, icon, description, archived, created_at, syllabus_id FROM subject
 WHERE id = $1
 `
 
@@ -82,12 +85,13 @@ func (q *Queries) GetSubject(ctx context.Context, id string) (Subject, error) {
 		&i.Description,
 		&i.Archived,
 		&i.CreatedAt,
+		&i.SyllabusID,
 	)
 	return i, err
 }
 
 const listSubjects = `-- name: ListSubjects :many
-SELECT id, name, color, icon, description, archived, created_at FROM subject
+SELECT id, name, color, icon, description, archived, created_at, syllabus_id FROM subject
 WHERE ($3::boolean IS NULL OR archived = $3::boolean)
 ORDER BY created_at DESC, id DESC
 LIMIT $1 OFFSET $2
@@ -118,6 +122,7 @@ func (q *Queries) ListSubjects(ctx context.Context, arg ListSubjectsParams) ([]S
 			&i.Description,
 			&i.Archived,
 			&i.CreatedAt,
+			&i.SyllabusID,
 		); err != nil {
 			return nil, err
 		}
@@ -136,21 +141,29 @@ SET
     color       = COALESCE($2, color),
     icon        = COALESCE($3, icon),
     description = COALESCE($4, description),
-    archived    = COALESCE($5, archived)
-WHERE id = $6
-RETURNING id, name, color, icon, description, archived, created_at
+    archived    = COALESCE($5, archived),
+    syllabus_id = CASE
+        WHEN $6::boolean THEN NULL
+        ELSE COALESCE($7, syllabus_id)
+    END
+WHERE id = $8
+RETURNING id, name, color, icon, description, archived, created_at, syllabus_id
 `
 
 type UpdateSubjectParams struct {
-	Name        *string `json:"name"`
-	Color       *string `json:"color"`
-	Icon        *string `json:"icon"`
-	Description *string `json:"description"`
-	Archived    *bool   `json:"archived"`
-	ID          string  `json:"id"`
+	Name          *string `json:"name"`
+	Color         *string `json:"color"`
+	Icon          *string `json:"icon"`
+	Description   *string `json:"description"`
+	Archived      *bool   `json:"archived"`
+	ClearSyllabus bool    `json:"clearSyllabus"`
+	SyllabusID    *string `json:"syllabusId"`
+	ID            string  `json:"id"`
 }
 
-// Partial update: NULL params leave the existing value untouched.
+// Partial update: NULL params leave the existing value untouched. syllabus_id
+// additionally supports explicit clearing (un-grouping) via clear_syllabus,
+// since COALESCE alone cannot distinguish "leave" from "set NULL".
 func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error) {
 	row := q.db.QueryRow(ctx, updateSubject,
 		arg.Name,
@@ -158,6 +171,8 @@ func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (S
 		arg.Icon,
 		arg.Description,
 		arg.Archived,
+		arg.ClearSyllabus,
+		arg.SyllabusID,
 		arg.ID,
 	)
 	var i Subject
@@ -169,6 +184,7 @@ func (q *Queries) UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (S
 		&i.Description,
 		&i.Archived,
 		&i.CreatedAt,
+		&i.SyllabusID,
 	)
 	return i, err
 }

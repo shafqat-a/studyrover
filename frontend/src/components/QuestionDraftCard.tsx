@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { components } from '../api/schema';
+import { RichContent } from './RichContent';
 
 /**
  * U07 — QuestionDraftCard
@@ -223,9 +224,10 @@ export function QuestionDraftCard({
           />
         </div>
       ) : (
-        <p id={promptId} className="text-base font-medium text-foreground">
-          {draft.text}
-        </p>
+        <RichContent
+          html={draft.text}
+          className="text-base font-medium text-foreground"
+        />
       )}
 
       {/* Options */}
@@ -318,7 +320,7 @@ export function QuestionDraftCard({
                     )}
                   />
                 </span>
-                <span className="flex-1">{optText}</span>
+                <RichContent inline html={optText} className="flex-1" />
                 {isCorrect && (
                   <span className="text-xs font-semibold uppercase tracking-wide text-success">
                     Correct
@@ -338,13 +340,13 @@ export function QuestionDraftCard({
             onClick={handleCancel}
             disabled={busy}
             className={cx(
-              'inline-flex h-10 items-center justify-center rounded-pill px-4',
-              'text-sm font-semibold text-foreground',
-              'border border-border bg-transparent transition-colors duration-150',
+              'inline-flex h-9 items-center justify-center rounded-md px-3.5',
+              'text-sm font-medium text-foreground',
+              'border border-border bg-surface shadow-xs transition-colors duration-150',
               'hover:bg-surface-muted',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-              'disabled:cursor-not-allowed disabled:opacity-60',
+              'disabled:cursor-not-allowed disabled:opacity-55',
             )}
           >
             Cancel
@@ -355,13 +357,13 @@ export function QuestionDraftCard({
             onClick={handleStartEdit}
             disabled={isLocked}
             className={cx(
-              'inline-flex h-10 items-center justify-center rounded-pill px-4',
-              'text-sm font-semibold text-foreground',
-              'border border-border bg-transparent transition-colors duration-150',
+              'inline-flex h-9 items-center justify-center rounded-md px-3.5',
+              'text-sm font-medium text-foreground',
+              'border border-border bg-surface shadow-xs transition-colors duration-150',
               'hover:bg-surface-muted',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-              'disabled:cursor-not-allowed disabled:opacity-60',
+              'disabled:cursor-not-allowed disabled:opacity-55',
             )}
           >
             Edit
@@ -374,13 +376,13 @@ export function QuestionDraftCard({
           disabled={isLocked}
           aria-busy={rejecting || undefined}
           className={cx(
-            'inline-flex h-10 items-center justify-center rounded-pill px-4',
-            'text-sm font-semibold text-danger',
-            'border border-danger/40 bg-transparent transition-colors duration-150',
+            'inline-flex h-9 items-center justify-center rounded-md px-3.5',
+            'text-sm font-medium text-danger',
+            'border border-danger/40 bg-surface shadow-xs transition-colors duration-150',
             'hover:bg-danger-soft',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            'disabled:cursor-not-allowed disabled:opacity-60',
+            'disabled:cursor-not-allowed disabled:opacity-55',
           )}
         >
           {rejecting ? 'Rejecting…' : 'Reject'}
@@ -392,13 +394,13 @@ export function QuestionDraftCard({
           disabled={isLocked}
           aria-busy={approving || undefined}
           className={cx(
-            'inline-flex h-10 items-center justify-center rounded-pill px-5',
-            'text-sm font-semibold text-primary-foreground',
-            'border border-transparent bg-primary shadow-card transition-colors duration-150',
-            'hover:bg-primary/90 active:bg-primary/80',
+            'inline-flex h-9 items-center justify-center rounded-md px-4',
+            'text-sm font-medium text-primary-foreground',
+            'border border-transparent bg-primary shadow-xs transition-colors duration-150',
+            'hover:bg-primary/90 active:bg-primary/95',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            'disabled:cursor-not-allowed disabled:opacity-60',
+            'disabled:cursor-not-allowed disabled:opacity-55',
           )}
         >
           {approving ? 'Approving…' : editing ? 'Save & approve' : 'Approve'}

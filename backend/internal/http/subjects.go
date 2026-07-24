@@ -83,6 +83,7 @@ func (h *Handlers) CreateSubject(w http.ResponseWriter, r *http.Request) {
 		Color:       body.Color,
 		Icon:        body.Icon,
 		Description: body.Description,
+		SyllabusID:  normalizeSyllabusID(body.SyllabusId),
 	})
 	if err != nil {
 		internalError(w, err.Error())
@@ -117,6 +118,20 @@ func toContractSubject(s store.Subject) contracts.Subject {
 		Icon:        s.Icon,
 		Description: s.Description,
 		Archived:    s.Archived,
+		SyllabusId:  s.SyllabusID,
 		CreatedAt:   s.CreatedAt,
 	}
+}
+
+// normalizeSyllabusID treats an empty/blank syllabusId as "no syllabus" (nil)
+// so callers cannot store an empty-string foreign key.
+func normalizeSyllabusID(id *string) *string {
+	if id == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*id)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }

@@ -200,6 +200,10 @@ func examDefToContract(e store.ExamDefinition) contracts.ExamDefinition {
 	if scope == nil {
 		scope = []string{}
 	}
+	questionIDs := e.QuestionIds
+	if questionIDs == nil {
+		questionIDs = []string{}
+	}
 	return contracts.ExamDefinition{
 		Id:            e.ID,
 		SubjectId:     e.SubjectID,
@@ -210,6 +214,7 @@ func examDefToContract(e store.ExamDefinition) contracts.ExamDefinition {
 		PassBar:       int(e.PassBar),
 		CooldownMin:   int(e.CooldownMin),
 		RewardStyle:   contracts.RewardStyle(e.RewardStyle),
+		QuestionIds:   &questionIDs,
 		CreatedAt:     e.CreatedAt,
 	}
 }

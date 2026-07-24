@@ -7,9 +7,10 @@ INSERT INTO exam_definition (
     size,
     pass_bar,
     cooldown_min,
-    reward_style
+    reward_style,
+    question_ids
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, COALESCE(sqlc.narg('question_ids')::text[], '{}')
 )
 RETURNING *;
 

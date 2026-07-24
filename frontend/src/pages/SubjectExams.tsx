@@ -1,20 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Check,
+  ClipboardList,
+  Play,
+  Plus,
+  RotateCcw,
+  Wand2,
+} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { Badge } from '../components';
-import { Button } from '../components';
-import { Card } from '../components';
-import { Select } from '../components';
-import { TextInput } from '../components';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  Dialog,
+  EmptyState,
+  JobStatus,
+  NumberStepper,
+  PageHeader,
+  Select,
+  TextInput,
+} from '../components';
 import type { components } from '../api/schema';
 import {
+  examDefinitionKeys,
   useCreateExamDefinition,
   useDeleteExamDefinition,
   useExamDefinitions,
+  useGenerateExam,
+  useJob,
   useTopics,
   useUpdateExamDefinition,
 } from '../hooks';
+import { useToast } from '../app/providers';
 
 /**
  * P08 — Exam definitions (screen 2.6)
@@ -45,6 +66,8 @@ type ExamDefinition = components['schemas']['ExamDefinition'];
 type CreateExamDefinition = components['schemas']['CreateExamDefinition'];
 type ExamType = components['schemas']['ExamType'];
 type RewardStyle = components['schemas']['RewardStyle'];
+type Topic = components['schemas']['Topic'];
+type Job = components['schemas']['Job'];
 
 const TYPE_OPTIONS: ReadonlyArray<{ value: ExamType; label: string }> = [
   { value: 'gate', label: 'Gate (unlocks internet time)' },
@@ -113,6 +136,7 @@ function formFromExam(exam: ExamDefinition): ExamFormState {
 
 export default function SubjectExams() {
   const { subjectId } = useParams<{ subjectId: string }>();
+  const navigate = useNavigate();
 
   const examsQuery = useExamDefinitions(subjectId);
   const topicsQuery = useTopics(subjectId);
@@ -120,11 +144,44 @@ export default function SubjectExams() {
   const updateExam = useUpdateExamDefinition();
   const deleteExam = useDeleteExamDefinition();
 
+  const generateExam = useGenerateExam();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   // Dialog state: `null` = closed; otherwise create (no exam) or edit.
   const [editor, setEditor] = useState<
     { mode: 'create' } | { mode: 'edit'; exam: ExamDefinition } | null
   >(null);
   const [confirm, setConfirm] = useState<ExamDefinition | null>(null);
+
+  // Generate-exam flow: dialog open state + the async job to poll.
+  const [genOpen, setGenOpen] = useState(false);
+  const [genJobId, setGenJobId] = useState<string | null>(null);
+  const genJob = useJob(genJobId ?? undefined);
+  const genStatus = genJob.data?.status;
+  const generating =
+    generateExam.isPending ||
+    genStatus === 'queued' ||
+    genStatus === 'processing';
+
+  useEffect(() => {
+    if (genStatus === 'ready') {
+      if (subjectId) {
+        void queryClient.invalidateQueries({
+          queryKey: examDefinitionKeys.lists(subjectId),
+        });
+      }
+      toast('Exam generated — it’s ready to take.', { variant: 'success' });
+      setGenJobId(null);
+      setGenOpen(false);
+    } else if (genStatus === 'error') {
+      toast(genJob.data?.error ?? 'Exam generation failed.', {
+        variant: 'danger',
+      });
+      setGenJobId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genStatus]);
 
   const topics = topicsQuery.data?.items ?? [];
   const topicName = (id: string) =>
@@ -150,18 +207,30 @@ export default function SubjectExams() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-display text-display-sm text-foreground">Exams</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Define exam templates for this subject. Gate exams unlock internet
-            time when a student passes; formal exams are graded only.
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={!subjectId}>
-          New exam
-        </Button>
-      </header>
+      <PageHeader
+        as="h2"
+        title="Exams"
+        subtitle="Define exam templates for this subject. Gate exams unlock internet time when a student passes; formal exams are graded only."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setGenOpen(true)}
+              disabled={!subjectId}
+              leadingIcon={<Wand2 className="h-4 w-4" aria-hidden="true" />}
+            >
+              Generate exam
+            </Button>
+            <Button
+              onClick={openCreate}
+              disabled={!subjectId}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              New exam
+            </Button>
+          </div>
+        }
+      />
 
       {examsQuery.isPending ? (
         <ExamsSkeleton />
@@ -172,7 +241,20 @@ export default function SubjectExams() {
           retrying={examsQuery.isFetching}
         />
       ) : examsQuery.data.items.length === 0 ? (
-        <EmptyState onAdd={openCreate} disabled={!subjectId} />
+        <EmptyState
+          icon={<ClipboardList className="h-5 w-5" />}
+          title="No exams yet"
+          description="Create an exam template to let your student earn internet time or check their understanding of this subject."
+          action={
+            <Button
+              onClick={openCreate}
+              disabled={!subjectId}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              New exam
+            </Button>
+          }
+        />
       ) : (
         <ul className="space-y-3" aria-label="Exam definitions">
           {examsQuery.data.items.map((exam) => (
@@ -180,6 +262,11 @@ export default function SubjectExams() {
               <ExamRow
                 exam={exam}
                 topicName={topicName}
+                onPreview={() =>
+                  navigate(
+                    `/parent/subjects/${subjectId}/exams/${exam.id}/preview`,
+                  )
+                }
                 onEdit={() => openEdit(exam)}
                 onDelete={() => setConfirm(exam)}
               />
@@ -236,33 +323,237 @@ export default function SubjectExams() {
 
       {confirm && (
         <ConfirmDialog
+          open
+          danger
           title="Delete exam"
-          body={`Permanently delete the exam “${confirm.name}”? Past attempts are kept, but no new attempts can be started. This cannot be undone.`}
+          message={`Permanently delete the exam “${confirm.name}”? Past attempts are kept, but no new attempts can be started. This cannot be undone.`}
           confirmLabel="Delete"
-          busy={deleteExam.isPending}
+          cancelLabel="Cancel"
           onCancel={() => setConfirm(null)}
-          onConfirm={() => void handleDelete()}
+          onConfirm={handleDelete}
+        />
+      )}
+
+      {genOpen && subjectId && (
+        <GenerateExamDialog
+          topics={topics}
+          submitting={generating}
+          job={genJobId ? genJob.data : undefined}
+          onClose={() => {
+            if (!generating) setGenOpen(false);
+          }}
+          onGenerate={async (form) => {
+            const job = await generateExam.mutateAsync({
+              subjectId,
+              name: form.name.trim(),
+              passBar: form.passBar,
+              difficulty: form.difficulty || undefined,
+              topics: form.topics,
+            });
+            setGenJobId(job.id);
+          }}
         />
       )}
     </div>
   );
 }
 
+interface GenerateExamForm {
+  name: string;
+  passBar: number;
+  difficulty: string;
+  topics: { topicId: string; count: number }[];
+}
+
+interface GenerateExamDialogProps {
+  topics: Topic[];
+  submitting: boolean;
+  job: Job | undefined;
+  onClose: () => void;
+  onGenerate: (form: GenerateExamForm) => Promise<void> | void;
+}
+
+/**
+ * Build a ready-to-take exam by picking how many questions to generate from each
+ * topic. The AI authors the questions from the syllabus (no question bank), and
+ * the exam is pinned to exactly those questions.
+ */
+function GenerateExamDialog({
+  topics,
+  submitting,
+  job,
+  onClose,
+  onGenerate,
+}: GenerateExamDialogProps) {
+  const [name, setName] = useState('');
+  const [passBar, setPassBar] = useState(70);
+  const [difficulty, setDifficulty] = useState('');
+  // topicId -> count (0 = not included).
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [touched, setTouched] = useState(false);
+
+  const selected = topics
+    .map((t) => ({ topicId: t.id, count: counts[t.id] ?? 0 }))
+    .filter((t) => t.count > 0);
+  const total = selected.reduce((sum, t) => sum + t.count, 0);
+
+  const nameError =
+    touched && name.trim().length === 0 ? 'Name is required.' : undefined;
+  const topicError =
+    touched && selected.length === 0
+      ? 'Pick at least one topic and a question count.'
+      : undefined;
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setTouched(true);
+    if (name.trim().length === 0 || selected.length === 0 || total > 60) return;
+    void onGenerate({ name, passBar, difficulty, topics: selected });
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title="Generate an exam"
+      description="Choose how many questions to generate from each topic. The AI writes them from the syllabus — no question bank needed — and pins them into a ready-to-take exam."
+      size="lg"
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="generate-exam-form"
+            loading={submitting}
+            disabled={total === 0 || total > 60}
+            leadingIcon={<Wand2 className="h-4 w-4" aria-hidden="true" />}
+          >
+            {submitting ? 'Generating…' : `Generate exam (${total})`}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="generate-exam-form"
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
+        <TextInput
+          label="Exam name"
+          required
+          autoFocus
+          value={name}
+          error={nameError}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() => setTouched(true)}
+          placeholder="e.g. Trigonometry practice test"
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-foreground">
+              Pass mark (%)
+            </span>
+            <NumberStepper
+              label="Pass mark percentage"
+              value={passBar}
+              min={0}
+              max={100}
+              step={5}
+              onChange={setPassBar}
+            />
+          </div>
+          <Select
+            label="Difficulty"
+            value={difficulty}
+            options={[
+              { value: '', label: 'A spread (default)' },
+              { value: 'easy', label: 'Easy' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'hard', label: 'Hard' },
+            ]}
+            onChange={(e) => setDifficulty(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground">
+              Questions per topic
+            </span>
+            <span className="text-sm text-foreground-muted">
+              {total} total{total > 60 ? ' — max 60' : ''}
+            </span>
+          </div>
+          {topicError && (
+            <p role="alert" className="mb-2 text-sm text-danger">
+              {topicError}
+            </p>
+          )}
+          {topics.length === 0 ? (
+            <p className="rounded-card border border-dashed border-border p-3 text-sm text-foreground-muted">
+              This subject has no topics yet. Add topics first.
+            </p>
+          ) : (
+            <ul className="max-h-72 space-y-1 overflow-y-auto rounded-card border border-border p-2">
+              {topics.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 hover:bg-surface-muted/50"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                    {t.name}
+                  </span>
+                  <NumberStepper
+                    label={`Questions from ${t.name}`}
+                    value={counts[t.id] ?? 0}
+                    min={0}
+                    max={20}
+                    onChange={(v) =>
+                      setCounts((c) => ({ ...c, [t.id]: v }))
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {job && (job.status === 'queued' || job.status === 'processing') && (
+          <JobStatus
+            status={job.status}
+            progress={job.progress}
+            label="Generating exam questions"
+          />
+        )}
+      </form>
+    </Dialog>
+  );
+}
+
 interface ExamRowProps {
   exam: ExamDefinition;
   topicName: (id: string) => string;
+  onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function ExamRow({ exam, topicName, onEdit, onDelete }: ExamRowProps) {
+function ExamRow({ exam, topicName, onPreview, onEdit, onDelete }: ExamRowProps) {
   const wholeSubject = exam.scopeTopicIds.length === 0;
   return (
     <Card padding="md" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-display font-bold text-foreground">
+            <span className="truncate font-display text-base font-semibold text-foreground">
               {exam.name}
             </span>
             <Badge tone={exam.type === 'gate' ? 'info' : 'neutral'} size="sm">
@@ -275,6 +566,14 @@ function ExamRow({ exam, topicName, onEdit, onDelete }: ExamRowProps) {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onPreview}
+            leadingIcon={<Play className="h-4 w-4" aria-hidden="true" />}
+          >
+            Preview
+          </Button>
           <Button variant="ghost" size="sm" onClick={onEdit}>
             Edit
           </Button>
@@ -352,153 +651,141 @@ function ExamDialog({
   }
 
   return (
-    <Overlay labelledBy="exam-dialog-title" onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-card bg-surface p-6 shadow-card"
-      >
-        <h2
-          id="exam-dialog-title"
-          className="font-display text-display-sm text-foreground"
-        >
-          {title}
-        </h2>
+    <Dialog open onClose={onClose} title={title} size="md">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <TextInput
+          label="Name"
+          required
+          autoFocus
+          value={form.name}
+          error={nameError}
+          placeholder="e.g. Chapter 3 quiz"
+          onChange={(e) => patch({ name: e.target.value })}
+          onBlur={() => setTouched(true)}
+        />
 
-        <div className="mt-5 space-y-5">
-          <TextInput
-            label="Name"
-            required
-            autoFocus
-            value={form.name}
-            error={nameError}
-            placeholder="e.g. Chapter 3 quiz"
-            onChange={(e) => patch({ name: e.target.value })}
-            onBlur={() => setTouched(true)}
-          />
+        <Select
+          label="Type"
+          value={form.type}
+          onChange={(e) => patch({ type: e.target.value as ExamType })}
+          options={TYPE_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+        />
 
-          <Select
-            label="Type"
-            value={form.type}
-            onChange={(e) => patch({ type: e.target.value as ExamType })}
-            options={TYPE_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-          />
-
-          <fieldset>
-            <legend className="text-sm font-semibold text-foreground">
-              Scope
-            </legend>
-            <p className="mt-0.5 text-sm text-foreground-muted">
-              Select topics to draw questions from. Leave all unchecked to cover
-              the whole subject.
+        <fieldset>
+          <legend className="text-sm font-semibold text-foreground">
+            Scope
+          </legend>
+          <p className="mt-0.5 text-sm text-foreground-muted">
+            Select topics to draw questions from. Leave all unchecked to cover
+            the whole subject.
+          </p>
+          {topicsLoading ? (
+            <p className="mt-2 text-sm text-foreground-muted">
+              Loading topics…
             </p>
-            {topicsLoading ? (
-              <p className="mt-2 text-sm text-foreground-muted">
-                Loading topics…
-              </p>
-            ) : topics.length === 0 ? (
-              <p className="mt-2 text-sm text-foreground-muted">
-                No topics yet — this exam will cover the whole subject.
-              </p>
-            ) : (
-              <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2">
-                {topics.map((topic) => {
-                  const checked = form.scopeTopicIds.includes(topic.id);
-                  return (
-                    <label
-                      key={topic.id}
-                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-foreground hover:bg-surface-muted"
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
-                        checked={checked}
-                        onChange={() => toggleTopic(topic.id)}
-                      />
-                      <span className="truncate">{topic.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </fieldset>
-
-          <fieldset>
-            <legend className="text-sm font-semibold text-foreground">
-              Size
-            </legend>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {SIZE_PRESETS.map((preset) => {
-                const selected = form.size === preset;
+          ) : topics.length === 0 ? (
+            <p className="mt-2 text-sm text-foreground-muted">
+              No topics yet — this exam will cover the whole subject.
+            </p>
+          ) : (
+            <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+              {topics.map((topic) => {
+                const checked = form.scopeTopicIds.includes(topic.id);
                 return (
-                  <button
-                    key={preset}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => patch({ size: preset })}
-                    className={`rounded-md border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      selected
-                        ? 'border-primary bg-primary-soft text-foreground'
-                        : 'border-border bg-surface text-foreground hover:bg-surface-muted'
-                    }`}
+                  <label
+                    key={topic.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-foreground hover:bg-surface-muted"
                   >
-                    {preset}
-                  </button>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
+                      checked={checked}
+                      onChange={() => toggleTopic(topic.id)}
+                    />
+                    <span className="truncate">{topic.name}</span>
+                  </label>
                 );
               })}
-              <TextInput
-                label="Custom"
-                type="number"
-                min={1}
-                value={String(form.size)}
-                onChange={(e) =>
-                  patch({ size: clampInt(e.target.value, 1, DEFAULTS.size) })
-                }
-                className="w-28"
-              />
             </div>
-          </fieldset>
+          )}
+        </fieldset>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <fieldset>
+          <legend className="text-sm font-semibold text-foreground">
+            Size
+          </legend>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {SIZE_PRESETS.map((preset) => {
+              const selected = form.size === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => patch({ size: preset })}
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    selected
+                      ? 'border-primary bg-primary-soft text-foreground'
+                      : 'border-border bg-surface text-foreground hover:bg-surface-muted'
+                  }`}
+                >
+                  {preset}
+                </button>
+              );
+            })}
             <TextInput
-              label="Pass bar (%)"
+              label="Custom"
               type="number"
-              min={0}
-              max={100}
-              value={String(form.passBar)}
+              min={1}
+              value={String(form.size)}
               onChange={(e) =>
-                patch({ passBar: clampInt(e.target.value, 0, DEFAULTS.passBar) })
+                patch({ size: clampInt(e.target.value, 1, DEFAULTS.size) })
               }
-            />
-            <TextInput
-              label="Cooldown (minutes)"
-              type="number"
-              min={0}
-              value={String(form.cooldownMin)}
-              onChange={(e) =>
-                patch({
-                  cooldownMin: clampInt(e.target.value, 0, DEFAULTS.cooldownMin),
-                })
-              }
+              className="w-28"
             />
           </div>
+        </fieldset>
 
-          <Select
-            label="Reward style"
-            value={form.rewardStyle}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Pass bar (%)"
+            type="number"
+            min={0}
+            max={100}
+            value={String(form.passBar)}
             onChange={(e) =>
-              patch({ rewardStyle: e.target.value as RewardStyle })
+              patch({ passBar: clampInt(e.target.value, 0, DEFAULTS.passBar) })
             }
-            options={REWARD_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
+          />
+          <TextInput
+            label="Cooldown (minutes)"
+            type="number"
+            min={0}
+            value={String(form.cooldownMin)}
+            onChange={(e) =>
+              patch({
+                cooldownMin: clampInt(e.target.value, 0, DEFAULTS.cooldownMin),
+              })
+            }
           />
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <Select
+          label="Reward style"
+          value={form.rewardStyle}
+          onChange={(e) =>
+            patch({ rewardStyle: e.target.value as RewardStyle })
+          }
+          options={REWARD_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+        />
+
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="ghost"
@@ -507,12 +794,16 @@ function ExamDialog({
           >
             Cancel
           </Button>
-          <Button type="submit" loading={submitting}>
+          <Button
+            type="submit"
+            loading={submitting}
+            leadingIcon={<Check className="h-4 w-4" aria-hidden="true" />}
+          >
             Save
           </Button>
         </div>
       </form>
-    </Overlay>
+    </Dialog>
   );
 }
 
@@ -525,115 +816,15 @@ function clampInt(raw: string, min: number, fallback: number): number {
   return parsed < min ? min : parsed;
 }
 
-interface ConfirmDialogProps {
-  title: string;
-  body: string;
-  confirmLabel: string;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}
-
-function ConfirmDialog({
-  title,
-  body,
-  confirmLabel,
-  busy,
-  onCancel,
-  onConfirm,
-}: ConfirmDialogProps) {
-  return (
-    <Overlay labelledBy="delete-exam-title" onClose={onCancel}>
-      <div
-        role="alertdialog"
-        aria-labelledby="delete-exam-title"
-        aria-describedby="delete-exam-body"
-        className="w-full max-w-sm rounded-card bg-surface p-6 shadow-card"
-      >
-        <h2
-          id="delete-exam-title"
-          className="font-display text-display-sm text-foreground"
-        >
-          {title}
-        </h2>
-        <p id="delete-exam-body" className="mt-2 text-sm text-foreground-muted">
-          {body}
-        </p>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-          <Button variant="danger" loading={busy} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </Overlay>
-  );
-}
-
-interface OverlayProps {
-  labelledBy: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}
-
-/** Minimal modal overlay: backdrop click + role=dialog wrapper. */
-function Overlay({ labelledBy, onClose, children }: OverlayProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        className="flex w-full justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function ExamsSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Loading exams">
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-24 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-24 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
-    </div>
-  );
-}
-
-interface EmptyStateProps {
-  onAdd: () => void;
-  disabled: boolean;
-}
-
-function EmptyState({ onAdd, disabled }: EmptyStateProps) {
-  return (
-    <div className="rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <p className="text-4xl" aria-hidden="true">
-        📝
-      </p>
-      <h3 className="mt-3 font-display text-display-sm text-foreground">
-        No exams yet
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-        Create an exam template to let your student earn internet time or check
-        their understanding of this subject.
-      </p>
-      <div className="mt-5">
-        <Button onClick={onAdd} disabled={disabled}>
-          New exam
-        </Button>
-      </div>
     </div>
   );
 }
@@ -648,14 +839,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h3 className="font-display text-display-sm text-danger">
+      <h3 className="font-display text-base font-semibold text-danger">
         Couldn&rsquo;t load exams
       </h3>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

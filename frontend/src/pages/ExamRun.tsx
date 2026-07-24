@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Clock, Flag, HelpCircle } from 'lucide-react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { ProgressBar } from '../components/ProgressBar';
+import { RadioGroup } from '../components/RadioGroup';
+import { RichContent, toPlainText } from '../components/RichContent';
 import type { components } from '../api/schema';
 import {
   useAttempt,
@@ -227,11 +231,14 @@ export default function ExamRun() {
       <header className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-display-sm text-foreground">
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
               Exam in progress
             </h1>
             <p className="mt-1 text-sm text-foreground-muted">
-              Question {current + 1} of {total} · {answeredCount} answered
+              <span className="inline-flex items-center gap-1.5">
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                Question {current + 1} of {total} · {answeredCount} answered
+              </span>
             </p>
           </div>
           {remaining !== null && (
@@ -240,12 +247,17 @@ export default function ExamRun() {
               size="md"
               aria-label={`Time remaining ${formatClock(remaining)}`}
             >
+              <Clock className="h-4 w-4" aria-hidden="true" />
               <span className="tabular-nums">{formatClock(remaining)}</span>
             </Badge>
           )}
         </div>
 
-        <ProgressBar value={progressPct} answered={answeredCount} total={total} />
+        <ProgressBar
+          value={progressPct}
+          showValue={false}
+          aria-label={`${answeredCount} of ${total} questions answered`}
+        />
 
         <nav aria-label="Jump to question" className="flex flex-wrap gap-1.5">
           {questions.map((q, index) => {
@@ -262,7 +274,7 @@ export default function ExamRun() {
                 }`}
                 className={`flex h-8 w-8 items-center justify-center rounded-md border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
                   isCurrent
-                    ? 'border-primary bg-primary text-on-primary'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : isAnswered
                       ? 'border-primary bg-primary-soft text-primary'
                       : 'border-border bg-surface text-foreground-muted hover:bg-surface-muted'
@@ -277,40 +289,26 @@ export default function ExamRun() {
 
       <Card padding="lg" className="space-y-5">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-foreground">
-            {question.text}
-          </h2>
+          <RichContent
+            html={question.text}
+            className="font-display text-base font-semibold text-foreground"
+          />
           <Badge tone="neutral" size="sm">
             {question.difficulty}
           </Badge>
         </div>
 
-        <fieldset className="space-y-2">
-          <legend className="sr-only">Answer options</legend>
-          {question.options.map((option) => {
-            const isChecked = selected === option.id;
-            return (
-              <label
-                key={option.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-card border p-4 transition focus-within:ring-2 focus-within:ring-ring ${
-                  isChecked
-                    ? 'border-primary bg-primary-soft'
-                    : 'border-border bg-surface hover:bg-surface-muted'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`q-${question.id}`}
-                  value={option.id}
-                  checked={isChecked}
-                  onChange={() => selectOption(option.id)}
-                  className="h-4 w-4 shrink-0 accent-primary focus:outline-none"
-                />
-                <span className="text-sm text-foreground">{option.text}</span>
-              </label>
-            );
-          })}
-        </fieldset>
+        <RadioGroup
+          options={question.options.map((option) => ({
+            id: option.id,
+            label: <RichContent inline html={option.text} />,
+            ariaLabel: toPlainText(option.text),
+          }))}
+          value={selected}
+          onChange={selectOption}
+          name={`q-${question.id}`}
+          aria-label="Answer options"
+        />
       </Card>
 
       <div className="flex items-center justify-between gap-3">
@@ -326,6 +324,7 @@ export default function ExamRun() {
           <Button
             onClick={() => setConfirmOpen(true)}
             loading={submitAttempt.isPending}
+            leadingIcon={<Flag className="h-4 w-4" aria-hidden="true" />}
           >
             Submit exam
           </Button>
@@ -343,6 +342,7 @@ export default function ExamRun() {
             size="sm"
             onClick={() => setConfirmOpen(true)}
             loading={submitAttempt.isPending}
+            leadingIcon={<Flag className="h-4 w-4" aria-hidden="true" />}
           >
             Submit exam now
           </Button>
@@ -363,31 +363,6 @@ export default function ExamRun() {
           onConfirm={() => void doSubmit()}
         />
       )}
-    </div>
-  );
-}
-
-interface ProgressBarProps {
-  value: number;
-  answered: number;
-  total: number;
-}
-
-/** Inline progress bar (U15 role): answered-questions completion. */
-function ProgressBar({ value, answered, total }: ProgressBarProps) {
-  return (
-    <div
-      role="progressbar"
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-valuenow={answered}
-      aria-label={`${answered} of ${total} questions answered`}
-      className="h-2 w-full overflow-hidden rounded-full bg-surface-muted"
-    >
-      <div
-        className="h-full rounded-full bg-primary transition-[width] duration-300"
-        style={{ width: `${value}%` }}
-      />
     </div>
   );
 }
@@ -420,12 +395,12 @@ function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="submit-dialog-title"
         aria-describedby="submit-dialog-body"
-        className="w-full max-w-sm rounded-card bg-surface p-6 shadow-card"
+        className="w-full max-w-sm rounded-card bg-surface p-6 shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
           id="submit-dialog-title"
-          className="font-display text-display-sm text-foreground"
+          className="font-display text-base font-semibold text-foreground"
         >
           {title}
         </h2>
@@ -439,7 +414,11 @@ function ConfirmDialog({
           <Button variant="ghost" onClick={onCancel} disabled={busy}>
             Keep going
           </Button>
-          <Button loading={busy} onClick={onConfirm}>
+          <Button
+            loading={busy}
+            onClick={onConfirm}
+            leadingIcon={<Flag className="h-4 w-4" aria-hidden="true" />}
+          >
             {confirmLabel}
           </Button>
         </div>
@@ -457,7 +436,7 @@ function ExamSkeleton() {
     >
       <div className="h-8 w-48 animate-pulse rounded-md bg-surface-muted" />
       <div className="h-2 w-full animate-pulse rounded-full bg-surface-muted" />
-      <div className="h-64 animate-pulse rounded-card border border-border bg-surface-muted" />
+      <div className="h-64 animate-pulse rounded-md bg-surface-muted" />
       <div className="flex justify-between">
         <div className="h-10 w-28 animate-pulse rounded-md bg-surface-muted" />
         <div className="h-10 w-28 animate-pulse rounded-md bg-surface-muted" />
@@ -476,14 +455,14 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load this exam
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button variant="secondary" size="sm" onClick={onRetry} loading={retrying}>
           Try again
         </Button>
       </div>
@@ -501,7 +480,7 @@ interface FatalStateProps {
 function FatalState({ title, body, actionLabel, onAction }: FatalStateProps) {
   return (
     <div className="mx-auto max-w-md rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <h2 className="font-display text-display-sm text-foreground">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-foreground">{title}</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
         {body}
       </p>

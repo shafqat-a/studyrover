@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Check, Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
 
 import { Button, Card, EmptyState, PageHeader } from '../components';
 import { JobStatus } from '../components/JobStatus';
@@ -131,6 +132,7 @@ export default function SubjectSyllabusSuggest() {
                 onClick={() => void handleSuggest()}
                 loading={starting}
                 disabled={running}
+                leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
               >
                 Re-run suggestion
               </Button>
@@ -140,18 +142,23 @@ export default function SubjectSyllabusSuggest() {
       />
 
       {!subjectId ? (
-        <Card padding="md">
-          <p role="alert" className="text-sm text-danger">
-            No subject selected.
-          </p>
-        </Card>
+        <div
+          role="alert"
+          className="rounded-card border border-danger bg-danger-soft p-4"
+        >
+          <p className="text-sm font-medium text-danger">No subject selected.</p>
+        </div>
       ) : !jobId ? (
         <EmptyState
-          icon="✨"
+          icon={<Sparkles className="h-5 w-5" />}
           title="Generate a suggested syllabus"
           description="StudyRover reads this subject’s sources and proposes an ordered topic tree with page ranges. You can fully edit the result before it becomes part of the syllabus."
           action={
-            <Button onClick={() => void handleSuggest()} loading={starting}>
+            <Button
+              onClick={() => void handleSuggest()}
+              loading={starting}
+              leadingIcon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
+            >
               Auto-suggest topics
             </Button>
           }
@@ -171,7 +178,11 @@ export default function SubjectSyllabusSuggest() {
 
           {isFailed && (
             <div className="flex justify-center">
-              <Button onClick={() => void handleSuggest()} loading={starting}>
+              <Button
+                onClick={() => void handleSuggest()}
+                loading={starting}
+                leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+              >
                 Try again
               </Button>
             </div>
@@ -180,7 +191,7 @@ export default function SubjectSyllabusSuggest() {
           {isReady &&
             (suggestions.length === 0 ? (
               <EmptyState
-                icon="🤔"
+                icon={<Lightbulb className="h-5 w-5" />}
                 title="No topics were suggested"
                 description="The AI couldn’t derive topics from the current sources. Add more source material to this subject and try again, or build the syllabus manually."
                 action={
@@ -191,7 +202,11 @@ export default function SubjectSyllabusSuggest() {
                     >
                       Build manually
                     </Button>
-                    <Button onClick={() => void handleSuggest()} loading={starting}>
+                    <Button
+                      onClick={() => void handleSuggest()}
+                      loading={starting}
+                      leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+                    >
                       Try again
                     </Button>
                   </div>
@@ -200,7 +215,7 @@ export default function SubjectSyllabusSuggest() {
             ) : (
               <Card padding="md" className="space-y-5">
                 <div>
-                  <h2 className="font-display text-lg font-bold text-foreground">
+                  <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
                     Review suggested topics
                   </h2>
                   <p className="mt-1 text-sm text-foreground-muted">
@@ -234,6 +249,7 @@ export default function SubjectSyllabusSuggest() {
                     onClick={() => void handleApply()}
                     loading={apply.isPending}
                     disabled={!canApply}
+                    leadingIcon={<Check className="h-4 w-4" aria-hidden="true" />}
                   >
                     Apply topics
                   </Button>

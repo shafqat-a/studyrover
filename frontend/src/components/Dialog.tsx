@@ -208,7 +208,10 @@ export function Dialog({
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="font-display text-lg font-bold">
+            <h2
+              id={titleId}
+              className="font-display text-base font-semibold tracking-tight"
+            >
               {title}
             </h2>
             {description != null && (
@@ -224,7 +227,7 @@ export function Dialog({
               aria-label={closeLabel}
               className={cx(
                 'inline-flex h-8 w-8 shrink-0 items-center justify-center ' +
-                  'rounded-pill text-foreground-muted transition-colors ' +
+                  'rounded-md text-foreground-muted transition-colors ' +
                   'hover:bg-surface-muted hover:text-foreground ' +
                   'focus-visible:outline-none focus-visible:ring-2 ' +
                   'focus-visible:ring-ring focus-visible:ring-offset-2 ' +

@@ -105,12 +105,12 @@ function ToastViewport({ toasts, dismiss }: Pick<ToastApi, 'toasts' | 'dismiss'>
         <div
           key={t.id}
           role="status"
-          className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border px-4 py-3 shadow-pop animate-pop-in ${
+          className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border px-4 py-3 shadow-pop animate-pop-in ${
             VARIANT_CLASSES[t.variant]
           }`}
         >
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm font-bold">{t.title}</p>
+            <p className="font-display text-sm font-semibold">{t.title}</p>
             {t.description ? (
               <p className="mt-0.5 text-sm text-foreground-muted">{t.description}</p>
             ) : null}
@@ -118,7 +118,7 @@ function ToastViewport({ toasts, dismiss }: Pick<ToastApi, 'toasts' | 'dismiss'>
           <button
             type="button"
             onClick={() => dismiss(t.id)}
-            className="shrink-0 rounded-pill px-2 text-sm text-foreground-muted hover:text-foreground"
+            className="shrink-0 rounded-md px-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
             aria-label="Dismiss notification"
           >
             ✕
