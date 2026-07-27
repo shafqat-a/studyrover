@@ -1,8 +1,8 @@
 -- Subject queries (D01) — contract C01.
 
 -- name: CreateSubject :one
-INSERT INTO subject (name, color, icon, description)
-VALUES ($1, $2, $3, $4)
+INSERT INTO subject (name, color, icon, description, syllabus_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetSubject :one
@@ -22,14 +22,20 @@ SELECT count(*) FROM subject
 WHERE (sqlc.narg('archived')::boolean IS NULL OR archived = sqlc.narg('archived')::boolean);
 
 -- name: UpdateSubject :one
--- Partial update: NULL params leave the existing value untouched.
+-- Partial update: NULL params leave the existing value untouched. syllabus_id
+-- additionally supports explicit clearing (un-grouping) via clear_syllabus,
+-- since COALESCE alone cannot distinguish "leave" from "set NULL".
 UPDATE subject
 SET
     name        = COALESCE(sqlc.narg('name'), name),
     color       = COALESCE(sqlc.narg('color'), color),
     icon        = COALESCE(sqlc.narg('icon'), icon),
     description = COALESCE(sqlc.narg('description'), description),
-    archived    = COALESCE(sqlc.narg('archived'), archived)
+    archived    = COALESCE(sqlc.narg('archived'), archived),
+    syllabus_id = CASE
+        WHEN sqlc.arg('clear_syllabus')::boolean THEN NULL
+        ELSE COALESCE(sqlc.narg('syllabus_id'), syllabus_id)
+    END
 WHERE id = sqlc.arg('id')
 RETURNING *;
 

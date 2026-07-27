@@ -1,9 +1,13 @@
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { GuidanceEditor } from '../components/GuidanceEditor';
+import { PageHeader } from '../components/PageHeader';
+import { ProgressBar } from '../components/ProgressBar';
+import { Flame, Library, RotateCcw, TrendingUp } from 'lucide-react';
 import type {
   GuidanceItem,
   GuidanceSubjectOption,
@@ -102,18 +106,14 @@ export default function ParentDashboard() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-display-sm text-foreground">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-foreground-muted">
-            {studentName
-              ? `Progress and tutor guidance for ${studentName}.`
-              : 'Progress and tutor guidance.'}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          studentName
+            ? `Progress and tutor guidance for ${studentName}.`
+            : 'Progress and tutor guidance.'
+        }
+      />
 
       {studentQuery.isPending ? (
         <DashboardSkeleton />
@@ -157,23 +157,26 @@ function DashboardBody({ dashboard }: { dashboard: Dashboard }) {
   return (
     <>
       <section
-        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         aria-label="Summary"
       >
         <StatCard
           label="Average score"
           value={`${Math.round(avgScore)}%`}
           hint="Across graded exam attempts"
+          icon={<TrendingUp className="h-4 w-4" />}
         />
         <StatCard
           label="Study streak"
           value={`${streak} ${streak === 1 ? 'day' : 'days'}`}
           hint="Consecutive days of progress"
+          icon={<Flame className="h-4 w-4" />}
         />
         <StatCard
           label="Topics tracked"
           value={String(mastery.length)}
           hint="Topics with recorded mastery"
+          icon={<Library className="h-4 w-4" />}
         />
       </section>
 
@@ -202,13 +205,21 @@ interface StatCardProps {
   label: string;
   value: string;
   hint?: string;
+  icon?: ReactNode;
 }
 
-function StatCard({ label, value, hint }: StatCardProps) {
+function StatCard({ label, value, hint, icon }: StatCardProps) {
   return (
     <Card padding="md">
-      <p className="text-sm font-semibold text-foreground-muted">{label}</p>
-      <p className="mt-1 font-display text-display-sm text-foreground">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+        {icon != null && (
+          <span className="inline-flex" aria-hidden="true">
+            {icon}
+          </span>
+        )}
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-display font-semibold tracking-tight tabular-nums text-foreground">
         {value}
       </p>
       {hint ? (
@@ -232,7 +243,7 @@ function MasterySection({ mastery }: { mastery: TopicMastery[] }) {
 
   return (
     <Card padding="md">
-      <h2 className="font-display text-lg font-bold text-foreground">
+      <h2 className="text-base font-semibold text-foreground">
         Mastery by topic
       </h2>
       {sorted.length === 0 ? (
@@ -240,32 +251,16 @@ function MasterySection({ mastery }: { mastery: TopicMastery[] }) {
           No mastery recorded yet.
         </p>
       ) : (
-        <ul className="mt-4 space-y-3" aria-label="Mastery by topic">
+        <ul className="mt-4 space-y-4" aria-label="Mastery by topic">
           {sorted.map((m) => {
             const pct = clampPct(m.mastery);
             return (
-              <li key={m.topicId} className="space-y-1">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate text-foreground">
-                    {m.topicId}
-                  </span>
-                  <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                    {pct}%
-                  </span>
-                </div>
-                <div
-                  className="h-2 w-full overflow-hidden rounded-pill bg-surface-muted"
-                  role="progressbar"
-                  aria-valuenow={pct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
+              <li key={m.topicId}>
+                <ProgressBar
+                  value={pct}
+                  label={m.topicId}
                   aria-label={`Mastery for topic ${m.topicId}`}
-                >
-                  <div
-                    className="h-full rounded-pill bg-primary"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
+                />
               </li>
             );
           })}
@@ -290,7 +285,7 @@ function formatDate(iso?: string): string {
 function HistorySection({ history }: { history: ExamAttempt[] }) {
   return (
     <Card padding="md">
-      <h2 className="font-display text-lg font-bold text-foreground">
+      <h2 className="text-base font-semibold text-foreground">
         Recent exams
       </h2>
       {history.length === 0 ? (
@@ -345,20 +340,20 @@ function AttemptBadge({ attempt }: { attempt: ExamAttempt }) {
 function DashboardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading dashboard" className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="h-24 animate-pulse rounded-card border border-border bg-surface-muted"
+            className="h-24 animate-pulse rounded-md bg-surface-muted"
           />
         ))}
       </div>
-      <div className="h-64 animate-pulse rounded-card border border-border bg-surface-muted" />
+      <div className="h-64 animate-pulse rounded-md bg-surface-muted" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="h-48 animate-pulse rounded-card border border-border bg-surface-muted"
+            className="h-48 animate-pulse rounded-md bg-surface-muted"
           />
         ))}
       </div>
@@ -376,14 +371,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load the dashboard
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

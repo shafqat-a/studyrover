@@ -43,31 +43,32 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 const base =
-  'relative inline-flex items-center justify-center gap-2 font-semibold ' +
-  'rounded-pill border transition-colors duration-150 select-none ' +
+  'relative inline-flex items-center justify-center gap-2 font-medium ' +
+  'rounded-md border transition-[colors,transform] duration-150 select-none ' +
+  'active:scale-[0.98] ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
   'focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
-  'disabled:cursor-not-allowed disabled:opacity-60';
+  'disabled:cursor-not-allowed disabled:opacity-55 disabled:active:scale-100';
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-foreground border-transparent ' +
-    'hover:bg-primary/90 active:bg-primary/80 shadow-card',
+    'bg-primary text-primary-foreground border-transparent shadow-xs ' +
+    'hover:bg-primary/90 active:bg-primary/95',
   secondary:
-    'bg-secondary text-secondary-foreground border-transparent ' +
-    'hover:bg-secondary/90 active:bg-secondary/80 shadow-card',
-  ghost:
-    'bg-transparent text-foreground border-transparent ' +
+    'bg-surface text-foreground border-border shadow-xs ' +
     'hover:bg-surface-muted active:bg-surface-muted',
+  ghost:
+    'bg-transparent text-foreground-muted border-transparent ' +
+    'hover:bg-surface-muted hover:text-foreground active:bg-surface-muted',
   danger:
-    'bg-danger text-danger-foreground border-transparent ' +
-    'hover:bg-danger/90 active:bg-danger/80 shadow-card',
+    'bg-danger text-danger-foreground border-transparent shadow-xs ' +
+    'hover:bg-danger/90 active:bg-danger/95',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-11 px-5 text-base',
-  lg: 'h-touch px-7 text-lg',
+  sm: 'h-8 px-3 text-sm',
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-11 px-5 text-base',
 };
 
 function Spinner({ className }: { className?: string }) {

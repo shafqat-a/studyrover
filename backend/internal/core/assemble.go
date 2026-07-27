@@ -16,6 +16,20 @@ import "github.com/shafqat/studyrover/backend/internal/contracts"
 // The result holds at most def.Size DeliveredQuestion values. AssembleExam is
 // deterministic for a given rng and is pure: it does not mutate def or bank.
 func AssembleExam(def contracts.ExamDefinition, bank []contracts.Question, rng RNG) []contracts.DeliveredQuestion {
+	selected := AssembleExamKeyed(def, bank, rng)
+	delivered := make([]contracts.DeliveredQuestion, 0, len(selected))
+	for _, q := range selected {
+		delivered = append(delivered, StripKey(q))
+	}
+	return delivered
+}
+
+// AssembleExamKeyed is like AssembleExam but returns full Questions with the
+// answer key intact (options shuffled). It backs both AssembleExam (which then
+// strips the key for students) and the parent-only exam preview (where the
+// parent is allowed to see the answers). It is pure and deterministic for a
+// given rng.
+func AssembleExamKeyed(def contracts.ExamDefinition, bank []contracts.Question, rng RNG) []contracts.Question {
 	scope := make(map[string]bool, len(def.ScopeTopicIds))
 	for _, id := range def.ScopeTopicIds {
 		scope[id] = true
@@ -36,19 +50,23 @@ func AssembleExam(def contracts.ExamDefinition, bank []contracts.Question, rng R
 	}
 
 	selected := SelectFromBank(pool, def.Size, nil, rng)
-
-	delivered := make([]contracts.DeliveredQuestion, 0, len(selected))
+	out := make([]contracts.Question, 0, len(selected))
 	for _, q := range selected {
-		shuffled := ShuffleOptions(q, rng)
-		delivered = append(delivered, contracts.DeliveredQuestion{
-			Id:         shuffled.Id,
-			SubjectId:  shuffled.SubjectId,
-			TopicId:    shuffled.TopicId,
-			Text:       shuffled.Text,
-			Options:    shuffled.Options,
-			Difficulty: shuffled.Difficulty,
-			Enabled:    shuffled.Enabled,
-		})
+		out = append(out, ShuffleOptions(q, rng))
 	}
-	return delivered
+	return out
+}
+
+// StripKey converts a full Question into a DeliveredQuestion, dropping the
+// answer key (correctOptionId) so it is never leaked to a student client.
+func StripKey(q contracts.Question) contracts.DeliveredQuestion {
+	return contracts.DeliveredQuestion{
+		Id:         q.Id,
+		SubjectId:  q.SubjectId,
+		TopicId:    q.TopicId,
+		Text:       q.Text,
+		Options:    q.Options,
+		Difficulty: q.Difficulty,
+		Enabled:    q.Enabled,
+	}
 }

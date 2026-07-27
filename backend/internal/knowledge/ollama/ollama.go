@@ -72,8 +72,14 @@ Respond with ONLY valid JSON matching this shape, no markdown, no prose:
 	return toTopicSuggestions(wire), nil
 }
 
-// GenerateQuestions drafts multiple-choice questions grounded in the subject's
-// sources, returning unapproved drafts (parent approval gates the live bank).
+// GenerateQuestions drafts multiple-choice questions for the subject, returning
+// unapproved drafts (parent approval gates the live bank).
+//
+// It authors questions from the model's own knowledge of the named curriculum —
+// no ingested source material or question bank is required — which is what makes
+// DeepSeek on Ollama Cloud usable for subjects that only have a syllabus. When a
+// subject does have sources the prompt still lets the model use them, but they
+// are not mandatory and citations are optional.
 func (s *Source) GenerateQuestions(ctx context.Context, req knowledge.GenRequest) ([]knowledge.QuestionDraft, error) {
 	if req.SubjectID == "" {
 		return nil, fmt.Errorf("ollama: questions: subjectID required")
@@ -82,22 +88,51 @@ func (s *Source) GenerateQuestions(ctx context.Context, req knowledge.GenRequest
 	if count <= 0 {
 		count = 5
 	}
-	scope := "the whole subject"
-	if req.TopicID != "" {
-		scope = fmt.Sprintf("topic %q", req.TopicID)
-	}
-	difficulty := req.Difficulty
-	if difficulty == "" {
-		difficulty = "a spread of difficulties"
+
+	// Prefer the human-readable subject name; the raw UUID is meaningless to a
+	// model authoring from curriculum knowledge.
+	subject := req.SubjectName
+	if subject == "" {
+		subject = req.SubjectID
 	}
 
-	system := "You are an expert assessment author. Respond with ONLY valid JSON, no markdown, no code fences, no prose."
-	user := fmt.Sprintf(`Generate %d multiple-choice questions for subject %q, scoped to %s, at %s.
-Ground every question in the subject's source material and include citations.
+	// Scope: a single named topic, an explicit list of syllabus topics, or the
+	// whole subject.
+	var scope string
+	switch {
+	case req.TopicName != "":
+		scope = fmt.Sprintf("the topic %q", req.TopicName)
+	case len(req.TopicNames) > 0:
+		topics := req.TopicNames
+		if len(topics) > 60 {
+			topics = topics[:60]
+		}
+		scope = "these syllabus topics (spread the questions across them): " + strings.Join(topics, "; ")
+	default:
+		scope = "the whole subject syllabus"
+	}
+
+	difficulty := req.Difficulty
+	if difficulty == "" {
+		difficulty = "a spread of easy, medium and hard"
+	}
+
+	system := "You are an expert Cambridge assessment author. You write accurate, exam-style multiple-choice questions from your own knowledge of the curriculum. Respond with ONLY valid JSON, no markdown, no code fences, no prose."
+	user := fmt.Sprintf(`Write %d multiple-choice questions for the subject %q, covering %s, at %s difficulty.
+Author the questions from your own knowledge of this curriculum — do NOT require or refer to any source document, and do NOT ask about missing material.
+Rules:
+- Each question has exactly 4 distinct options and exactly one correct answer.
+- "correctOptionIndex" is the 0-based index of the correct option.
+- Keep questions factually accurate and at the level of the named subject.
+- Do not number the questions or repeat them.
+- Format the "text" and each option using HTML so formulas and figures render clearly:
+  * Write mathematics as LaTeX — inline as \( ... \) and display as \[ ... \]. Use \lt \gt \le \ge instead of a raw < or > sign.
+  * For geometry or any question that needs a figure, embed a self-contained inline <svg> with a viewBox and clearly labelled points, sides and angles, so the diagram is visible. Use SINGLE quotes for every SVG/HTML attribute. No <script>, no <foreignObject>, no external references or images.
+  * Use <sub>, <sup> and <table> where they aid clarity. Plain text is fine when no formula or figure is needed.
+- The response MUST be valid JSON: escape backslashes as \\ and double quotes as \". Using single-quoted SVG/HTML attributes avoids most escaping.
 Respond with ONLY a valid JSON array matching this shape, no markdown, no prose:
-[{"text":string,"options":[{"text":string}],"correctOptionIndex":int,"difficulty":string,
-  "citations":[{"sourceId":string,"label":string,"locator":string}]}]`,
-		count, req.SubjectID, scope, difficulty)
+[{"text":string,"options":[{"text":string},{"text":string},{"text":string},{"text":string}],"correctOptionIndex":int,"difficulty":string}]`,
+		count, subject, scope, difficulty)
 
 	raw, err := s.client.chat(ctx, []chatMessage{
 		{Role: "system", Content: system},
@@ -108,10 +143,60 @@ Respond with ONLY a valid JSON array matching this shape, no markdown, no prose:
 	}
 
 	var wire []questionNode
-	if err := json.Unmarshal([]byte(extractJSON(raw)), &wire); err != nil {
-		return nil, fmt.Errorf("ollama: questions: parse output: %w", err)
+	js := extractJSON(raw)
+	if err := json.Unmarshal([]byte(js), &wire); err != nil {
+		// LaTeX/HTML content is backslash-heavy and models often under-escape it
+		// (e.g. \frac or \( instead of \\frac / \\(). Repair lone backslashes and
+		// retry once; well-escaped output already parsed on the first attempt.
+		if err2 := json.Unmarshal([]byte(repairJSONEscapes(js)), &wire); err2 != nil {
+			return nil, fmt.Errorf("ollama: questions: parse output: %w", err)
+		}
 	}
 	return toQuestionDrafts(req.SubjectID, req.TopicID, wire), nil
+}
+
+// repairJSONEscapes doubles lone backslashes inside JSON string literals so that
+// under-escaped LaTeX/HTML from a model (\frac, \(, \times) parses. Backslashes
+// that already form a valid JSON escape (\\ \" \/ \uXXXX) are left untouched, so
+// correctly-escaped input is unchanged. Runs only after a first parse fails.
+func repairJSONEscapes(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) + 16)
+	inStr := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !inStr {
+			b.WriteByte(c)
+			if c == '"' {
+				inStr = true
+			}
+			continue
+		}
+		if c == '"' {
+			b.WriteByte(c)
+			inStr = false
+			continue
+		}
+		if c != '\\' {
+			b.WriteByte(c)
+			continue
+		}
+		if i+1 >= len(s) {
+			b.WriteString(`\\`)
+			continue
+		}
+		switch s[i+1] {
+		case '\\', '"', '/', 'u':
+			// Already a valid JSON escape — keep both bytes verbatim.
+			b.WriteByte(c)
+			b.WriteByte(s[i+1])
+			i++
+		default:
+			// Lone backslash the model meant literally (a LaTeX macro) — double it.
+			b.WriteString(`\\`)
+		}
+	}
+	return b.String()
 }
 
 // GenerateStudyGuide produces a grounded, citation-bearing study guide.

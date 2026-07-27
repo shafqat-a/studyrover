@@ -266,12 +266,12 @@ function parseMarkdown(markdown: string): {
 }
 
 const headingClasses: Record<number, string> = {
-  1: 'font-display text-display-sm font-extrabold text-foreground mt-8 first:mt-0',
-  2: 'font-display text-2xl font-bold text-foreground mt-7 first:mt-0',
-  3: 'font-display text-xl font-bold text-foreground mt-6 first:mt-0',
-  4: 'font-display text-lg font-semibold text-foreground mt-5 first:mt-0',
-  5: 'text-base font-semibold text-foreground mt-4 first:mt-0',
-  6: 'text-sm font-semibold uppercase tracking-wide text-foreground-muted mt-4 first:mt-0',
+  1: 'font-display text-2xl font-semibold tracking-tight text-foreground mt-8 first:mt-0',
+  2: 'font-display text-xl font-semibold tracking-tight text-foreground mt-7 first:mt-0',
+  3: 'font-display text-lg font-semibold text-foreground mt-6 first:mt-0',
+  4: 'font-display text-base font-semibold text-foreground mt-5 first:mt-0',
+  5: 'text-sm font-semibold text-foreground mt-4 first:mt-0',
+  6: 'text-xs font-semibold uppercase tracking-wide text-foreground-muted mt-4 first:mt-0',
 };
 
 /** Render a single parsed block to React. */
@@ -436,7 +436,7 @@ export function StudyGuideView({
               aria-label="Sources"
               className="mt-10 border-t border-border pt-6"
             >
-              <h2 className="font-display text-lg font-bold text-foreground">
+              <h2 className="font-display text-base font-semibold text-foreground">
                 Sources
               </h2>
               <ol className="mt-3 space-y-2">
@@ -444,7 +444,7 @@ export function StudyGuideView({
                   const marker = (
                     <span
                       aria-hidden="true"
-                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-primary-soft text-xs font-semibold text-primary"
+                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-surface-muted text-xs font-semibold text-foreground-muted"
                     >
                       {i + 1}
                     </span>

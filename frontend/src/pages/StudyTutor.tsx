@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GraduationCap, MessagesSquare, RotateCcw, Sparkles } from 'lucide-react';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -203,7 +204,7 @@ export default function StudyTutor() {
   if (activeSubjects.length === 0) {
     return (
       <EmptyState
-        icon={<span className="text-4xl">📚</span>}
+        icon={<MessagesSquare className="h-5 w-5" />}
         title="No subjects to study yet"
         description="Ask your parent to add a subject and some study material, then come back to chat with your tutor."
       />
@@ -214,10 +215,11 @@ export default function StudyTutor() {
     <div className="space-y-6">
       <header className="space-y-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-secondary">
+          <p className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-secondary">
+            <MessagesSquare className="h-4 w-4" aria-hidden="true" />
             Study with your tutor
           </p>
-          <h1 className="mt-1 font-display text-display-sm text-foreground">
+          <h1 className="mt-1 font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             {selectedSubject ? selectedSubject.name : 'Study'}
           </h1>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -288,6 +290,7 @@ export default function StudyTutor() {
                 variant="secondary"
                 onClick={handleReadyForQuiz}
                 disabled={!subjectId}
+                leadingIcon={<GraduationCap className="h-4 w-4" aria-hidden="true" />}
               >
                 I&rsquo;m ready for a quiz
               </Button>
@@ -298,7 +301,7 @@ export default function StudyTutor() {
         {/* Study-guide pane */}
         <Card padding="md" className="flex h-[32rem] flex-col">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-bold text-foreground">
+            <h2 className="font-display text-base font-semibold text-foreground">
               Study guide
             </h2>
             <Button
@@ -307,6 +310,7 @@ export default function StudyTutor() {
               onClick={handleGenerateGuide}
               loading={generateGuide.isPending}
               disabled={!subjectId}
+              leadingIcon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
             >
               {guideQuery.data ? 'Regenerate' : 'Generate'}
             </Button>
@@ -327,6 +331,7 @@ export default function StudyTutor() {
                     onClick={handleGenerateGuide}
                     loading={generateGuide.isPending}
                     disabled={!subjectId}
+                    leadingIcon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
                   >
                     Generate study guide
                   </Button>
@@ -356,8 +361,8 @@ function StudyTutorSkeleton() {
         <div className="h-8 w-64 animate-pulse rounded-md bg-surface-muted" />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_22rem]">
-        <div className="h-[32rem] animate-pulse rounded-card border border-border bg-surface-muted" />
-        <div className="h-[32rem] animate-pulse rounded-card border border-border bg-surface-muted" />
+        <div className="h-[32rem] animate-pulse rounded-md bg-surface-muted" />
+        <div className="h-[32rem] animate-pulse rounded-md bg-surface-muted" />
       </div>
     </div>
   );
@@ -386,14 +391,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t start studying
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

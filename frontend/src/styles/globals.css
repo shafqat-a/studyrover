@@ -5,6 +5,8 @@
 /*
  * StudyRover design tokens (CSS custom properties).
  *
+ * Modern, clean, "Linear/Vercel" aesthetic: a near-neutral zinc surface, a
+ * near-black primary action color, and a single restrained violet brand accent.
  * Values are HSL channels ("H S% L%") so Tailwind can apply opacity modifiers
  * via `hsl(var(--token) / <alpha-value>)` (see tailwind.config.ts). Keep this
  * file the single source for raw color/elevation values; everything else
@@ -12,84 +14,171 @@
  */
 @layer base {
   :root {
-    /* Neutral surfaces */
-    --sr-background: 240 33% 99%;
+    /* Neutral surfaces — subtle separation between page and cards. */
+    --sr-background: 0 0% 100%;
     --sr-surface: 0 0% 100%;
-    --sr-surface-muted: 240 24% 96%;
-    --sr-border: 240 16% 90%;
-    --sr-ring: 250 84% 60%;
+    --sr-surface-muted: 240 5% 96%;
+    --sr-border: 240 6% 90%;
+    --sr-ring: 243 75% 58%;
 
     /* Foreground / text */
-    --sr-foreground: 240 24% 16%;
-    --sr-foreground-muted: 240 10% 42%;
+    --sr-foreground: 240 10% 4%;
+    --sr-foreground-muted: 240 4% 46%;
 
-    /* Brand — indigo/violet */
-    --sr-primary: 250 84% 60%;
+    /* Primary action — friendly indigo (indigo-600). White text ≈ 6.5:1 (AA).
+       Warmer and more brand-forward than near-black for an ed-tech product. */
+    --sr-primary: 243 75% 58%;
     --sr-primary-foreground: 0 0% 100%;
-    --sr-primary-soft: 250 96% 95%;
+    --sr-primary-soft: 244 80% 96%;
 
-    /* Secondary — teal */
-    --sr-secondary: 174 62% 42%;
+    /* Brand accent — restrained violet, used sparingly (wordmark, links). */
+    --sr-secondary: 250 84% 60%;
     --sr-secondary-foreground: 0 0% 100%;
-    --sr-secondary-soft: 174 64% 94%;
+    --sr-secondary-soft: 250 60% 96%;
 
-    /* Accent — amber (rewards / highlights) */
+    /* Accent — amber, reserved for rewards / highlights (Phase 3). */
     --sr-accent: 38 92% 50%;
-    --sr-accent-foreground: 30 60% 16%;
-    --sr-accent-soft: 42 96% 92%;
+    --sr-accent-foreground: 30 60% 12%;
+    --sr-accent-soft: 46 96% 93%;
 
-    /* Semantic states */
-    --sr-success: 152 60% 38%;
+    /* Semantic states — tuned for AA contrast on their soft surfaces. */
+    --sr-success: 142 69% 38%;
     --sr-success-foreground: 0 0% 100%;
-    --sr-success-soft: 152 56% 93%;
+    --sr-success-soft: 142 60% 95%;
 
-    --sr-warning: 32 90% 48%;
-    --sr-warning-foreground: 30 60% 14%;
-    --sr-warning-soft: 40 94% 92%;
+    --sr-warning: 32 95% 44%;
+    --sr-warning-foreground: 0 0% 100%;
+    --sr-warning-soft: 36 96% 93%;
 
-    --sr-danger: 356 72% 52%;
+    --sr-danger: 0 72% 51%;
     --sr-danger-foreground: 0 0% 100%;
-    --sr-danger-soft: 356 84% 95%;
+    --sr-danger-soft: 0 80% 97%;
 
-    /* Elevation */
-    --sr-shadow: 240 40% 20%;
+    /* Elevation — soft, low-contrast; separation comes mostly from borders. */
+    --sr-shadow: 240 10% 9%;
   }
 
   .dark {
-    --sr-background: 240 24% 10%;
-    --sr-surface: 240 20% 14%;
-    --sr-surface-muted: 240 16% 18%;
-    --sr-border: 240 14% 24%;
-    --sr-ring: 250 84% 68%;
+    /* True dark — near-black page, slightly raised surface. */
+    --sr-background: 240 10% 4%;
+    --sr-surface: 240 8% 7%;
+    --sr-surface-muted: 240 6% 12%;
+    --sr-border: 240 5% 17%;
+    --sr-ring: 243 76% 63%;
 
-    --sr-foreground: 240 24% 96%;
-    --sr-foreground-muted: 240 12% 70%;
+    --sr-foreground: 0 0% 98%;
+    --sr-foreground-muted: 240 5% 64%;
 
-    --sr-primary: 250 84% 68%;
-    --sr-primary-foreground: 240 24% 10%;
-    --sr-primary-soft: 250 40% 24%;
+    /* Indigo primary, lifted for dark surfaces. White text ≈ 5.4:1 (AA). */
+    --sr-primary: 243 76% 63%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 243 40% 18%;
 
-    --sr-secondary: 174 56% 52%;
-    --sr-secondary-foreground: 240 24% 10%;
-    --sr-secondary-soft: 174 40% 22%;
+    --sr-secondary: 250 84% 70%;
+    --sr-secondary-foreground: 240 10% 8%;
+    --sr-secondary-soft: 250 40% 20%;
 
     --sr-accent: 38 92% 58%;
-    --sr-accent-foreground: 30 60% 12%;
-    --sr-accent-soft: 38 40% 24%;
+    --sr-accent-foreground: 30 60% 10%;
+    --sr-accent-soft: 38 40% 16%;
 
-    --sr-success: 152 56% 48%;
-    --sr-success-foreground: 240 24% 10%;
-    --sr-success-soft: 152 36% 20%;
+    --sr-success: 142 60% 52%;
+    --sr-success-foreground: 240 10% 8%;
+    --sr-success-soft: 142 40% 15%;
 
-    --sr-warning: 32 90% 56%;
-    --sr-warning-foreground: 30 60% 12%;
-    --sr-warning-soft: 32 40% 22%;
+    --sr-warning: 32 92% 56%;
+    --sr-warning-foreground: 240 10% 8%;
+    --sr-warning-soft: 32 40% 16%;
 
-    --sr-danger: 356 76% 62%;
-    --sr-danger-foreground: 240 24% 10%;
-    --sr-danger-soft: 356 40% 24%;
+    --sr-danger: 0 70% 62%;
+    --sr-danger-foreground: 240 10% 8%;
+    --sr-danger-soft: 0 40% 16%;
 
-    --sr-shadow: 240 60% 4%;
+    --sr-shadow: 240 60% 2%;
+  }
+
+  /*
+   * Themes. Each theme overrides only the brand palette (primary action,
+   * accent, focus ring, and their soft/foreground tints). Neutral surfaces,
+   * text, and the semantic states stay global so spacing/contrast remain
+   * consistent across themes. Apply via `data-theme="<name>"` on <html>.
+   * `midnight` is the default (:root above); the others layer on top.
+   */
+
+  /* Ocean — deep blue primary with a sky/cyan accent. */
+  [data-theme='ocean'] {
+    --sr-primary: 221 83% 53%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 214 100% 96%;
+    --sr-secondary: 199 89% 48%;
+    --sr-secondary-foreground: 0 0% 100%;
+    --sr-secondary-soft: 199 90% 95%;
+    --sr-ring: 221 83% 53%;
+  }
+  [data-theme='ocean'].dark {
+    --sr-primary: 217 91% 60%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 217 40% 18%;
+    --sr-secondary: 198 90% 55%;
+    --sr-secondary-soft: 199 40% 18%;
+    --sr-ring: 217 91% 60%;
+  }
+
+  /* Forest — emerald primary with a teal accent. */
+  [data-theme='forest'] {
+    --sr-primary: 142 69% 38%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 142 70% 95%;
+    --sr-secondary: 173 80% 40%;
+    --sr-secondary-foreground: 0 0% 100%;
+    --sr-secondary-soft: 173 70% 93%;
+    --sr-ring: 142 69% 38%;
+  }
+  [data-theme='forest'].dark {
+    --sr-primary: 142 64% 45%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 142 40% 16%;
+    --sr-secondary: 173 65% 50%;
+    --sr-secondary-soft: 173 40% 16%;
+    --sr-ring: 142 64% 45%;
+  }
+
+  /* Sunset — rose primary with a warm amber accent. */
+  [data-theme='sunset'] {
+    --sr-primary: 347 77% 50%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 351 100% 96%;
+    --sr-secondary: 32 95% 44%;
+    --sr-secondary-foreground: 0 0% 100%;
+    --sr-secondary-soft: 36 96% 93%;
+    --sr-ring: 347 77% 50%;
+  }
+  [data-theme='sunset'].dark {
+    --sr-primary: 347 77% 60%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 347 40% 18%;
+    --sr-secondary: 32 92% 55%;
+    --sr-secondary-soft: 32 40% 18%;
+    --sr-ring: 347 77% 60%;
+  }
+
+  /* Royal — violet primary with a fuchsia accent. */
+  [data-theme='royal'] {
+    --sr-primary: 263 70% 50%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 262 83% 96%;
+    --sr-secondary: 280 65% 50%;
+    --sr-secondary-foreground: 0 0% 100%;
+    --sr-secondary-soft: 280 70% 95%;
+    --sr-ring: 263 70% 50%;
+  }
+  [data-theme='royal'].dark {
+    --sr-primary: 263 70% 62%;
+    --sr-primary-foreground: 0 0% 100%;
+    --sr-primary-soft: 262 40% 20%;
+    --sr-secondary: 280 60% 65%;
+    --sr-secondary-soft: 280 40% 20%;
+    --sr-ring: 263 70% 62%;
   }
 
   * {
@@ -105,6 +194,8 @@
     @apply bg-background text-foreground font-sans antialiased;
     margin: 0;
     min-height: 100vh;
+    /* Inter reads a touch cleaner with a hair of optical tightening. */
+    letter-spacing: -0.006em;
   }
 
   /* Visible, consistent focus for keyboard / assistive-tech users. */
@@ -115,6 +206,71 @@
   h1,
   h2,
   h3 {
-    @apply font-display text-foreground;
+    @apply font-display tracking-tight text-foreground;
   }
+}
+
+/*
+ * Explicit base typography, intentionally UNLAYERED so it always wins over
+ * user-agent defaults (some headless/Linux environments resolve the sans
+ * generic to a serif). This is what actually pins the loaded webfonts —
+ * Inter for UI text, Bricolage Grotesque for display/headings — and makes the
+ * browser fetch the @font-face files by matching rendered text to the family.
+ */
+html,
+body {
+  font-family:
+    'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family:
+    'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Inter Variable',
+    Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Rich question content (RichContent): geometry SVGs and rendered math authored
+ * by the AI. Keep figures inside their container and give display math room.
+ */
+.sr-rich svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0;
+  /* Diagrams are authored on light backgrounds; a subtle frame + white fill
+     keeps strokes legible in dark mode too. */
+  background: #ffffff;
+  border: 1px solid hsl(var(--sr-border));
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+.sr-rich .katex-display {
+  margin: 0.6rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.sr-rich table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+.sr-rich th,
+.sr-rich td {
+  border: 1px solid hsl(var(--sr-border));
+  padding: 0.25rem 0.5rem;
+}
+.sr-rich :where(p, ul, ol):not(:last-child) {
+  margin-bottom: 0.4rem;
+}
+.sr-rich ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.sr-rich ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
 }

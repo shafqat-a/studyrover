@@ -79,30 +79,17 @@ func (h *Handlers) StartAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Load the eligible question bank for the subject (enabled questions).
-	// AssembleExam applies the def's topic scope, selection (size) and option
-	// shuffling, so the whole-subject bank is passed and scoped in core.
-	rows, err := h.Store.ListEligibleForExam(r.Context(), store.ListEligibleForExamParams{
-		SubjectID:     def.SubjectID,
-		ScopeTopicIds: nil,
-	})
+	// 3–4. Assemble the exam's questions (scoped/pinned, shuffled), then strip the
+	// answer key so the correct option is never delivered to the student client.
+	keyed, err := h.assembleExamQuestions(r.Context(), contractDef)
 	if err != nil {
 		internalError(w, err.Error())
 		return
 	}
-
-	bank := make([]contracts.Question, 0, len(rows))
-	for i := range rows {
-		opts, err := h.Store.ListOptionsByQuestion(r.Context(), rows[i].ID)
-		if err != nil {
-			internalError(w, err.Error())
-			return
-		}
-		bank = append(bank, toContractQuestion(rows[i], opts))
+	delivered := make([]contracts.DeliveredQuestion, 0, len(keyed))
+	for i := range keyed {
+		delivered = append(delivered, core.StripKey(keyed[i]))
 	}
-
-	// 4. Assemble the delivered questions (scoped, selected, shuffled, no key).
-	delivered := core.AssembleExam(contractDef, bank, core.NewRNG())
 
 	questionIDs := make([]string, 0, len(delivered))
 	for i := range delivered {

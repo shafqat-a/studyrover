@@ -44,14 +44,14 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 const titleClasses: Record<NonNullable<PageHeaderProps['as']>, string> = {
-  h1: 'text-2xl sm:text-3xl',
-  h2: 'text-xl sm:text-2xl',
-  h3: 'text-lg sm:text-xl',
+  h1: 'text-2xl',
+  h2: 'text-lg sm:text-xl',
+  h3: 'text-base sm:text-lg',
 };
 
 function Separator() {
   return (
-    <span className="text-foreground-muted/60" aria-hidden="true">
+    <span className="text-foreground-muted/50" aria-hidden="true">
       /
     </span>
   );
@@ -70,7 +70,9 @@ export function PageHeader({
   const hasCrumbs = breadcrumbs != null && breadcrumbs.length > 0;
 
   return (
-    <header className={cx('w-full', className)}>
+    <header
+      className={cx('w-full border-b border-border pb-4', className)}
+    >
       {hasCrumbs && (
         <nav aria-label={breadcrumbLabel} className="mb-2">
           <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground-muted">
@@ -108,14 +110,14 @@ export function PageHeader({
         <div className="min-w-0">
           <Heading
             className={cx(
-              'font-display font-bold leading-tight text-foreground',
+              'font-display font-semibold tracking-tight text-foreground',
               titleClasses[as],
             )}
           >
             {title}
           </Heading>
           {subtitle != null && (
-            <p className="mt-1 text-sm text-foreground-muted sm:text-base">
+            <p className="mt-1 max-w-2xl text-sm text-foreground-muted">
               {subtitle}
             </p>
           )}

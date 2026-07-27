@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { FileText, RotateCcw, Upload } from 'lucide-react';
 
 import {
   Badge,
@@ -233,7 +234,7 @@ export default function SubjectSourcesIngest() {
       />
 
       <Card padding="md">
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Select
             label="What are you adding?"
             value={form.type}
@@ -310,6 +311,7 @@ export default function SubjectSourcesIngest() {
               type="submit"
               loading={createSource.isPending}
               disabled={submitDisabled}
+              leadingIcon={<Upload className="h-4 w-4" aria-hidden="true" />}
             >
               Ingest source
             </Button>
@@ -319,7 +321,7 @@ export default function SubjectSourcesIngest() {
 
       {activeIngestJobs.length > 0 && (
         <section aria-label="Active ingestion" className="space-y-3">
-          <h3 className="font-display text-lg font-bold text-foreground">
+          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
             Active ingestion
           </h3>
           <ul className="space-y-3">
@@ -337,7 +339,7 @@ export default function SubjectSourcesIngest() {
       )}
 
       <section aria-label="Sources" className="space-y-3">
-        <h3 className="font-display text-lg font-bold text-foreground">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
           Sources
         </h3>
 
@@ -351,7 +353,7 @@ export default function SubjectSourcesIngest() {
           />
         ) : sourcesQuery.data.items.length === 0 ? (
           <EmptyState
-            icon="📄"
+            icon={<FileText className="h-5 w-5" />}
             title="No sources yet"
             description="Upload a document, link a NotebookLM project, or paste text above to give this subject something to study from."
           />
@@ -436,7 +438,7 @@ function SourcesSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-16 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-16 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
     </div>
@@ -453,14 +455,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4"
     >
-      <h3 className="font-display text-display-sm text-danger">
+      <h3 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load sources
       </h3>
-      <p className="mt-1 text-sm text-foreground-muted">{message}</p>
-      <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+      <p className="mt-1 text-sm font-medium text-danger">{message}</p>
+      <div className="mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

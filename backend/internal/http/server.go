@@ -116,7 +116,7 @@ func apiPath(r *http.Request) string {
 // WebAuthn parent ceremonies and the student sign-in).
 func isPublicPath(path string) bool {
 	switch path {
-	case "/auth/login", "/auth/register", "/auth/student", "/auth/session":
+	case "/auth/login", "/auth/register", "/auth/student", "/auth/session", "/auth/password":
 		return true
 	default:
 		return false
@@ -168,6 +168,10 @@ func spaHandler() http.HandlerFunc {
 				return
 			}
 		}
+		// App shell (HTML) must never be served from a stale browser cache, or
+		// the browser keeps loading an outdated (hashed) bundle after a deploy.
+		// Hashed assets above keep their default caching.
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		http.ServeFile(w, r, index)
 	}
 }

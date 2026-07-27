@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Hourglass, Layers, Play, Tag, Target } from 'lucide-react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -172,7 +173,7 @@ export default function ExamStart() {
         <p className="text-sm font-semibold uppercase tracking-wide text-secondary">
           Ready to start?
         </p>
-        <h1 className="mt-1 font-display text-display-sm text-foreground">
+        <h1 className="mt-1 font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           {def.name}
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
@@ -182,9 +183,18 @@ export default function ExamStart() {
 
       <Card padding="lg" className="space-y-6">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Stat label="Scope" value={scopeLabel(def)} />
-          <Stat label="Pass mark" value={`${def.passBar}%`} />
           <Stat
+            icon={<Layers className="h-4 w-4" aria-hidden="true" />}
+            label="Scope"
+            value={scopeLabel(def)}
+          />
+          <Stat
+            icon={<Target className="h-4 w-4" aria-hidden="true" />}
+            label="Pass mark"
+            value={`${def.passBar}%`}
+          />
+          <Stat
+            icon={<Tag className="h-4 w-4" aria-hidden="true" />}
             label="Type"
             value={<Badge tone="neutral" size="sm">{def.type}</Badge>}
           />
@@ -214,6 +224,7 @@ export default function ExamStart() {
               size="lg"
               loading={startAttempt.isPending}
               onClick={() => void handleStart()}
+              leadingIcon={<Play className="h-4 w-4" aria-hidden="true" />}
             >
               Start exam
             </Button>
@@ -235,15 +246,19 @@ export default function ExamStart() {
 interface StatProps {
   label: string;
   value: React.ReactNode;
+  icon?: React.ReactNode;
 }
 
-function Stat({ label, value }: StatProps) {
+function Stat({ icon, label, value }: StatProps) {
   return (
     <div className="rounded-card bg-surface-muted p-3">
       <dt className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
-        {label}
+        <span className="inline-flex items-center gap-1.5">
+          {icon}
+          {label}
+        </span>
       </dt>
-      <dd className="mt-1 text-base font-bold text-foreground">{value}</dd>
+      <dd className="mt-1 text-base font-semibold text-foreground">{value}</dd>
     </div>
   );
 }
@@ -260,10 +275,10 @@ function CooldownNotice({ message, until }: CooldownNoticeProps) {
       role="status"
       className="rounded-card border border-warning bg-warning-soft p-5 text-center"
     >
-      <p className="text-3xl" aria-hidden="true">
-        ⏳
+      <p className="text-3xl text-foreground-muted" aria-hidden="true">
+        <Hourglass className="h-8 w-8" />
       </p>
-      <h2 className="mt-2 font-display text-lg font-bold text-foreground">
+      <h2 className="mt-2 font-display text-base font-semibold text-foreground">
         Hang on a moment
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
@@ -287,7 +302,7 @@ function StartSkeleton() {
         <div className="h-4 w-32 animate-pulse rounded-md bg-surface-muted" />
         <div className="h-8 w-64 animate-pulse rounded-md bg-surface-muted" />
       </div>
-      <div className="h-64 animate-pulse rounded-card border border-border bg-surface-muted" />
+      <div className="h-64 animate-pulse rounded-md bg-surface-muted" />
     </div>
   );
 }
@@ -302,14 +317,14 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="mx-auto max-w-md rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load this exam
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button variant="secondary" size="sm" onClick={onRetry} loading={retrying}>
           Try again
         </Button>
       </div>
@@ -327,7 +342,7 @@ interface FatalStateProps {
 function FatalState({ title, body, actionLabel, onAction }: FatalStateProps) {
   return (
     <div className="mx-auto max-w-md rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <h2 className="font-display text-display-sm text-foreground">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-foreground">{title}</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
         {body}
       </p>

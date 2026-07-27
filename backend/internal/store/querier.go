@@ -43,6 +43,8 @@ type Querier interface {
 	CreateSource(ctx context.Context, arg CreateSourceParams) (Source, error)
 	// Subject queries (D01) — contract C01.
 	CreateSubject(ctx context.Context, arg CreateSubjectParams) (Subject, error)
+	// Syllabus queries — the curriculum grouping above subjects (e.g. "Class V").
+	CreateSyllabus(ctx context.Context, arg CreateSyllabusParams) (Syllabus, error)
 	// D03 — Topic queries (sqlc)
 	//
 	// One file per table. Emits type-safe Go into internal/store (pgx/v5).
@@ -55,6 +57,8 @@ type Querier interface {
 	DeleteQuestion(ctx context.Context, id string) error
 	DeleteSource(ctx context.Context, id string) error
 	DeleteSubject(ctx context.Context, id string) error
+	// Subjects referencing the syllabus are un-grouped via ON DELETE SET NULL.
+	DeleteSyllabus(ctx context.Context, id string) error
 	DeleteTopic(ctx context.Context, id string) error
 	// Job queue queries (D03) — contract 2-C03. Drives the 2-F06 worker.
 	// Schedule a new job. run_after defaults to now() when NULL is passed.
@@ -70,6 +74,9 @@ type Querier interface {
 	GetParentByEmail(ctx context.Context, email string) (Parent, error)
 	GetQuestion(ctx context.Context, id string) (Question, error)
 	GetQuestionDraft(ctx context.Context, id string) (QuestionDraft, error)
+	// Fetch a specific set of questions by id (used by pinned/generated exams),
+	// regardless of enabled state.
+	GetQuestionsByIDs(ctx context.Context, ids []string) ([]Question, error)
 	// Settings queries (D11) — contract C09. Single-row ('singleton') pattern.
 	// Returns the singleton settings row.
 	GetSettings(ctx context.Context) (Setting, error)
@@ -82,6 +89,7 @@ type Querier interface {
 	// subject-level guide is returned.
 	GetStudyGuide(ctx context.Context, arg GetStudyGuideParams) (StudyGuide, error)
 	GetSubject(ctx context.Context, id string) (Subject, error)
+	GetSyllabus(ctx context.Context, id string) (Syllabus, error)
 	GetTopic(ctx context.Context, id string) (Topic, error)
 	// TutorInstructions queries (D04) — contract 2-C06. One row per subject.
 	GetTutorInstructionsBySubject(ctx context.Context, subjectID string) (TutorInstruction, error)
@@ -118,6 +126,8 @@ type Querier interface {
 	// List drafts, optionally filtering by status. When sqlc.narg('status') is NULL
 	// the filter is skipped and drafts of every status return, newest first.
 	ListQuestionDrafts(ctx context.Context, status *string) ([]QuestionDraft, error)
+	// The manual question bank: excludes generated questions (which back generated
+	// exams and are never hand-curated here).
 	ListQuestionsBySubject(ctx context.Context, arg ListQuestionsBySubjectParams) ([]Question, error)
 	ListQuestionsByTopic(ctx context.Context, arg ListQuestionsByTopicParams) ([]Question, error)
 	// Range-filtered timeline for the dashboard. NULL range bounds are skipped, so
@@ -127,6 +137,7 @@ type Querier interface {
 	// Paginated, optionally filtering by archived. When sqlc.narg('archived') is
 	// NULL the filter is skipped and both archived and non-archived rows return.
 	ListSubjects(ctx context.Context, arg ListSubjectsParams) ([]Subject, error)
+	ListSyllabuses(ctx context.Context) ([]Syllabus, error)
 	ListTopicsBySubject(ctx context.Context, arg ListTopicsBySubjectParams) ([]Topic, error)
 	MarkSubmitted(ctx context.Context, arg MarkSubmittedParams) (ExamAttempt, error)
 	// Advance a draft through its review lifecycle (pending → approved/rejected).
@@ -136,8 +147,12 @@ type Querier interface {
 	// Report incremental progress (0-100) while processing.
 	UpdateJobProgress(ctx context.Context, arg UpdateJobProgressParams) (Job, error)
 	UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) (Question, error)
-	// Partial update: NULL params leave the existing value untouched.
+	// Partial update: NULL params leave the existing value untouched. syllabus_id
+	// additionally supports explicit clearing (un-grouping) via clear_syllabus,
+	// since COALESCE alone cannot distinguish "leave" from "set NULL".
 	UpdateSubject(ctx context.Context, arg UpdateSubjectParams) (Subject, error)
+	// Partial update: NULL params leave the existing value untouched.
+	UpdateSyllabus(ctx context.Context, arg UpdateSyllabusParams) (Syllabus, error)
 	UpdateTopic(ctx context.Context, arg UpdateTopicParams) (Topic, error)
 	// Inserts or updates the singleton settings row. NULL params fall back to the
 	// spec defaults on insert and leave the existing value untouched on update.

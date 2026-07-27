@@ -92,11 +92,42 @@ func (h *QuestionGenHandler) Handle(ctx context.Context, job Job, prog ProgressF
 
 	_ = prog(ctx, 10)
 
+	// Resolve human-readable names so knowledge-only backends (e.g. Ollama +
+	// DeepSeek) can author questions from their curriculum knowledge without any
+	// ingested source material. The raw UUIDs are meaningless to a model.
+	var subjectName, topicName string
+	var topicNames []string
+	if subj, err := h.Store.GetSubject(ctx, subjectID); err == nil {
+		subjectName = subj.Name
+	}
+	if payload.TopicID != "" {
+		if t, err := h.Store.GetTopic(ctx, payload.TopicID); err == nil {
+			topicName = t.Name
+		}
+	} else {
+		// Whole-subject scope: give the model the active topic list to spread
+		// questions across. Cap the list so the prompt stays bounded.
+		if topics, err := h.Store.ListTopicsBySubject(ctx, store.ListTopicsBySubjectParams{
+			SubjectID: subjectID,
+			PageOffset: 0,
+			PageLimit:  200,
+		}); err == nil {
+			for _, t := range topics {
+				if t.Active {
+					topicNames = append(topicNames, t.Name)
+				}
+			}
+		}
+	}
+
 	drafts, err := h.Knowledge.GenerateQuestions(ctx, knowledge.GenRequest{
-		SubjectID:  subjectID,
-		TopicID:    payload.TopicID,
-		Count:      count,
-		Difficulty: payload.Difficulty,
+		SubjectID:   subjectID,
+		SubjectName: subjectName,
+		TopicID:     payload.TopicID,
+		TopicName:   topicName,
+		TopicNames:  topicNames,
+		Count:       count,
+		Difficulty:  payload.Difficulty,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("questiongen: generate: %w", err)

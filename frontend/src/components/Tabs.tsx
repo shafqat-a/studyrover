@@ -76,22 +76,22 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 
 const sizeClasses: Record<TabsSize, string> = {
   sm: 'h-9 px-3 text-sm',
-  md: 'h-11 px-4 text-base',
+  md: 'h-10 px-4 text-sm',
 };
 
 const tabBase =
-  'relative inline-flex items-center justify-center gap-2 font-semibold ' +
+  'relative inline-flex items-center justify-center gap-2 font-medium ' +
   'whitespace-nowrap border-b-2 transition-colors duration-150 select-none ' +
   '-mb-px focus-visible:outline-none focus-visible:ring-2 ' +
   'focus-visible:ring-ring focus-visible:ring-offset-2 ' +
-  'focus-visible:ring-offset-background rounded-t-card ' +
-  'disabled:cursor-not-allowed disabled:opacity-60';
+  'focus-visible:ring-offset-background rounded-t-md ' +
+  'disabled:cursor-not-allowed disabled:opacity-55';
 
 const inactiveTab =
   'border-transparent text-foreground-muted hover:text-foreground ' +
-  'hover:bg-surface-muted';
+  'hover:bg-surface-muted/50';
 
-const activeTab = 'border-primary text-primary';
+const activeTab = 'border-primary text-foreground';
 
 const listBase = 'flex items-stretch border-b border-border';
 

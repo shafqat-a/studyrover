@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BookOpen, ClipboardList, Library } from 'lucide-react';
 
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import type { components } from '../api/schema';
 import { useSubjects } from '../hooks/useSubjects';
 import { useExamDefinitions } from '../hooks/useExamDefinitions';
@@ -40,7 +42,9 @@ export default function StudentHome() {
   const studentQuery = useStudentProfile();
   const studentId = studentQuery.data?.id;
 
-  const subjectsQuery = useSubjects();
+  // pageSize 200 (the server max) so the full catalog is visible, matching the
+  // parent Subjects page.
+  const subjectsQuery = useSubjects({ pageSize: 200 });
   const progressQuery = useProgress(studentId);
 
   // The active subject card whose exams are expanded. `null` until one is picked.
@@ -64,7 +68,7 @@ export default function StudentHome() {
     <div className="space-y-6">
       <header className="space-y-3">
         <div>
-          <h1 className="font-display text-display-sm text-foreground">
+          <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             {studentQuery.data
               ? `Hi, ${studentQuery.data.name.split(' ')[0]} 👋`
               : 'Welcome back 👋'}
@@ -89,7 +93,11 @@ export default function StudentHome() {
           retrying={subjectsQuery.isFetching}
         />
       ) : activeSubjects.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon={<Library className="h-5 w-5" aria-hidden="true" />}
+          title="No subjects yet"
+          description="Ask your parent to add a subject and set up an exam, then come back to start studying."
+        />
       ) : (
         <ul
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -152,16 +160,16 @@ interface StatusStripProps {
 function StatusStrip({ streak, loading, recommendedTopic }: StatusStripProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <span className="inline-flex items-center gap-2 rounded-card bg-surface px-3 py-1.5 shadow-card">
-        <span aria-hidden="true" className="text-lg">
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs">
+        <span aria-hidden="true" className="text-sm">
           🔥
         </span>
-        <span className="text-sm text-foreground">
+        <span className="text-foreground">
           {loading ? (
             <span className="text-foreground-muted">Loading streak…</span>
           ) : (
             <>
-              <span className="font-display font-bold">{streak ?? 0}</span>{' '}
+              <span className="font-semibold">{streak ?? 0}</span>{' '}
               <span className="text-foreground-muted">
                 day{(streak ?? 0) === 1 ? '' : 's'} streak
               </span>
@@ -171,11 +179,11 @@ function StatusStrip({ streak, loading, recommendedTopic }: StatusStripProps) {
       </span>
 
       {recommendedTopic && (
-        <span className="inline-flex min-w-0 items-center gap-2 rounded-card bg-primary-soft px-3 py-1.5">
-          <span aria-hidden="true" className="text-lg">
+        <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs">
+          <span aria-hidden="true" className="text-sm">
             🎯
           </span>
-          <span className="min-w-0 text-sm">
+          <span className="min-w-0">
             <span className="text-foreground-muted">Next up:</span>{' '}
             <span className="font-semibold text-foreground">
               {recommendedTopic.name}
@@ -202,11 +210,7 @@ function SubjectCard({
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
   return (
-    <Card
-      padding="md"
-      className="flex h-full flex-col"
-      style={{ borderTopColor: color, borderTopWidth: 4 }}
-    >
+    <Card padding="md" className="flex h-full flex-col">
       <button
         type="button"
         aria-expanded={expanded}
@@ -215,13 +219,13 @@ function SubjectCard({
       >
         <span
           aria-hidden="true"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-lg font-bold uppercase text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-semibold uppercase text-white"
           style={{ backgroundColor: color }}
         >
           {subject.name.trim().charAt(0) || "?"}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-display font-bold text-foreground group-hover:underline">
+          <span className="block truncate font-display font-semibold text-foreground group-hover:underline">
             {subject.name}
           </span>
           {subject.description ? (
@@ -338,10 +342,15 @@ function ExamRow({ exam, onTakeExam }: ExamRowProps) {
           size="sm"
           disabled
           title="Study mode is coming soon"
+          leadingIcon={<BookOpen className="h-4 w-4" aria-hidden="true" />}
         >
           Study
         </Button>
-        <Button size="sm" onClick={onTakeExam}>
+        <Button
+          size="sm"
+          onClick={onTakeExam}
+          leadingIcon={<ClipboardList className="h-4 w-4" aria-hidden="true" />}
+        >
           Take an exam
         </Button>
       </div>
@@ -359,26 +368,9 @@ function SubjectsSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="h-24 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-24 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <p className="text-4xl" aria-hidden="true">
-        📚
-      </p>
-      <h2 className="mt-3 font-display text-display-sm text-foreground">
-        No subjects yet
-      </h2>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-        Ask your parent to add a subject and set up an exam, then come back to
-        start studying.
-      </p>
     </div>
   );
 }
@@ -393,14 +385,14 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load subjects
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button variant="secondary" size="sm" onClick={onRetry} loading={retrying}>
           Try again
         </Button>
       </div>

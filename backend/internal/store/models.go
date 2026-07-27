@@ -59,6 +59,7 @@ type ExamDefinition struct {
 	CooldownMin   int32     `json:"cooldownMin"`
 	RewardStyle   string    `json:"rewardStyle"`
 	CreatedAt     time.Time `json:"createdAt"`
+	QuestionIds   []string  `json:"questionIds"`
 }
 
 type FileBlob struct {
@@ -119,10 +120,11 @@ type Option struct {
 }
 
 type Parent struct {
-	ID          string    `json:"id"`
-	DisplayName string    `json:"displayName"`
-	Email       string    `json:"email"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID           string    `json:"id"`
+	DisplayName  string    `json:"displayName"`
+	Email        string    `json:"email"`
+	CreatedAt    time.Time `json:"createdAt"`
+	PasswordHash *string   `json:"passwordHash"`
 }
 
 type Question struct {
@@ -134,6 +136,7 @@ type Question struct {
 	Difficulty      string    `json:"difficulty"`
 	Enabled         bool      `json:"enabled"`
 	CreatedAt       time.Time `json:"createdAt"`
+	Generated       bool      `json:"generated"`
 }
 
 type QuestionDraft struct {
@@ -197,6 +200,14 @@ type Subject struct {
 	Icon        *string   `json:"icon"`
 	Description *string   `json:"description"`
 	Archived    bool      `json:"archived"`
+	CreatedAt   time.Time `json:"createdAt"`
+	SyllabusID  *string   `json:"syllabusId"`
+}
+
+type Syllabus struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 

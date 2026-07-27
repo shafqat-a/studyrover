@@ -1,11 +1,19 @@
 import { useMemo, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import type { FormEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Check, HelpCircle, Plus, RotateCcw, Wand2 } from 'lucide-react';
 
-import { Badge } from '../components';
-import { Button } from '../components';
-import { Card } from '../components';
-import { Select } from '../components';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  Dialog,
+  EmptyState,
+  PageHeader,
+  RichContent,
+  Select,
+} from '../components';
 import type { components } from '../api/schema';
 import {
   useCreateQuestion,
@@ -103,6 +111,7 @@ function formFromQuestion(question: Question): QuestionFormState {
 
 export default function SubjectQuestions() {
   const { subjectId } = useParams<{ subjectId: string }>();
+  const navigate = useNavigate();
 
   const [topicFilter, setTopicFilter] = useState<string>(ALL_TOPICS);
 
@@ -198,26 +207,32 @@ export default function SubjectQuestions() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-display text-display-sm text-foreground">
-            Question bank
-          </h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Author the multiple-choice questions exams are built from.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            disabled
-            title="Automatic generation arrives in a later release"
-          >
-            Generate
-          </Button>
-          <Button onClick={openCreate}>Add question</Button>
-        </div>
-      </header>
+      <PageHeader
+        as="h2"
+        title="Question bank"
+        subtitle="Author the multiple-choice questions exams are built from."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                navigate(`/parent/subjects/${subjectId}/question-gen`)
+              }
+              disabled={!subjectId}
+              title="Draft questions with AI, then review before they join the bank"
+              leadingIcon={<Wand2 className="h-4 w-4" aria-hidden="true" />}
+            >
+              Generate
+            </Button>
+            <Button
+              onClick={openCreate}
+              leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              Add question
+            </Button>
+          </>
+        }
+      />
 
       {topics.length > 0 && (
         <div className="max-w-xs">
@@ -239,11 +254,43 @@ export default function SubjectQuestions() {
           retrying={questionsQuery.isFetching}
         />
       ) : questionsQuery.data.items.length === 0 ? (
-        <EmptyState
-          filtered={topicFilter !== ALL_TOPICS}
-          onAdd={openCreate}
-          onClearFilter={() => setTopicFilter(ALL_TOPICS)}
-        />
+        topicFilter !== ALL_TOPICS ? (
+          <EmptyState
+            icon={<HelpCircle className="h-5 w-5" />}
+            title="No questions for this topic"
+            description="There are no questions tagged with the selected topic yet."
+            action={
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setTopicFilter(ALL_TOPICS)}
+                >
+                  Show all topics
+                </Button>
+                <Button
+                  onClick={openCreate}
+                  leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+                >
+                  Add question
+                </Button>
+              </div>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<HelpCircle className="h-5 w-5" />}
+            title="No questions yet"
+            description="Add your first multiple-choice question to start building exams for this subject."
+            action={
+              <Button
+                onClick={openCreate}
+                leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+              >
+                Add question
+              </Button>
+            }
+          />
+        )
       ) : (
         <ul className="space-y-3" aria-label="Questions">
           {questionsQuery.data.items.map((question) => (
@@ -290,12 +337,14 @@ export default function SubjectQuestions() {
 
       {confirm && (
         <ConfirmDialog
+          open
+          danger
           title="Delete question"
-          body={`Permanently delete this question? This cannot be undone.`}
+          message={`Permanently delete this question? This cannot be undone.`}
           confirmLabel="Delete"
-          busy={deleteQuestion.isPending}
+          cancelLabel="Cancel"
           onCancel={() => setConfirm(null)}
-          onConfirm={() => void handleDelete()}
+          onConfirm={handleDelete}
         />
       )}
     </div>
@@ -323,7 +372,10 @@ function QuestionRow({
     <Card padding="md" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-medium text-foreground">{question.text}</p>
+          <RichContent
+            html={question.text}
+            className="font-medium text-foreground"
+          />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge tone={DIFFICULTY_TONE[question.difficulty]} size="sm">
               {DIFFICULTY_LABEL[question.difficulty]}
@@ -366,7 +418,11 @@ function QuestionRow({
               >
                 {correct ? '✓' : ''}
               </span>
-              <span className={correct ? 'font-medium' : ''}>{option.text}</span>
+              <RichContent
+                inline
+                html={option.text}
+                className={correct ? 'font-medium' : ''}
+              />
               {correct && <span className="sr-only">(correct answer)</span>}
             </li>
           );
@@ -473,143 +529,131 @@ function QuestionDialog({
   ];
 
   return (
-    <Overlay labelledBy="question-dialog-title" onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-card bg-surface shadow-card"
-      >
-        <h2
-          id="question-dialog-title"
-          className="border-b border-border px-6 py-4 font-display text-display-sm text-foreground"
-        >
-          {title}
-        </h2>
-
-        <div className="space-y-5 overflow-y-auto px-6 py-5">
-          <div>
-            <label
-              htmlFor="question-text"
-              className="block text-sm font-semibold text-foreground"
-            >
-              Question prompt
-              <span aria-hidden="true" className="ml-0.5 text-danger">
-                *
-              </span>
-            </label>
-            <textarea
-              id="question-text"
-              required
-              autoFocus
-              rows={3}
-              value={form.text}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, text: e.target.value }))
-              }
-              onBlur={() => setTouched(true)}
-              aria-invalid={Boolean(textError)}
-              placeholder="e.g. What is the capital of France?"
-              className="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            {textError && (
-              <p role="alert" className="mt-1 text-sm text-danger">
-                {textError}
-              </p>
-            )}
-          </div>
-
-          <fieldset>
-            <legend className="text-sm font-semibold text-foreground">
-              Options
-              <span aria-hidden="true" className="ml-0.5 text-danger">
-                *
-              </span>
-            </legend>
-            <p className="mt-0.5 text-xs text-foreground-muted">
-              Provide at least {MIN_OPTIONS} options and select the correct one.
+    <Dialog open onClose={onClose} title={title} size="md">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label
+            htmlFor="question-text"
+            className="block text-sm font-semibold text-foreground"
+          >
+            Question prompt
+            <span aria-hidden="true" className="ml-0.5 text-danger">
+              *
+            </span>
+          </label>
+          <textarea
+            id="question-text"
+            required
+            autoFocus
+            rows={3}
+            value={form.text}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, text: e.target.value }))
+            }
+            onBlur={() => setTouched(true)}
+            aria-invalid={Boolean(textError)}
+            placeholder="e.g. What is the capital of France?"
+            className="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          {textError && (
+            <p role="alert" className="mt-1 text-xs font-medium text-danger">
+              {textError}
             </p>
-            <ul className="mt-2 space-y-2">
-              {form.options.map((option, index) => {
-                const selected = form.correctIndex === index;
-                return (
-                  <li key={index} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="correct-option"
-                      checked={selected}
-                      onChange={() =>
-                        setForm((f) => ({ ...f, correctIndex: index }))
-                      }
-                      aria-label={`Mark option ${index + 1} as correct`}
-                      className="h-4 w-4 shrink-0 accent-primary"
-                    />
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => setOption(index, e.target.value)}
-                      onBlur={() => setTouched(true)}
-                      placeholder={`Option ${index + 1}`}
-                      aria-label={`Option ${index + 1} text`}
-                      className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeOption(index)}
-                      disabled={form.options.length <= MIN_OPTIONS}
-                      aria-label={`Remove option ${index + 1}`}
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-            {optionsError && (
-              <p role="alert" className="mt-1.5 text-sm text-danger">
-                {optionsError}
-              </p>
-            )}
-            <div className="mt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={addOption}
-                disabled={form.options.length >= MAX_OPTIONS}
-              >
-                Add option
-              </Button>
-            </div>
-          </fieldset>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
-              label="Topic"
-              value={form.topicId === '' ? NO_TOPIC : form.topicId}
-              options={topicOptions}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  topicId: e.target.value === NO_TOPIC ? '' : e.target.value,
-                }))
-              }
-            />
-            <Select
-              label="Difficulty"
-              value={form.difficulty}
-              options={DIFFICULTY_OPTIONS}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  difficulty: e.target.value as Difficulty,
-                }))
-              }
-            />
-          </div>
+          )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+        <fieldset>
+          <legend className="text-sm font-semibold text-foreground">
+            Options
+            <span aria-hidden="true" className="ml-0.5 text-danger">
+              *
+            </span>
+          </legend>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            Provide at least {MIN_OPTIONS} options and select the correct one.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {form.options.map((option, index) => {
+              const selected = form.correctIndex === index;
+              return (
+                <li key={index} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="correct-option"
+                    checked={selected}
+                    onChange={() =>
+                      setForm((f) => ({ ...f, correctIndex: index }))
+                    }
+                    aria-label={`Mark option ${index + 1} as correct`}
+                    className="h-4 w-4 shrink-0 accent-primary"
+                  />
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => setOption(index, e.target.value)}
+                    onBlur={() => setTouched(true)}
+                    placeholder={`Option ${index + 1}`}
+                    aria-label={`Option ${index + 1} text`}
+                    className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeOption(index)}
+                    disabled={form.options.length <= MIN_OPTIONS}
+                    aria-label={`Remove option ${index + 1}`}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+          {optionsError && (
+            <p role="alert" className="mt-1.5 text-xs font-medium text-danger">
+              {optionsError}
+            </p>
+          )}
+          <div className="mt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addOption}
+              disabled={form.options.length >= MAX_OPTIONS}
+            >
+              Add option
+            </Button>
+          </div>
+        </fieldset>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Select
+            label="Topic"
+            value={form.topicId === '' ? NO_TOPIC : form.topicId}
+            options={topicOptions}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                topicId: e.target.value === NO_TOPIC ? '' : e.target.value,
+              }))
+            }
+          />
+          <Select
+            label="Difficulty"
+            value={form.difficulty}
+            options={DIFFICULTY_OPTIONS}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                difficulty: e.target.value as Difficulty,
+              }))
+            }
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="ghost"
@@ -618,85 +662,17 @@ function QuestionDialog({
           >
             Cancel
           </Button>
-          <Button type="submit" loading={submitting} disabled={!valid && touched}>
+          <Button
+            type="submit"
+            loading={submitting}
+            disabled={!valid && touched}
+            leadingIcon={<Check className="h-4 w-4" aria-hidden="true" />}
+          >
             Save
           </Button>
         </div>
       </form>
-    </Overlay>
-  );
-}
-
-interface ConfirmDialogProps {
-  title: string;
-  body: string;
-  confirmLabel: string;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}
-
-function ConfirmDialog({
-  title,
-  body,
-  confirmLabel,
-  busy,
-  onCancel,
-  onConfirm,
-}: ConfirmDialogProps) {
-  return (
-    <Overlay labelledBy="confirm-dialog-title" onClose={onCancel}>
-      <div
-        role="alertdialog"
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-body"
-        className="w-full max-w-sm rounded-card bg-surface p-6 shadow-card"
-      >
-        <h2
-          id="confirm-dialog-title"
-          className="font-display text-display-sm text-foreground"
-        >
-          {title}
-        </h2>
-        <p id="confirm-dialog-body" className="mt-2 text-sm text-foreground-muted">
-          {body}
-        </p>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-          <Button variant="danger" loading={busy} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </Overlay>
-  );
-}
-
-interface OverlayProps {
-  labelledBy: string;
-  onClose: () => void;
-  children: ReactNode;
-}
-
-/** Minimal modal overlay: backdrop click + role=dialog wrapper. */
-function Overlay({ labelledBy, onClose, children }: OverlayProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        className="flex w-full justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -706,53 +682,9 @@ function QuestionsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="h-28 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-28 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
-    </div>
-  );
-}
-
-interface EmptyStateProps {
-  filtered: boolean;
-  onAdd: () => void;
-  onClearFilter: () => void;
-}
-
-function EmptyState({ filtered, onAdd, onClearFilter }: EmptyStateProps) {
-  if (filtered) {
-    return (
-      <div className="rounded-card border border-dashed border-border bg-surface p-12 text-center">
-        <h3 className="font-display text-display-sm text-foreground">
-          No questions for this topic
-        </h3>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-          There are no questions tagged with the selected topic yet.
-        </p>
-        <div className="mt-5 flex justify-center gap-2">
-          <Button variant="secondary" onClick={onClearFilter}>
-            Show all topics
-          </Button>
-          <Button onClick={onAdd}>Add question</Button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="rounded-card border border-dashed border-border bg-surface p-12 text-center">
-      <p className="text-4xl" aria-hidden="true">
-        ❓
-      </p>
-      <h3 className="mt-3 font-display text-display-sm text-foreground">
-        No questions yet
-      </h3>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-foreground-muted">
-        Add your first multiple-choice question to start building exams for this
-        subject.
-      </p>
-      <div className="mt-5">
-        <Button onClick={onAdd}>Add question</Button>
-      </div>
     </div>
   );
 }
@@ -767,14 +699,20 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h3 className="font-display text-display-sm text-danger">
+      <h3 className="font-display text-base font-semibold text-danger">
         Couldn&rsquo;t load questions
       </h3>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+          leadingIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+        >
           Try again
         </Button>
       </div>

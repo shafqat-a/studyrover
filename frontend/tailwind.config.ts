@@ -3,9 +3,10 @@ import type { Config } from 'tailwindcss';
 /**
  * StudyRover design tokens.
  *
- * Tokens are exposed both as Tailwind theme values and (via globals.css) as
- * CSS custom properties, so components can reference `bg-primary`, `rounded-card`,
- * `text-display`, etc. and stay visually consistent and kid-friendly.
+ * Modern, clean aesthetic (Linear/Vercel). Tokens are exposed both as Tailwind
+ * theme values and (via globals.css) as CSS custom properties, so components can
+ * reference `bg-primary`, `rounded-card`, `text-display`, etc. and stay
+ * visually consistent.
  *
  * Colors are tuned for WCAG AA contrast on the chosen surfaces. Brand hues use
  * an HSL-channel CSS variable so opacity modifiers (e.g. `bg-primary/80`) work.
@@ -67,15 +68,15 @@ const config: Config = {
       },
 
       borderRadius: {
-        // Rounder, friendlier corners for a kid-facing UI.
+        // Tighter, crisper corners — flat, professional, not bubbly.
         none: '0px',
         sm: '0.375rem', // 6px
-        DEFAULT: '0.625rem', // 10px
-        md: '0.75rem', // 12px
-        lg: '1rem', // 16px
-        xl: '1.25rem', // 20px
-        '2xl': '1.5rem', // 24px
-        card: '1.25rem', // 20px — default for Card/Dialog
+        DEFAULT: '0.5rem', // 8px — buttons, inputs, small chips
+        md: '0.625rem', // 10px
+        lg: '0.75rem', // 12px
+        xl: '1rem', // 16px
+        '2xl': '1.25rem', // 20px
+        card: '0.75rem', // 12px — default for Card/Dialog
         pill: '9999px',
         full: '9999px',
       },
@@ -111,8 +112,9 @@ const config: Config = {
 
       fontFamily: {
         sans: [
-          'Nunito',
-          'ui-rounded',
+          'Inter Variable',
+          'Inter',
+          'ui-sans-serif',
           'system-ui',
           '-apple-system',
           'Segoe UI',
@@ -122,9 +124,11 @@ const config: Config = {
           'sans-serif',
         ],
         display: [
-          'Baloo 2',
-          'Nunito',
-          'ui-rounded',
+          'Bricolage Grotesque Variable',
+          'Bricolage Grotesque',
+          'Inter Variable',
+          'Inter',
+          'ui-sans-serif',
           'system-ui',
           'sans-serif',
         ],
@@ -132,24 +136,38 @@ const config: Config = {
       },
 
       fontSize: {
-        // [size, lineHeight] pairs. Tuned slightly larger for readability.
+        // [size, lineHeight] pairs. Tighter display sizes with negative
+        // tracking for a crisp, modern heading rhythm.
         xs: ['0.75rem', { lineHeight: '1rem' }],
         sm: ['0.875rem', { lineHeight: '1.25rem' }],
-        base: ['1rem', { lineHeight: '1.5rem' }],
-        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        base: ['0.9375rem', { lineHeight: '1.5rem' }],
+        lg: ['1.0625rem', { lineHeight: '1.625rem' }],
         xl: ['1.25rem', { lineHeight: '1.75rem' }],
         '2xl': ['1.5rem', { lineHeight: '2rem' }],
         '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
         '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
-        display: ['2.5rem', { lineHeight: '1.1', fontWeight: '800' }],
-        'display-sm': ['1.75rem', { lineHeight: '1.2', fontWeight: '700' }],
+        display: [
+          '2rem',
+          { lineHeight: '1.15', fontWeight: '700', letterSpacing: '-0.025em' },
+        ],
+        'display-sm': [
+          '1.5rem',
+          { lineHeight: '1.25', fontWeight: '600', letterSpacing: '-0.015em' },
+        ],
+      },
+
+      letterSpacing: {
+        tightest: '-0.03em',
+        tighter: '-0.02em',
+        tight: '-0.01em',
       },
 
       boxShadow: {
-        // Soft, low-contrast elevation for a gentle look.
-        card: '0 1px 2px 0 hsl(var(--sr-shadow) / 0.06), 0 4px 16px -2px hsl(var(--sr-shadow) / 0.10)',
-        pop: '0 8px 32px -4px hsl(var(--sr-shadow) / 0.18)',
-        focus: '0 0 0 3px hsl(var(--sr-ring) / 0.45)',
+        // Very subtle elevation — separation comes mostly from borders.
+        xs: '0 1px 2px 0 hsl(var(--sr-shadow) / 0.05)',
+        card: '0 1px 2px 0 hsl(var(--sr-shadow) / 0.04), 0 1px 3px 0 hsl(var(--sr-shadow) / 0.06)',
+        pop: '0 12px 32px -8px hsl(var(--sr-shadow) / 0.18), 0 4px 12px -4px hsl(var(--sr-shadow) / 0.10)',
+        focus: '0 0 0 3px hsl(var(--sr-ring) / 0.35)',
       },
 
       ringColor: {

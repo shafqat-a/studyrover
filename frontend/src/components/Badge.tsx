@@ -38,12 +38,12 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 const toneClasses: Record<BadgeTone, string> = {
-  neutral: 'bg-surface-muted text-foreground',
-  success: 'bg-success-soft text-success',
-  warning: 'bg-warning-soft text-warning',
-  danger: 'bg-danger-soft text-danger',
-  // Brand indigo doubles as the informational tone.
-  info: 'bg-primary-soft text-primary',
+  neutral: 'bg-surface-muted text-foreground-muted border-border',
+  success: 'bg-success-soft text-success border-transparent',
+  warning: 'bg-warning-soft text-warning border-transparent',
+  danger: 'bg-danger-soft text-danger border-transparent',
+  // Brand violet doubles as the informational tone.
+  info: 'bg-secondary-soft text-secondary border-transparent',
 };
 
 const dotClasses: Record<BadgeTone, string> = {
@@ -51,12 +51,12 @@ const dotClasses: Record<BadgeTone, string> = {
   success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-danger',
-  info: 'bg-primary',
+  info: 'bg-secondary',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'h-5 gap-1 px-2 text-xs',
-  md: 'h-6 gap-1.5 px-2.5 text-sm',
+  sm: 'h-5 gap-1 px-1.5 text-xs',
+  md: 'h-6 gap-1.5 px-2 text-xs',
 };
 
 export function Badge({
@@ -71,7 +71,7 @@ export function Badge({
     <span
       data-tone={tone}
       className={cx(
-        'inline-flex select-none items-center rounded-pill font-semibold leading-none',
+        'inline-flex select-none items-center rounded-full border font-medium leading-none',
         'whitespace-nowrap align-middle',
         toneClasses[tone],
         sizeClasses[size],

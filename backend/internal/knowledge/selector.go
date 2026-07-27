@@ -31,6 +31,9 @@ type Config struct {
 	// Ollama is the constructed Ollama Cloud adapter, or nil when the Ollama API
 	// key is absent. Selecting "ollama" with a nil Ollama falls back to Fake.
 	Ollama Source
+	// Zai is the constructed z.ai (Zhipu GLM) adapter, or nil when the z.ai API
+	// key is absent. Selecting "zai" with a nil Zai falls back to Fake.
+	Zai Source
 	// Fake is the deterministic fallback backend (2-F02). It must be non-nil:
 	// selectBackend returns it whenever the chosen backend is unavailable, so the
 	// platform keeps working without external services. When nil, New substitutes
@@ -83,6 +86,12 @@ func selectBackend(settings contracts.Settings, cfg Config) Source {
 	case contracts.KnowledgeBackendOllama:
 		if cfg.Ollama != nil {
 			return cfg.Ollama
+		}
+		return fallback
+
+	case contracts.KnowledgeBackendZai:
+		if cfg.Zai != nil {
+			return cfg.Zai
 		}
 		return fallback
 

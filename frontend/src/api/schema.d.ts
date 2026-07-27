@@ -4,6 +4,51 @@
  */
 
 export interface paths {
+    "/syllabuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List syllabuses
+         * @description Returns every syllabus (the curriculum grouping above subjects, e.g. "Class V"), oldest first. Ungrouped subjects simply have no syllabusId; there are few syllabuses per household so the list is not paginated.
+         */
+        get: operations["listSyllabuses"];
+        put?: never;
+        /** Create a syllabus */
+        post: operations["createSyllabus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/syllabuses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a syllabus (partial) */
+        put: operations["updateSyllabus"];
+        post?: never;
+        /**
+         * Delete a syllabus
+         * @description Deletes the syllabus. Its subjects are un-grouped (syllabusId cleared), not deleted.
+         */
+        delete: operations["deleteSyllabus"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/subjects": {
         parameters: {
             query?: never;
@@ -135,6 +180,49 @@ export interface paths {
         put?: never;
         /** Create an exam definition */
         post: operations["createExamDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exam-definitions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a ready-to-take exam directly from topics (no question bank)
+         * @description Kicks off async generation of an exam. The AI authors the requested number of questions per topic from its curriculum knowledge, and the exam is pinned to exactly those questions — no ingested sources or curated question bank are required. Returns a Job whose result holds the created ExamDefinition's id.
+         */
+        post: operations["generateExam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exam-definitions/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Preview an exam as the parent (with answers)
+         * @description Assembles the exam exactly as a student attempt would (pinned or scoped/shuffled), but INCLUDING the answer key, so the parent can sit and self-check the exam ad-hoc without a student account, saved attempt, cooldown or reward. Parent-guarded.
+         */
+        get: operations["previewExam"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -357,6 +445,26 @@ export interface paths {
          * @description Drives the parent WebAuthn authentication ceremony. The opaque ceremony payload is passed through to go-webauthn. On finish, a Session is returned and the session cookie is set.
          */
         post: operations["authLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parent password sign-in (passkey fallback)
+         * @description Signs a parent in with email + password for devices where passkeys are unavailable. When the parent has no password configured, the built-in default password is accepted. On success a Session is returned and the session cookie is set.
+         */
+        post: operations["authPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1017,10 +1125,38 @@ export interface components {
             /** @default flat */
             rewardStyle: components["schemas"]["RewardStyle"];
             /**
+             * @description When non-empty, the exam is pinned to exactly these questions (a generated exam). When empty, the exam samples the question bank by scope/size at attempt time.
+             * @default []
+             */
+            questionIds: string[];
+            /**
              * Format: date-time
              * @description When the exam template was created (RFC 3339).
              */
             createdAt: string;
+        };
+        /** @description A parent-side preview of an exam — the assembled questions WITH the answer key, for ad-hoc self-checking. Never returned to a student. */
+        ExamPreview: {
+            /** @description The assembled questions in delivery order, each with its correct option. */
+            questions: components["schemas"]["Question"][];
+        };
+        /** @description Request to generate a ready-to-take exam from topics, with the AI authoring the questions (no question bank needed). */
+        GenerateExamRequest: {
+            /** @description The subject the exam belongs to. */
+            subjectId: string;
+            /** @description Human-readable name for the generated exam. */
+            name: string;
+            /** @description The topics to draw from and how many questions to generate from each. */
+            topics: {
+                /** @description The topic to generate questions from. */
+                topicId: string;
+                /** @description How many questions to generate from this topic. */
+                count: number;
+            }[];
+            /** @description Minimum score percentage to pass (defaults to the settings default). */
+            passBar?: number;
+            /** @description Optional target difficulty hint ("easy"|"medium"|"hard"). */
+            difficulty?: string;
         };
         /** @description Request body to create an ExamDefinition. The server assigns `id` and `createdAt` and applies the spec §10 defaults for any omitted field. */
         CreateExamDefinition: {
@@ -1171,10 +1307,10 @@ export interface components {
             timestamp: string;
         };
         /**
-         * @description The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative.
+         * @description The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative. Ollama (DeepSeek) and z.ai (GLM) author questions/guides from curriculum knowledge without ingested sources.
          * @enum {string}
          */
-        KnowledgeBackend: "notebooklm" | "gemini" | "ollama";
+        KnowledgeBackend: "notebooklm" | "gemini" | "ollama" | "zai";
         /** @description The application settings singleton. Holds the spec defaults that gate exam creation plus the Guardian-side reward knobs (stored now, used in Phase 3). L10 ResolveSettings fills any missing field from these same defaults at runtime. */
         Settings: {
             /** @description Identifier of the settings singleton row. */
@@ -1301,6 +1437,27 @@ export interface components {
             /** @description Optional free-form notes the parent keeps about the student. */
             notes?: string;
         };
+        /** @description A curriculum grouping above subjects, modelled on an education system's class level — e.g. "Class V", whose subjects are "Math Class V", "Science Class V", and so on. */
+        Syllabus: {
+            /** @description Server-assigned unique identifier. */
+            id: string;
+            /** @description Human-readable syllabus name (e.g. "Class V"). */
+            name: string;
+            /** @description Optional longer description of the syllabus. */
+            description?: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339 creation timestamp.
+             */
+            createdAt: string;
+        };
+        /** @description Request body to create a Syllabus; server assigns id/createdAt. */
+        CreateSyllabus: {
+            /** @description Human-readable syllabus name (e.g. "Class V"). */
+            name: string;
+            /** @description Optional longer description of the syllabus. */
+            description?: string;
+        };
         /** @description A unit of study a parent configures (e.g. "Algebra I"). */
         Subject: {
             /** @description Server-assigned unique identifier (UUID/cuid). */
@@ -1318,6 +1475,8 @@ export interface components {
              * @default false
              */
             archived: boolean;
+            /** @description Optional syllabus (curriculum grouping, e.g. "Class V") this subject belongs to. On update, an empty string clears the assignment (un-groups the subject); omitting the field leaves it unchanged. */
+            syllabusId?: string;
             /**
              * Format: date-time
              * @description RFC 3339 creation timestamp.
@@ -1334,6 +1493,8 @@ export interface components {
             icon?: string;
             /** @description Optional longer description of the subject. */
             description?: string;
+            /** @description Optional syllabus (curriculum grouping, e.g. "Class V") this subject belongs to. */
+            syllabusId?: string;
         };
         /** @description A single page of Subject results (Page<Subject> per the common pagination pattern). */
         PageOfSubject: {
@@ -1438,6 +1599,13 @@ export interface components {
             studentId: string;
             /** @description Optional PIN gating the student sign-in. */
             pin?: string;
+        };
+        /** @description Body for the parent password sign-in fallback, used when passkeys are unavailable. */
+        PasswordSignIn: {
+            /** @description The parent's account email. */
+            email: string;
+            /** @description The parent's password (or the built-in default when none is configured). */
+            password: string;
         };
         /** @description The response of a WebAuthn ceremony step. During the begin step it carries opaque ceremony options; on a successful finish it carries the established Session. Both fields are optional; exactly one is present per step. */
         AuthResult: {
@@ -1784,6 +1952,102 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listSyllabuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All syllabuses. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Syllabus"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createSyllabus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSyllabus"];
+            };
+        };
+        responses: {
+            /** @description The created syllabus. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Syllabus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateSyllabus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Syllabus"];
+            };
+        };
+        responses: {
+            /** @description The updated syllabus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Syllabus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteSyllabus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The syllabus was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listSubjects: {
         parameters: {
             query?: {
@@ -2183,6 +2447,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExamDefinition"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    generateExam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateExamRequest"];
+            };
+        };
+        responses: {
+            /** @description The async exam-generation job. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    previewExam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assembled exam questions, with the correct option marked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExamPreview"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -2657,6 +2970,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    authPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordSignIn"];
+            };
+        };
+        responses: {
+            /** @description The parent session. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Session"];
                 };
             };
             default: components["responses"]["Problem"];

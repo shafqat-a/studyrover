@@ -5,6 +5,7 @@ import { Card } from '../components/Card';
 import { NumberStepper } from '../components/NumberStepper';
 import { PageHeader } from '../components/PageHeader';
 import { Select } from '../components/Select';
+import { ThemePicker } from '../components/ThemePicker';
 import { Toggle } from '../components/Toggle';
 import type { components } from '../api/schema';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
@@ -42,7 +43,8 @@ const KNOWLEDGE_BACKEND_OPTIONS: Array<{
 }> = [
   { value: 'notebooklm', label: 'NotebookLM (default)' },
   { value: 'gemini', label: 'Gemini' },
-  { value: 'ollama', label: 'Ollama Cloud' },
+  { value: 'ollama', label: 'Ollama Cloud (DeepSeek)' },
+  { value: 'zai', label: 'z.ai (GLM)' },
 ];
 
 function formFromSettings(settings: Settings): FormState {
@@ -86,6 +88,20 @@ export default function Settings() {
         title="Settings"
         subtitle="Global defaults that gate exam creation and the AI knowledge backend."
       />
+
+      <Card padding="md">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">
+            Appearance
+          </h2>
+          <p className="mt-1 text-sm text-foreground-muted">
+            How StudyRover looks on this device.
+          </p>
+        </div>
+        <div className="mt-5">
+          <ThemePicker variant="full" />
+        </div>
+      </Card>
 
       {settingsQuery.isPending ? (
         <SettingsSkeleton />
@@ -139,9 +155,9 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card padding="md" className="space-y-6">
+      <Card padding="md">
         <div>
-          <h2 className="font-display text-display-sm text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             Exam defaults
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -149,6 +165,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
           </p>
         </div>
 
+        <div className="mt-6 space-y-4">
         <SettingRow
           title="Default exam size"
           description="Number of questions assembled for a new exam."
@@ -219,11 +236,12 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
             }
           />
         </SettingRow>
+        </div>
       </Card>
 
-      <Card padding="md" className="space-y-6">
+      <Card padding="md">
         <div>
-          <h2 className="font-display text-display-sm text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             Knowledge backend
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -231,6 +249,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
           </p>
         </div>
 
+        <div className="mt-6 space-y-4">
         <SettingRow
           title="Backend"
           description="The AI provider for the tutor and generation (Ollama Cloud, Gemini, or NotebookLM)."
@@ -249,11 +268,12 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
             }
           />
         </SettingRow>
+        </div>
       </Card>
 
-      <Card padding="md" className="space-y-6">
+      <Card padding="md">
         <div>
-          <h2 className="font-display text-display-sm text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             Rewards
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -261,6 +281,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
           </p>
         </div>
 
+        <div className="mt-6 space-y-4">
         <SettingRow
           title="Reward rate"
           description="Minutes of earned time per correct question."
@@ -294,6 +315,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
             onChange={() => undefined}
           />
         </SettingRow>
+        </div>
       </Card>
 
       <div className="flex items-center justify-end gap-2">
@@ -329,17 +351,17 @@ function SettingRow({
   children,
 }: SettingRowProps) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-5 first:border-t-0 first:pt-0 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 sm:max-w-md">
         {htmlFor ? (
           <label
             htmlFor={htmlFor}
-            className="block text-sm font-semibold text-foreground"
+            className="block text-sm font-medium text-foreground"
           >
             {title}
           </label>
         ) : (
-          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="text-sm font-medium text-foreground">{title}</p>
         )}
         {description ? (
           <p className="mt-0.5 text-sm text-foreground-muted">{description}</p>
@@ -361,7 +383,7 @@ function SettingsSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="h-48 animate-pulse rounded-card border border-border bg-surface-muted"
+          className="h-48 animate-pulse rounded-md bg-surface-muted"
         />
       ))}
     </div>
@@ -378,14 +400,14 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="rounded-card border border-danger bg-danger-soft p-4 text-center"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load settings
       </h2>
       <p className="mt-1 text-sm text-foreground-muted">{message}</p>
       <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+        <Button variant="secondary" size="sm" onClick={onRetry} loading={retrying}>
           Try again
         </Button>
       </div>

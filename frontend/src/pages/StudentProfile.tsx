@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { Avatar } from '../components/Avatar';
+import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { FileUpload } from '../components/FileUpload';
+import { PageHeader } from '../components/PageHeader';
 import { TextInput } from '../components/TextInput';
 import { Textarea } from '../components/Textarea';
 import type { components } from '../api/schema';
@@ -135,14 +137,10 @@ export default function StudentProfile() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <h1 className="font-display text-display-sm text-foreground">
-          Student profile
-        </h1>
-        <p className="mt-1 text-sm text-foreground-muted">
-          Manage the student&rsquo;s name, level, avatar, and study preferences.
-        </p>
-      </header>
+      <PageHeader
+        title="Student profile"
+        subtitle="Manage the student&rsquo;s name, level, avatar, and study preferences."
+      />
 
       {studentQuery.isPending ? (
         <ProfileSkeleton />
@@ -164,7 +162,7 @@ export default function StudentProfile() {
                   alt={form.name ? `${form.name}'s avatar` : 'Student avatar'}
                 />
                 <div className="min-w-0">
-                  <p className="font-display text-lg font-bold text-foreground">
+                  <p className="font-display text-lg font-semibold text-foreground">
                     {form.name.trim() || 'Unnamed student'}
                   </p>
                   {form.gradeLevel.trim() ? (
@@ -259,15 +257,17 @@ function DeviceSummaryPlaceholder() {
     <Card padding="lg">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-foreground">Devices</h2>
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Devices
+          </h2>
           <p className="mt-1 text-sm text-foreground-muted">
             Managed devices and screen-time controls will appear here once the
             Guardian companion is connected.
           </p>
         </div>
-        <span className="shrink-0 rounded-pill border border-border bg-surface-muted px-3 py-1 text-xs font-semibold text-foreground-muted">
+        <Badge tone="neutral" className="shrink-0">
           Coming soon
-        </span>
+        </Badge>
       </div>
       <p className="mt-4 rounded-card border border-dashed border-border bg-surface-muted px-4 py-6 text-center text-sm text-foreground-muted">
         No devices connected yet.
@@ -296,14 +296,19 @@ function ErrorState({ message, onRetry, retrying }: ErrorStateProps) {
   return (
     <div
       role="alert"
-      className="rounded-card border border-danger bg-danger-soft p-8 text-center"
+      className="border border-danger bg-danger-soft rounded-card p-4"
     >
-      <h2 className="font-display text-display-sm text-danger">
+      <h2 className="text-base font-semibold text-danger">
         Couldn&rsquo;t load the profile
       </h2>
-      <p className="mt-1 text-sm text-foreground-muted">{message}</p>
-      <div className="mt-5">
-        <Button variant="secondary" onClick={onRetry} loading={retrying}>
+      <p className="mt-1 text-sm font-medium text-danger">{message}</p>
+      <div className="mt-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          loading={retrying}
+        >
           Try again
         </Button>
       </div>

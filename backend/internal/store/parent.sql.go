@@ -47,7 +47,7 @@ const createParent = `-- name: CreateParent :one
 
 INSERT INTO parent (display_name, email)
 VALUES ($1, $2)
-RETURNING id, display_name, email, created_at
+RETURNING id, display_name, email, created_at, password_hash
 `
 
 type CreateParentParams struct {
@@ -64,12 +64,13 @@ func (q *Queries) CreateParent(ctx context.Context, arg CreateParentParams) (Par
 		&i.DisplayName,
 		&i.Email,
 		&i.CreatedAt,
+		&i.PasswordHash,
 	)
 	return i, err
 }
 
 const getParentByEmail = `-- name: GetParentByEmail :one
-SELECT id, display_name, email, created_at FROM parent
+SELECT id, display_name, email, created_at, password_hash FROM parent
 WHERE email = $1
 `
 
@@ -81,6 +82,7 @@ func (q *Queries) GetParentByEmail(ctx context.Context, email string) (Parent, e
 		&i.DisplayName,
 		&i.Email,
 		&i.CreatedAt,
+		&i.PasswordHash,
 	)
 	return i, err
 }

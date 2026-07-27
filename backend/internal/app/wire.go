@@ -27,6 +27,7 @@ import (
 	"github.com/shafqat/studyrover/backend/internal/knowledge/gemini"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/notebooklm"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/ollama"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/zai"
 	"github.com/shafqat/studyrover/backend/internal/storage"
 	"github.com/shafqat/studyrover/backend/internal/store"
 )
@@ -137,6 +138,7 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 			Gemini:     gemini.New(gemini.Config{APIKey: cfg.GeminiAPIKey, Model: cfg.GeminiModel}),
 			NotebookLM: notebooklm.New(notebooklm.Config{}),
 			Ollama:     ollama.New(ollama.Config{APIKey: cfg.OllamaAPIKey, BaseURL: cfg.OllamaBaseURL, Model: cfg.OllamaModel}),
+			Zai:        zai.New(zai.Config{APIKey: cfg.ZaiAPIKey, BaseURL: cfg.ZaiBaseURL, Model: cfg.ZaiModel}),
 			Fake:       fake.New(0),
 		},
 	)
@@ -151,6 +153,7 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 	registry.Register(jobs.TypeIngest, jobs.NewIngestHandler(knowledgeSrc, db, files))
 	registry.Register(jobs.TypeSyllabus, jobs.NewSyllabusHandler(knowledgeSrc))
 	registry.Register(jobs.TypeQuestions, jobs.NewQuestionGenHandler(knowledgeSrc, db))
+	registry.Register(jobs.TypeExam, jobs.NewExamGenHandler(knowledgeSrc, db))
 	worker := jobs.NewWorker(queue, registry, jobs.Config{})
 
 	h := &httpapi.Handlers{

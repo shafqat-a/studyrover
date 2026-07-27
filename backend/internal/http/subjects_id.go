@@ -57,13 +57,19 @@ func (h *Handlers) UpdateSubject(w http.ResponseWriter, r *http.Request, id cont
 		return
 	}
 
+	// syllabusId is a tri-state on update: absent leaves the grouping alone, an
+	// empty string clears it, and a non-empty id re-assigns the subject.
+	clearSyllabus := body.SyllabusId != nil && strings.TrimSpace(*body.SyllabusId) == ""
+
 	updated, err := h.Store.UpdateSubject(r.Context(), store.UpdateSubjectParams{
-		ID:          id,
-		Name:        &name,
-		Color:       body.Color,
-		Icon:        body.Icon,
-		Description: body.Description,
-		Archived:    &body.Archived,
+		ID:            id,
+		Name:          &name,
+		Color:         body.Color,
+		Icon:          body.Icon,
+		Description:   body.Description,
+		Archived:      &body.Archived,
+		SyllabusID:    normalizeSyllabusID(body.SyllabusId),
+		ClearSyllabus: clearSyllabus,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
