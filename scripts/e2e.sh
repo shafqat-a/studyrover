@@ -34,6 +34,19 @@ echo "==> [2/5] migrate + seed"
 command -v migrate >/dev/null || export PATH="$PATH:$HOME/go/bin"
 migrate -path "$REPO/backend/db/migrations" -database "$E2E_DATABASE_URL" up
 ( cd "$REPO/backend" && DATABASE_URL="$E2E_DATABASE_URL" go run ./cmd/seed )
+# Guardian fixtures: one gated device for the demo student, and a clean slate
+# for today's usage so the earned-time assertions are deterministic. Older
+# score_events are marked consumed so the subscriber only grants the new one.
+psql "$E2E_DATABASE_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+INSERT INTO guardian_device (student_id, name, mac)
+VALUES ('44444444-4444-4444-4444-444444444444', 'Demo laptop', 'aa:bb:cc:dd:ee:01')
+ON CONFLICT (mac) DO NOTHING;
+DELETE FROM guardian_grant;
+DELETE FROM guardian_daily_usage;
+INSERT INTO guardian_score_inbox (score_event_id, minutes, note)
+SELECT id, 0, 'e2e reset' FROM score_event
+WHERE id NOT IN (SELECT score_event_id FROM guardian_score_inbox);
+SQL
 
 echo "==> [3/5] backend on :${E2E_BACKEND_PORT}"
 STORAGE_DIR="$(mktemp -d)"

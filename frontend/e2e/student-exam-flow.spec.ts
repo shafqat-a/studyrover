@@ -68,4 +68,16 @@ test('student can sign in, take an exam, and pass', async ({ page }) => {
   await expect(page.getByText('Passed', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Score 100 percent').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Review answers' })).toBeVisible();
+
+  // Guardian (fake wall, seeded gated device): the pass should open internet
+  // time — 20 questions × 3 min = 60 min — within a few seconds of submit.
+  await expect(
+    page.getByText(/You earned 60 minutes of internet/),
+  ).toBeVisible({ timeout: 20_000 });
+
+  // …and the student home shows the live "Online" strip.
+  await page.getByRole('button', { name: /home/i }).click();
+  await expect(page).toHaveURL(/\/studyrover\/student\/?$/);
+  await expect(page.getByText('Online', { exact: true })).toBeVisible();
+  await expect(page.getByText('left', { exact: true })).toBeVisible();
 });
