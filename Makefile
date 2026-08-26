@@ -28,7 +28,7 @@ PNPM           := pnpm
 DATABASE_URL  ?= postgres://studyrover:studyrover@localhost:5432/studyrover?sslmode=disable
 MIGRATIONS_DIR := $(BACKEND_DIR)/db/migrations
 
-.PHONY: help gen gen-go gen-ts build build-spa build-backend dev dev-backend dev-frontend \
+.PHONY: e2e help gen gen-go gen-ts build build-spa build-backend dev dev-backend dev-frontend \
         test test-go test-frontend lint lint-go lint-frontend migrate migrate-down seed \
         install clean
 
@@ -85,6 +85,9 @@ test-go: ## Run Go tests with race detector
 
 test-frontend: ## Run frontend unit tests (Vitest)
 	cd $(FRONTEND_DIR) && $(PNPM) run test
+
+e2e: ## Run Playwright E2E against a real backend on an isolated DB (scripts/e2e.sh)
+	scripts/e2e.sh
 
 # ---- Lint -------------------------------------------------------------------
 lint: lint-go lint-frontend ## Lint both languages
