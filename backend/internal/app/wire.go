@@ -20,6 +20,7 @@ import (
 	"github.com/shafqat/studyrover/backend/internal/auth"
 	"github.com/shafqat/studyrover/backend/internal/config"
 	"github.com/shafqat/studyrover/backend/internal/contracts"
+	"github.com/shafqat/studyrover/backend/internal/enrich"
 	"github.com/shafqat/studyrover/backend/internal/guardian/ingest"
 	"github.com/shafqat/studyrover/backend/internal/guardian/session"
 	"github.com/shafqat/studyrover/backend/internal/guardian/wall"
@@ -168,6 +169,16 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, []backgroun
 	registry.Register(jobs.TypeSyllabus, jobs.NewSyllabusHandler(knowledgeSrc))
 	registry.Register(jobs.TypeQuestions, jobs.NewQuestionGenHandler(knowledgeSrc, db))
 	registry.Register(jobs.TypeExam, jobs.NewExamGenHandler(knowledgeSrc, db))
+
+	// Lesson enrichment providers. Wikipedia needs no key; YouTube (Data API
+	// v3) is only built when YOUTUBE_API_KEY is set, otherwise the enrich job
+	// skips it with a warning in its result.
+	var youtube enrich.Provider
+	if cfg.YouTubeAPIKey != "" {
+		youtube = enrich.NewYouTube(cfg.YouTubeAPIKey, nil, "")
+	}
+	wikipedia := enrich.NewWikipedia(cfg.WikipediaLang, nil, "")
+	registry.Register(jobs.TypeEnrich, jobs.NewEnrichHandler(db, youtube, wikipedia, nil))
 	worker := jobs.NewWorker(queue, registry, jobs.Config{})
 
 	h := &httpapi.Handlers{
@@ -177,6 +188,10 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, []backgroun
 		Knowledge: knowledgeSrc,
 		Jobs:      queue,
 		Storage:   files,
+		Lessons: &httpapi.LessonDeps{
+			WikipediaLang: wikipedia.Lang(),
+			Metadata:      enrich.NewMetadata(nil),
+		},
 	}
 	loops := []background{{name: "job worker", run: worker.Run}}
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/shafqat/studyrover/backend/internal/knowledge"
+	"github.com/shafqat/studyrover/backend/internal/llm"
 )
 
 // Source is the Gemini-direct implementation of knowledge.Source. It performs
@@ -147,18 +148,45 @@ Return ONLY a JSON array matching this schema:
 	return toQuestionDrafts(req.SubjectID, req.TopicID, wire), nil
 }
 
-// GenerateStudyGuide produces a grounded, citation-bearing study guide.
+// GenerateStudyGuide produces a study guide (default style) or, for
+// knowledge.GuideStyleLesson, a complete class lesson in Markdown. Human-readable
+// SubjectName/TopicName are preferred over ids in the prompt, and the lesson
+// structure comes from llm.RenderLesson so every adapter asks for the same
+// sections.
 func (s *Source) GenerateStudyGuide(ctx context.Context, req knowledge.GuideRequest) (knowledge.StudyGuide, error) {
 	if req.SubjectID == "" {
 		return knowledge.StudyGuide{}, fmt.Errorf("gemini: guide: subjectID required")
 	}
-	scope := "the whole subject"
-	if req.TopicID != "" {
-		scope = fmt.Sprintf("topic %q", req.TopicID)
+	subject := req.SubjectName
+	if subject == "" {
+		subject = req.SubjectID
 	}
-	prompt := fmt.Sprintf(`Write a study guide in Markdown for subject %q, scoped to %s, grounded in its source material.
-Return ONLY a JSON object: {"markdown":string,"citations":[{"sourceId":string,"label":string,"locator":string}]}`,
-		req.SubjectID, scope)
+	topic := req.TopicName
+	if topic == "" {
+		topic = req.TopicID
+	}
+
+	const shape = `Return ONLY a JSON object: {"markdown":string,"citations":[{"sourceId":string,"label":string,"locator":string}]}`
+
+	var prompt string
+	if req.Style == knowledge.GuideStyleLesson {
+		prompt = llm.RenderLesson(llm.LessonInput{
+			SubjectContext: llm.SubjectContext{Subject: subject},
+			Topic:          topic,
+			GradeLevel:     req.GradeLevel,
+			Instructions:   req.Instructions,
+		}) + "\n\nPut the whole lesson in the \"markdown\" field; \"citations\" may be an empty array.\n" + shape
+	} else {
+		scope := "the whole subject"
+		if topic != "" {
+			scope = fmt.Sprintf("the topic %q", topic)
+		}
+		prompt = fmt.Sprintf("Write a study guide in Markdown for the subject %q, scoped to %s, grounded in its source material.", subject, scope)
+		if ins := strings.TrimSpace(req.Instructions); ins != "" {
+			prompt += "\nAdditional instructions: " + ins
+		}
+		prompt += "\n" + shape
+	}
 
 	gReq := generateRequest{
 		Contents:         []content{{Role: "user", Parts: []part{{Text: prompt}}}},
@@ -172,6 +200,9 @@ Return ONLY a JSON object: {"markdown":string,"citations":[{"sourceId":string,"l
 	var wire guideNode
 	if err := json.Unmarshal([]byte(extractJSON(resp.text())), &wire); err != nil {
 		return knowledge.StudyGuide{}, fmt.Errorf("gemini: guide: parse output: %w", err)
+	}
+	if strings.TrimSpace(wire.Markdown) == "" {
+		return knowledge.StudyGuide{}, fmt.Errorf("gemini: guide: model returned an empty body")
 	}
 	return knowledge.StudyGuide{
 		SubjectID: req.SubjectID,

@@ -12,6 +12,7 @@ export * from './useExamHistory';
 export * from './useGuardian';
 export * from './useGuidance';
 export * from './useJobs';
+export * from './useLessons';
 export * from './useQuestionGen';
 export * from './useQuestions';
 export * from './useSettings';

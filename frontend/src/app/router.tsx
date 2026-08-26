@@ -41,11 +41,13 @@ function lazyPage(
  *     ./sources .............................. Sources tab            (P06)
  *     ./syllabus ............................. Syllabus builder       (P07)
  *     ./syllabus/suggest ..................... Syllabus suggest (P2, :id)
+ *     ./lessons .............................. Class lessons list
  *     ./exams ................................ Exam definitions       (P08)
  *     ./questions ............................ Question bank          (P09)
  *     ./tutor-instructions ................... Tutor instructions (P2, :id)
  *   /parent/subjects/:subjectId/ingest ....... Sources ingest    (P2, :subjectId)
  *   /parent/subjects/:subjectId/question-gen . Question gen      (P2, :subjectId)
+ *   /parent/subjects/:subjectId/lessons/:lessonId  Lesson editor
  *   /parent/dashboard ........................ Parent dashboard       (Phase-2)
  *   /parent/guardian ......................... Guardian hub + tabs    (Phase-3)
  *     ./ (index) ............................. Overview
@@ -55,6 +57,7 @@ function lazyPage(
  *   /parent/settings ......................... Settings               (P10)
  *   /student ................................. Student home           (P11)
  *   /student/study ........................... Study tutor            (Phase-2)
+ *   /student/subjects/:subjectId/lessons ..... Published lessons
  *   /student/exam/start ...................... Start exam             (P12)
  *   /student/exam/:id ........................ Exam in progress       (P13)
  *   /student/exam/:id/result ................. Exam result            (P14)
@@ -131,6 +134,12 @@ export const routes: RouteObject[] = [
             lazy: lazyPage(() => import('../pages/SubjectSyllabusSuggest')),
           },
           {
+            // Class lessons per topic (list); the editor is a sibling route
+            // below so it gets the full page width.
+            path: 'lessons',
+            lazy: lazyPage(() => import('../pages/SubjectLessons')),
+          },
+          {
             path: 'exams',
             lazy: lazyPage(() => import('../pages/SubjectExams')),
           },
@@ -154,6 +163,11 @@ export const routes: RouteObject[] = [
         // Phase-2: AI question generation (reads the `:subjectId` param).
         path: 'subjects/:subjectId/question-gen',
         lazy: lazyPage(() => import('../pages/SubjectQuestionGen')),
+      },
+      {
+        // Lesson editor (reads `:subjectId` + `:lessonId`).
+        path: 'subjects/:subjectId/lessons/:lessonId',
+        lazy: lazyPage(() => import('../pages/SubjectLessonEditor')),
       },
       {
         // Parent ad-hoc exam preview ("sit the exam" from the parent view).
@@ -213,6 +227,11 @@ export const routes: RouteObject[] = [
         // Phase-2: AI study tutor chat.
         path: 'study',
         lazy: lazyPage(() => import('../pages/StudyTutor')),
+      },
+      {
+        // Published class lessons for a subject (reads `:subjectId`).
+        path: 'subjects/:subjectId/lessons',
+        lazy: lazyPage(() => import('../pages/StudentLessons')),
       },
       {
         // ExamStart reads :examId; opened from StudentHome "Take exam".

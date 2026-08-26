@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/shafqat/studyrover/backend/internal/knowledge"
+	"github.com/shafqat/studyrover/backend/internal/llm"
 )
 
 // Source is the z.ai (Zhipu GLM) implementation of knowledge.Source. It performs
@@ -189,20 +190,51 @@ func repairJSONEscapes(s string) string {
 	return b.String()
 }
 
-// GenerateStudyGuide produces a grounded, citation-bearing study guide.
+// GenerateStudyGuide produces a study guide (default style) or, for
+// knowledge.GuideStyleLesson, a complete class lesson (objectives, explanation,
+// worked examples, key terms, quick check, summary) in Markdown. The
+// human-readable SubjectName/TopicName are used in the prompt whenever they are
+// supplied — the raw ids are meaningless to a model authoring from curriculum
+// knowledge — and the lesson prompt itself comes from llm.RenderLesson so every
+// adapter asks for the same structure.
 func (s *Source) GenerateStudyGuide(ctx context.Context, req knowledge.GuideRequest) (knowledge.StudyGuide, error) {
 	if req.SubjectID == "" {
 		return knowledge.StudyGuide{}, fmt.Errorf("zai: guide: subjectID required")
 	}
-	scope := "the whole subject"
-	if req.TopicID != "" {
-		scope = fmt.Sprintf("topic %q", req.TopicID)
+	subject := req.SubjectName
+	if subject == "" {
+		subject = req.SubjectID
 	}
-	system := "You are an expert tutor. Respond with ONLY valid JSON, no markdown wrapping, no code fences, no prose outside the JSON."
-	user := fmt.Sprintf(`Write a study guide in Markdown for subject %q, scoped to %s.
-Respond with ONLY a valid JSON object matching this shape, no code fences, no prose:
-{"markdown":string,"citations":[{"sourceId":string,"label":string,"locator":string}]}`,
-		req.SubjectID, scope)
+	topic := req.TopicName
+	if topic == "" {
+		topic = req.TopicID
+	}
+
+	const shape = `Respond with ONLY a valid JSON object matching this shape, no code fences, no prose:
+{"markdown":string,"citations":[{"sourceId":string,"label":string,"locator":string}]}
+Inside the "markdown" string escape newlines as \n, double quotes as \" and backslashes as \\.`
+
+	var system, user string
+	if req.Style == knowledge.GuideStyleLesson {
+		system = "You are an experienced teacher who writes complete, accurate class lessons in Markdown from your own knowledge of the curriculum. Respond with ONLY valid JSON, no markdown wrapping, no code fences, no prose outside the JSON."
+		user = llm.RenderLesson(llm.LessonInput{
+			SubjectContext: llm.SubjectContext{Subject: subject},
+			Topic:          topic,
+			GradeLevel:     req.GradeLevel,
+			Instructions:   req.Instructions,
+		}) + "\n\nPut the whole lesson in the \"markdown\" field; \"citations\" may be an empty array.\n" + shape
+	} else {
+		scope := "the whole subject"
+		if topic != "" {
+			scope = fmt.Sprintf("the topic %q", topic)
+		}
+		system = "You are an expert tutor. Respond with ONLY valid JSON, no markdown wrapping, no code fences, no prose outside the JSON."
+		user = fmt.Sprintf("Write a study guide in Markdown for the subject %q, scoped to %s, grounded in its source material.", subject, scope)
+		if ins := strings.TrimSpace(req.Instructions); ins != "" {
+			user += "\nAdditional instructions: " + ins
+		}
+		user += "\n" + shape
+	}
 
 	raw, err := s.client.chat(ctx, []chatMessage{
 		{Role: "system", Content: system},
@@ -213,8 +245,16 @@ Respond with ONLY a valid JSON object matching this shape, no code fences, no pr
 	}
 
 	var wire guideNode
-	if err := json.Unmarshal([]byte(extractJSON(raw)), &wire); err != nil {
-		return knowledge.StudyGuide{}, fmt.Errorf("zai: guide: parse output: %w", err)
+	js := extractJSON(raw)
+	if err := json.Unmarshal([]byte(js), &wire); err != nil {
+		// Lesson bodies carry LaTeX, which models often under-escape; repair lone
+		// backslashes and retry once (see GenerateQuestions).
+		if err2 := json.Unmarshal([]byte(repairJSONEscapes(js)), &wire); err2 != nil {
+			return knowledge.StudyGuide{}, fmt.Errorf("zai: guide: parse output: %w", err)
+		}
+	}
+	if strings.TrimSpace(wire.Markdown) == "" {
+		return knowledge.StudyGuide{}, fmt.Errorf("zai: guide: model returned an empty body")
 	}
 	return knowledge.StudyGuide{
 		SubjectID: req.SubjectID,

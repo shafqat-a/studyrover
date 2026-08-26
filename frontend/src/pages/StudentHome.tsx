@@ -116,6 +116,7 @@ export default function StudentHome() {
                   navigate(`/student/exams/${examId}/start`)
                 }
                 onStudy={(id) => navigate(`/student/study?subject=${id}`)}
+                onLessons={(id) => navigate(`/student/subjects/${id}/lessons`)}
               />
             </li>
           ))}
@@ -205,6 +206,7 @@ interface SubjectCardProps {
   onSelect: () => void;
   onTakeExam: (examId: string) => void;
   onStudy: (subjectId: string) => void;
+  onLessons: (subjectId: string) => void;
 }
 
 function SubjectCard({
@@ -213,6 +215,7 @@ function SubjectCard({
   onSelect,
   onTakeExam,
   onStudy,
+  onLessons,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
   return (
@@ -252,6 +255,19 @@ function SubjectCard({
 
       {expanded && (
         <div className="mt-4 border-t border-border pt-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+              Exams
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onLessons(subject.id)}
+              leadingIcon={<BookOpen className="h-4 w-4" aria-hidden="true" />}
+            >
+              Lessons
+            </Button>
+          </div>
           <SubjectExams
             subjectId={subject.id}
             onTakeExam={onTakeExam}

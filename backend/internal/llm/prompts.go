@@ -122,6 +122,25 @@ type TutorInput struct {
 	Topic string
 }
 
+// LessonInput is the input to the class-lesson template (the "lesson" style of
+// GenerateStudyGuide). Subject and Topic are the human-readable names; the
+// model never sees database ids.
+type LessonInput struct {
+	SubjectContext
+
+	// Topic is the lesson's topic name (required for a useful lesson).
+	Topic string
+
+	// GradeLevel is the student's grade/year label (e.g. "Grade 5", "Year 9").
+	// Empty means "unspecified"; the template then asks for a general
+	// secondary-school level.
+	GradeLevel string
+
+	// Instructions is the parent's optional steer for this lesson ("focus on
+	// fractions of a set", "keep it short"). Rendered verbatim.
+	Instructions string
+}
+
 // RenderStudyGuide renders the deterministic prompt that asks the model to
 // produce a Markdown study guide grounded in the supplied sources.
 func RenderStudyGuide(in GuideInput) string {
@@ -174,6 +193,21 @@ func RenderTutorSystem(in TutorInput) string {
 		"Version": PromptVersion,
 		"Scope":   scopeLine(in.Subject, in.Topic),
 		"Context": contextBlock(in.SubjectContext),
+	})
+}
+
+// RenderLesson renders the deterministic prompt that asks the model to write a
+// complete class lesson in Markdown with a fixed section structure (learning
+// objectives, introduction, explanation, worked examples, key terms, quick
+// check with collapsed answers, summary). Adapters wrap it with their own
+// output-format instructions (e.g. "return JSON {markdown, citations}").
+func RenderLesson(in LessonInput) string {
+	return render(lessonTmpl, map[string]any{
+		"Version":      PromptVersion,
+		"Scope":        scopeLine(in.Subject, in.Topic),
+		"GradeLevel":   strings.TrimSpace(in.GradeLevel),
+		"Instructions": strings.TrimSpace(in.Instructions),
+		"Context":      contextBlock(in.SubjectContext),
 	})
 }
 
@@ -407,4 +441,42 @@ questions, give hints, and build on what they already know. Always cite the
 source material you rely on. Never reveal exam answer keys. Stay strictly within
 the subject and follow all parent guidance and per-subject instructions
 below.` + ctxFragment))
+
+	lessonTmpl = template.Must(template.New("lesson").Parse(
+		`[prompt:lesson v={{.Version}}]
+You are an experienced, friendly teacher writing a complete class lesson for {{.Scope}}.
+{{if .GradeLevel}}The student is at grade level "{{.GradeLevel}}": pitch the language, examples and depth at that level.{{else}}Pitch the language, examples and depth at a secondary-school student who is meeting this topic for the first time.{{end}}
+
+Write the lesson in Markdown using exactly these "##" sections, in this order:
+
+## Learning objectives
+3-5 bullet points starting with an action verb ("Explain…", "Calculate…"), each a concrete thing the student will be able to do.
+
+## Introduction
+A short hook (2-4 sentences) that connects the topic to everyday life or a question the student may have wondered about.
+
+## Explanation
+2-4 "###" subsections that teach the topic step by step in simple, clear language. Define ideas before using them, build from concrete to abstract, and use short paragraphs, lists and (where helpful) tables. Write mathematics in LaTeX: inline as $...$ and display as $$...$$.
+
+## Worked examples
+2-3 fully worked examples. State the problem, then show every step of the reasoning, then the answer.
+
+## Key terms
+A definition list of the important terms, one per line as "**Term** — plain-language definition".
+
+## Quick check
+3-5 short questions the student can answer in a minute each. Put ALL the answers together after the questions inside a collapsed block exactly like this:
+<details>
+<summary>Answers</summary>
+
+1. …
+</details>
+
+## Summary
+3-5 sentences (or bullets) recapping the big ideas.
+
+Rules: be accurate and stay strictly within the topic and the named subject's curriculum; do not invent facts; do not add sections beyond the ones listed; do not include a top-level "#" title (the app supplies it).{{if .Instructions}}
+
+Additional instructions from the parent (follow them):
+{{.Instructions}}{{end}}` + ctxFragment))
 )

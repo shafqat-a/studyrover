@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import {
+  BookOpen,
   ClipboardList,
   FileText,
   HelpCircle,
@@ -61,6 +62,11 @@ const SUBJECT_TABS: ReadonlyArray<SubjectTab> = [
     to: 'syllabus',
     label: 'Topics',
     icon: <ListTree className="h-4 w-4" aria-hidden="true" />,
+  },
+  {
+    to: 'lessons',
+    label: 'Lessons',
+    icon: <BookOpen className="h-4 w-4" aria-hidden="true" />,
   },
   {
     to: 'exams',

@@ -55,6 +55,11 @@ type Handlers struct {
 	// subscriber). Nil when GUARDIAN_ENABLED is off: the /guardian handlers then
 	// report "disabled" (status / earned-time) or 409 (everything else).
 	Guardian *GuardianDeps
+
+	// Lessons carries the class-lesson dependencies (Wikipedia edition and the
+	// oEmbed/summary metadata resolver used when a parent attaches a resource by
+	// URL). Nil falls back to the public endpoints and the "en" edition.
+	Lessons *LessonDeps
 }
 
 // spaDir is the built frontend served for non-API routes (client-side routing).

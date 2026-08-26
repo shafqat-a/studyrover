@@ -293,11 +293,67 @@ func (s *Source) GenerateStudyGuide(ctx context.Context, req knowledge.GuideRequ
 	if err := ctx.Err(); err != nil {
 		return knowledge.StudyGuide{}, err
 	}
-	label := subjectLabel(req.SubjectID)
-	scope := label
-	if req.TopicID != "" {
-		scope = subjectLabel(req.TopicID) + " (" + label + ")"
+	label := req.SubjectName
+	if label == "" {
+		label = subjectLabel(req.SubjectID)
 	}
+	topic := req.TopicName
+	if topic == "" && req.TopicID != "" {
+		topic = subjectLabel(req.TopicID)
+	}
+	scope := label
+	if topic != "" {
+		scope = topic + " (" + label + ")"
+	}
+
+	// Lesson style: a deterministic body with the same section structure the
+	// real adapters are asked for (llm.RenderLesson), so dev/e2e runs exercise
+	// the lesson UI without a model.
+	if req.Style == knowledge.GuideStyleLesson {
+		if topic == "" {
+			topic = label
+		}
+		grade := strings.TrimSpace(req.GradeLevel)
+		if grade == "" {
+			grade = "secondary school"
+		}
+		kws := keywords(topic+" "+label+" idea method example practice", 4)
+		var md strings.Builder
+		md.WriteString("## Learning objectives\n\n")
+		for _, kw := range kws {
+			fmt.Fprintf(&md, "- Explain what **%s** means in the context of %s.\n", title(kw), topic)
+		}
+		fmt.Fprintf(&md, "- Apply %s to a new problem.\n\n", topic)
+		md.WriteString("## Introduction\n\n")
+		fmt.Fprintf(&md, "Have you ever noticed %s in everyday life? This lesson (pitched at %s level) shows how %s explains it.\n\n", strings.ToLower(topic), grade, label)
+		md.WriteString("## Explanation\n\n")
+		for i, kw := range kws {
+			fmt.Fprintf(&md, "### %d. %s\n\n%s is a core idea in %s. Start from what you already know, then build up one step at a time.\n\n", i+1, title(kw), title(kw), topic)
+		}
+		md.WriteString("## Worked examples\n\n")
+		for i := 1; i <= 2; i++ {
+			fmt.Fprintf(&md, "**Example %d.** A short problem about %s.\n\n1. Read the question carefully.\n2. Apply the idea.\n3. Check the answer makes sense.\n\n", i, strings.ToLower(topic))
+		}
+		md.WriteString("## Key terms\n\n")
+		for _, kw := range kws {
+			fmt.Fprintf(&md, "**%s** — a term you should be able to define in your own words.\n", title(kw))
+		}
+		md.WriteString("\n## Quick check\n\n")
+		fmt.Fprintf(&md, "1. What is %s?\n2. Give one everyday example of %s.\n3. Why does %s matter in %s?\n\n", strings.ToLower(topic), strings.ToLower(topic), strings.ToLower(topic), label)
+		md.WriteString("<details>\n<summary>Answers</summary>\n\n1. See the Explanation section.\n2. Any sensible example.\n3. It underpins the rest of the syllabus.\n</details>\n\n")
+		md.WriteString("## Summary\n\n")
+		fmt.Fprintf(&md, "%s connects the ideas above; practise them until they feel natural.\n", topic)
+		if ins := strings.TrimSpace(req.Instructions); ins != "" {
+			fmt.Fprintf(&md, "\n_Parent instructions honoured: %s_\n", ins)
+		}
+		return knowledge.StudyGuide{
+			SubjectID: req.SubjectID,
+			TopicID:   req.TopicID,
+			Markdown:  md.String(),
+			Citations: []knowledge.Citation{},
+		}, nil
+	}
+
 	kws := keywords(req.SubjectID+" "+req.TopicID+" overview key concepts summary practice", 4)
 
 	var md strings.Builder

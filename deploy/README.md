@@ -57,6 +57,29 @@ sudo systemctl restart studyrover
   subpath does not affect parent FIDO2 login.
 - TLS is the site's existing certbot cert; nothing to renew here.
 
+## Lessons / Enrich
+Class lessons (one per topic) are written by the active knowledge backend on
+demand ("Generate") and can be topped up with external resources via
+"Enrich", an async `enrich` job that searches YouTube and Wikipedia for the
+lesson's topic and attaches the best matches (deduplicated by URL; poll the
+returned Job, its `result` is `{lessonId, added, youtube, wikipedia, warnings}`).
+Parents can also paste a YouTube / Wikipedia / any URL by hand; the title and
+thumbnail are fetched best-effort (YouTube oEmbed, Wikipedia page summary — no
+key needed).
+
+Env (see `studyrover.env.example`; both optional):
+
+| Var | Meaning |
+|---|---|
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key. Unset → the Enrich job skips YouTube and reports `"YouTube skipped: YOUTUBE_API_KEY not configured"` in `warnings`; Wikipedia still runs. Create it in Google Cloud Console (enable "YouTube Data API v3", then Credentials → API key). Each search spends 100 of the free 10,000 daily quota units, so a lesson enrich costs ~1% of the daily budget; a `quotaExceeded` error shows up as a warning, not a failed job. |
+| `WIKIPEDIA_LANG` | Wikipedia edition to search (default `en`). Also the edition used for pasted `wikipedia.org/wiki/…` links without a language subdomain. |
+
+Outbound calls go to `www.googleapis.com`, `www.youtube.com` (oEmbed) and
+`*.wikipedia.org` with a 10s timeout and the User-Agent
+`StudyRover/1.0 (home study app; contact via repo)` (Wikimedia rejects
+anonymous UAs). Nothing is cached server-side; re-running Enrich only adds
+resources that are not already attached.
+
 ## Guardian (Phase 3)
 The Guardian is the optional reward engine + network wall: a passed exam opens
 internet time on the student's registered devices, a timer counts it down, and

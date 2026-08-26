@@ -18,6 +18,7 @@ const (
 	TypeSyllabus  = "syllabus"
 	TypeQuestions = "questions"
 	TypeExam      = "exam"
+	TypeEnrich    = "enrich"
 )
 
 // Job is the persisted job row (contract 2-C03), aliased from the store so the

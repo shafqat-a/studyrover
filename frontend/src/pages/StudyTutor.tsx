@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GraduationCap, MessagesSquare, RotateCcw, Sparkles } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  BookOpen,
+  GraduationCap,
+  MessagesSquare,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -18,6 +24,7 @@ import { useTopics } from '../hooks/useTopics';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useTutorChat } from '../hooks/useTutorChat';
 import { useStudyGuide, useGenerateStudyGuide } from '../hooks/useStudyGuide';
+import { useLessons } from '../hooks/useLessons';
 
 /**
  * 2-P01 — Study / Tutor chat (screen 3.2)
@@ -126,6 +133,19 @@ export default function StudyTutor() {
 
   const selectedSubject = activeSubjects.find((s) => s.id === subjectId);
   const selectedTopic = topics.find((t) => t.id === topicId);
+
+  // Published class lesson for the focused topic (students only receive
+  // published lessons), surfaced as an "Open lesson" link.
+  const lessonsQuery = useLessons(subjectId || undefined);
+  const topicLesson = useMemo(
+    () =>
+      topicId
+        ? lessonsQuery.data?.find(
+            (l) => l.topicId === topicId && l.status === 'published',
+          )
+        : undefined,
+    [lessonsQuery.data, topicId],
+  );
 
   const subjectOptions = useMemo(
     () => activeSubjects.map((s) => ({ value: s.id, label: s.name })),
@@ -253,6 +273,15 @@ export default function StudyTutor() {
             onChange={(e) => setTopicId(e.target.value)}
           />
         </div>
+        {topicLesson ? (
+          <Link
+            to={`/student/subjects/${subjectId}/lessons?lesson=${topicLesson.id}`}
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <BookOpen className="h-4 w-4 text-secondary" aria-hidden="true" />
+            Open lesson: {topicLesson.title}
+          </Link>
+        ) : null}
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_22rem]">
