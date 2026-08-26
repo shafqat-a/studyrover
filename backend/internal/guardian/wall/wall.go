@@ -63,6 +63,11 @@ type Wall interface {
 	Discover(ctx context.Context) ([]DiscoveredDevice, error)
 	// Ping checks connectivity/credentials; nil when healthy.
 	Ping(ctx context.Context) error
+	// Gate installs (gated=true) or removes (gated=false) the per-device rule
+	// that blocks mac's internet unless it holds an open grant. The household
+	// is allow-by-default: only gated MACs are ever blocked (spec §11).
+	// Idempotent.
+	Gate(ctx context.Context, mac string, gated bool) error
 }
 
 var macRe = regexp.MustCompile(`^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)

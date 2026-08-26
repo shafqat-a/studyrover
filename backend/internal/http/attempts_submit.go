@@ -3,8 +3,8 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"

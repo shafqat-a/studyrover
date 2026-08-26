@@ -35,4 +35,8 @@ func (w *Wall) Discover(ctx context.Context) ([]wall.DiscoveredDevice, error) {
 }
 func (w *Wall) Ping(ctx context.Context) error { return nil }
 
+func (w *Wall) Gate(ctx context.Context, mac string, gated bool) error {
+	return errors.New("fake wall: not implemented")
+}
+
 var _ wall.Wall = (*Wall)(nil)

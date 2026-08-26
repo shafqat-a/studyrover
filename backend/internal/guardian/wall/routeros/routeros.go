@@ -58,4 +58,8 @@ func (w *Wall) Discover(ctx context.Context) ([]wall.DiscoveredDevice, error) {
 }
 func (w *Wall) Ping(ctx context.Context) error { return errors.New("routeros: not implemented") }
 
+func (w *Wall) Gate(ctx context.Context, mac string, gated bool) error {
+	return errors.New("routeros: not implemented")
+}
+
 var _ wall.Wall = (*Wall)(nil)
