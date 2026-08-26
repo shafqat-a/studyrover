@@ -100,7 +100,7 @@ func (h *Handlers) GetGuardianEarnedTime(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	for _, g := range recent {
-		if contracts.GrantSource(g.Source) != contracts.Exam {
+		if contracts.GrantSource(g.Source) != contracts.GrantSourceExam {
 			continue
 		}
 		minutes := int(g.Minutes)

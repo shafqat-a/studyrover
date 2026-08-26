@@ -531,6 +531,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subjects/{id}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the subject's lessons (one per topic)
+         * @description Parents see every lesson; a student session sees only `published` lessons.
+         */
+        get: operations["listLessons"];
+        put?: never;
+        /** Create a lesson for a topic (optionally AI-generated) */
+        post: operations["createLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /** Get a lesson with its resources */
+        get: operations["getLesson"];
+        /** Update a lesson (partial — title, body, status) */
+        put: operations["updateLesson"];
+        post?: never;
+        /** Delete a lesson and its resources */
+        delete: operations["deleteLesson"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{id}/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * (Re)generate the lesson body with the AI knowledge backend
+         * @description Synchronous, like study-guide generation. Replaces the body; resources are kept.
+         */
+        post: operations["generateLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{id}/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enrich the lesson with YouTube videos and Wikipedia articles (async job)
+         * @description Queues an `enrich` job that searches YouTube (Data API v3; skipped with a warning when YOUTUBE_API_KEY is not configured) and Wikipedia for the lesson's topic and attaches the best matches as resources (deduplicated by URL). Poll the returned Job; its `result` is an EnrichResult.
+         */
+        post: operations["enrichLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{id}/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach a resource by URL (YouTube video, Wikipedia article, or any link) */
+        post: operations["addLessonResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{id}/resources/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+                /** @description The LessonResource id. */
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Detach a resource */
+        delete: operations["deleteLessonResource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/guardian/status": {
         parameters: {
             query?: never;
@@ -1632,6 +1766,102 @@ export interface components {
             createdAt: string;
         };
         /**
+         * @description draft = parent-only; published = visible to the student.
+         * @enum {string}
+         */
+        LessonStatus: "draft" | "published";
+        /** @enum {string} */
+        LessonResourceKind: "youtube" | "wikipedia" | "link";
+        /**
+         * @description How the resource was attached — by the Enrich job or by hand.
+         * @enum {string}
+         */
+        LessonResourceSource: "enrich" | "manual";
+        /** @description A video/article/link attached to a lesson. */
+        LessonResource: {
+            id: string;
+            lessonId: string;
+            kind: components["schemas"]["LessonResourceKind"];
+            title: string;
+            /** @description Canonical URL (watch page for YouTube, article URL for Wikipedia). */
+            url: string;
+            /** @description Short blurb (video description excerpt / article extract). */
+            description?: string;
+            thumbnailUrl?: string;
+            /** @description YouTube video id or Wikipedia page key — lets the UI embed the video. */
+            externalId?: string;
+            position: number;
+            source: components["schemas"]["LessonResourceSource"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description A class lesson for one topic — a Markdown body plus enrichment resources. */
+        Lesson: {
+            id: string;
+            subjectId: string;
+            topicId: string;
+            title: string;
+            /** @description Lesson body (objectives, explanation, worked examples, key terms, quick checks). */
+            markdown: string;
+            status: components["schemas"]["LessonStatus"];
+            resources: components["schemas"]["LessonResource"][];
+            /**
+             * Format: date-time
+             * @description When the body was last produced by the AI (absent for hand-written bodies).
+             */
+            generatedAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateLesson: {
+            topicId: string;
+            /** @description Defaults to the topic name. */
+            title?: string;
+            /**
+             * @description Generate the body with the AI knowledge backend now (synchronous).
+             * @default true
+             */
+            generate: boolean;
+            /** @description Optional steer for the generator (e.g. "focus on fractions of a set, grade 5"). */
+            instructions?: string;
+        };
+        UpdateLesson: {
+            title?: string;
+            markdown?: string;
+            status?: components["schemas"]["LessonStatus"];
+        };
+        GenerateLessonRequest: {
+            instructions?: string;
+        };
+        EnrichLessonRequest: {
+            /** @default true */
+            youtube: boolean;
+            /** @default true */
+            wikipedia: boolean;
+            /** @default 3 */
+            maxPerKind: number;
+            /** @description Override the search query (default is derived from the topic and subject). */
+            query?: string;
+        };
+        /** @description The `result` payload of an `enrich` job. */
+        EnrichResult: {
+            lessonId: string;
+            added: number;
+            youtube: number;
+            wikipedia: number;
+            warnings: string[];
+        };
+        AddLessonResource: {
+            url: string;
+            /** @description Defaults to youtube/wikipedia when the URL is recognised, else link. */
+            kind?: components["schemas"]["LessonResourceKind"];
+            /** @description Defaults to a title fetched from the provider (YouTube oEmbed / Wikipedia summary) or the URL. */
+            title?: string;
+            description?: string;
+        };
+        /**
          * @description Which Network Wall implementation is active. `fake` is an in-memory wall for development.
          * @enum {string}
          */
@@ -2120,7 +2350,7 @@ export interface components {
              * @description The kind of work this job performs.
              * @enum {string}
              */
-            type: "ingest" | "syllabus" | "questions";
+            type: "ingest" | "syllabus" | "questions" | "exam" | "enrich";
             /**
              * @description Lifecycle state of the job.
              * @enum {string}
@@ -3449,6 +3679,258 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listLessons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lessons with their resources, in topic order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lesson"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLesson"];
+            };
+        };
+        responses: {
+            /** @description The created lesson. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lesson"];
+                };
+            };
+            /** @description The topic already has a lesson. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lesson. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lesson"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLesson"];
+            };
+        };
+        responses: {
+            /** @description The updated lesson. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lesson"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    generateLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GenerateLessonRequest"];
+            };
+        };
+        responses: {
+            /** @description The lesson with its new body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lesson"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    enrichLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EnrichLessonRequest"];
+            };
+        };
+        responses: {
+            /** @description The queued job. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addLessonResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddLessonResource"];
+            };
+        };
+        responses: {
+            /** @description The attached resource. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResource"];
+                };
+            };
+            /** @description That URL is already attached. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLessonResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+                /** @description The LessonResource id. */
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

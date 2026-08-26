@@ -149,7 +149,28 @@ type GuideRequest struct {
 	// TopicID optionally scopes the guide to a single topic; empty covers the
 	// whole subject.
 	TopicID string
+
+	// Style selects the shape of the output: GuideStyleGuide (default) is the
+	// study-guide summary; GuideStyleLesson is a class lesson (learning
+	// objectives, explanation in sections, worked examples, key terms, quick
+	// checks, summary). Adapters that don't distinguish may ignore it.
+	Style GuideStyle
+	// SubjectName / TopicName / GradeLevel are human-readable context for the
+	// prompt (IDs alone are meaningless to a model). Optional.
+	SubjectName string
+	TopicName   string
+	GradeLevel  string
+	// Instructions is an optional parent steer ("focus on …", "keep it short").
+	Instructions string
 }
+
+// GuideStyle is the requested output shape for GenerateStudyGuide.
+type GuideStyle string
+
+const (
+	GuideStyleGuide  GuideStyle = ""
+	GuideStyleLesson GuideStyle = "lesson"
+)
 
 // AskRequest is a single tutor turn (2-C01). The backend assembles its grounded
 // answer from the subject's sources and the conversation context.

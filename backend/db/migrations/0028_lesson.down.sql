@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS lesson_resource;
+DROP TABLE IF EXISTS lesson;

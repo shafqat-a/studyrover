@@ -658,7 +658,7 @@ func TestManualGrantAndSessions(t *testing.T) {
 	var g contracts.GuardianGrant
 	rec := e.parent(t, "POST", "/guardian/grant", contracts.ManualGrant{DeviceId: d.ID, Minutes: 45, Reason: str("homework done")}, &g)
 	expectStatus(t, rec, 201)
-	if g.DeviceId != "d1" || g.DeviceName != "Device d1" || g.Minutes != 45 || g.Source != contracts.Manual || g.Reason == nil || *g.Reason != "homework done" || g.RemainingSeconds != 45*60 || g.RevokedAt != nil {
+	if g.DeviceId != "d1" || g.DeviceName != "Device d1" || g.Minutes != 45 || g.Source != contracts.GrantSourceManual || g.Reason == nil || *g.Reason != "homework done" || g.RemainingSeconds != 45*60 || g.RevokedAt != nil {
 		t.Fatalf("grant = %+v", g)
 	}
 	if len(e.st.overrides) != 1 || e.st.overrides[0].Who != "parent-1" || e.st.overrides[0].Minutes != 45 || e.st.overrides[0].DeviceName != "Device d1" {

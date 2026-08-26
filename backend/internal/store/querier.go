@@ -41,6 +41,8 @@ type Querier interface {
 	CreateGuardianGrant(ctx context.Context, arg CreateGuardianGrantParams) (GuardianGrant, error)
 	// Guidance queries (D05) — contract 2-C07.
 	CreateGuidance(ctx context.Context, arg CreateGuidanceParams) (Guidance, error)
+	CreateLesson(ctx context.Context, arg CreateLessonParams) (Lesson, error)
+	CreateLessonResource(ctx context.Context, arg CreateLessonResourceParams) (LessonResource, error)
 	CreateOption(ctx context.Context, arg CreateOptionParams) (Option, error)
 	// Parent + Credential queries (D10) — contract C08.
 	CreateParent(ctx context.Context, arg CreateParentParams) (Parent, error)
@@ -60,6 +62,8 @@ type Querier interface {
 	DeleteExamDefinition(ctx context.Context, id string) error
 	DeleteGuardianDevice(ctx context.Context, id string) (int64, error)
 	DeleteGuidance(ctx context.Context, id string) error
+	DeleteLesson(ctx context.Context, id string) (int64, error)
+	DeleteLessonResource(ctx context.Context, arg DeleteLessonResourceParams) (int64, error)
 	DeleteOptionsByQuestion(ctx context.Context, questionID string) error
 	DeleteQuestion(ctx context.Context, id string) error
 	DeleteSource(ctx context.Context, id string) error
@@ -91,6 +95,10 @@ type Querier interface {
 	GetGuardianPolicy(ctx context.Context) (GuardianPolicy, error)
 	GetJob(ctx context.Context, id string) (Job, error)
 	GetLastFailedForExam(ctx context.Context, arg GetLastFailedForExamParams) (ExamAttempt, error)
+	GetLesson(ctx context.Context, id string) (Lesson, error)
+	GetLessonByTopic(ctx context.Context, topicID string) (Lesson, error)
+	GetLessonResource(ctx context.Context, arg GetLessonResourceParams) (LessonResource, error)
+	GetLessonResourceByURL(ctx context.Context, arg GetLessonResourceByURLParams) (LessonResource, error)
 	GetParentByEmail(ctx context.Context, email string) (Parent, error)
 	GetQuestion(ctx context.Context, id string) (Question, error)
 	GetQuestionDraft(ctx context.Context, id string) (QuestionDraft, error)
@@ -155,9 +163,17 @@ type Querier interface {
 	ListGuidance(ctx context.Context, arg ListGuidanceParams) ([]Guidance, error)
 	// Optionally filtered by subject, newest first.
 	ListJobs(ctx context.Context, arg ListJobsParams) ([]Job, error)
+	// Lesson resource queries (0028).
+	ListLessonResources(ctx context.Context, lessonID string) ([]LessonResource, error)
+	// One round trip for the subject's lesson list.
+	ListLessonResourcesBySubject(ctx context.Context, subjectID string) ([]LessonResource, error)
+	// Lesson queries (0028).
+	// Topic order, so the parent list mirrors the syllabus.
+	ListLessonsBySubject(ctx context.Context, subjectID string) ([]Lesson, error)
 	ListMessages(ctx context.Context, conversationID string) ([]Message, error)
 	ListOptionsByQuestion(ctx context.Context, questionID string) ([]Option, error)
 	ListOptionsByQuestionIDs(ctx context.Context, questionIds []uuid.UUID) ([]Option, error)
+	ListPublishedLessonsBySubject(ctx context.Context, subjectID string) ([]Lesson, error)
 	// List drafts, optionally filtering by status. When sqlc.narg('status') is NULL
 	// the filter is skipped and drafts of every status return, newest first.
 	ListQuestionDrafts(ctx context.Context, status *string) ([]QuestionDraft, error)
@@ -179,6 +195,7 @@ type Querier interface {
 	ListSyllabuses(ctx context.Context) ([]Syllabus, error)
 	ListTopicsBySubject(ctx context.Context, arg ListTopicsBySubjectParams) ([]Topic, error)
 	MarkSubmitted(ctx context.Context, arg MarkSubmittedParams) (ExamAttempt, error)
+	NextLessonResourcePosition(ctx context.Context, lessonID string) (int32, error)
 	RevokeGuardianGrant(ctx context.Context, arg RevokeGuardianGrantParams) (GuardianGrant, error)
 	// Advance a draft through its review lifecycle (pending → approved/rejected).
 	SetQuestionDraftStatus(ctx context.Context, arg SetQuestionDraftStatusParams) (QuestionDraft, error)
@@ -190,6 +207,8 @@ type Querier interface {
 	UpdateGuardianPolicy(ctx context.Context, arg UpdateGuardianPolicyParams) (GuardianPolicy, error)
 	// Report incremental progress (0-100) while processing.
 	UpdateJobProgress(ctx context.Context, arg UpdateJobProgressParams) (Job, error)
+	// Partial update: NULL params leave the existing value untouched.
+	UpdateLesson(ctx context.Context, arg UpdateLessonParams) (Lesson, error)
 	UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) (Question, error)
 	// Partial update: NULL params leave the existing value untouched. syllabus_id
 	// additionally supports explicit clearing (un-grouping) via clear_syllabus,

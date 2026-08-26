@@ -49,6 +49,13 @@ type Config struct {
 	// the adapter default (glm-5.2).
 	ZaiModel string
 
+	// Lessons — enrichment providers (Phase 2.5 "class lessons").
+	// YouTubeAPIKey enables YouTube Data API v3 search in the Enrich job; empty
+	// = YouTube skipped with a warning. WikipediaLang is the Wikipedia edition
+	// (default "en").
+	YouTubeAPIKey string
+	WikipediaLang string
+
 	// GuardianEnabled wires the Phase-3 Guardian (reward engine + network wall)
 	// into this server (env GUARDIAN_ENABLED, "true"/"1"). Off by default: the
 	// platform then runs exactly as Phase 1+2 and no Guardian code executes.
@@ -112,6 +119,8 @@ func Load() (*Config, error) {
 		ZaiAPIKey:     os.Getenv("ZAI_API_KEY"),
 		ZaiBaseURL:    os.Getenv("ZAI_BASE_URL"),
 		ZaiModel:      os.Getenv("ZAI_MODEL"),
+		YouTubeAPIKey: os.Getenv("YOUTUBE_API_KEY"),
+		WikipediaLang: getenv("WIKIPEDIA_LANG", "en"),
 
 		GuardianEnabled:       envBool("GUARDIAN_ENABLED"),
 		GuardianWall:          strings.ToLower(getenv("GUARDIAN_WALL", WallFake)),

@@ -51,6 +51,8 @@ tags:
 - name: dashboard
 - name: guardian
   description: Phase 3 Guardian — reward engine + network wall (optional add-on; parent-managed).
+- name: lessons
+  description: Class lessons per topic, with AI-generated bodies and enrichment resources (YouTube, Wikipedia).
 paths:
   /syllabuses:
     get:
@@ -923,6 +925,199 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /subjects/{id}/lessons:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: listLessons
+      tags:
+      - lessons
+      summary: List the subject's lessons (one per topic)
+      description: Parents see every lesson; a student session sees only `published` lessons.
+      responses:
+        '200':
+          description: Lessons with their resources, in topic order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lesson'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createLesson
+      tags:
+      - lessons
+      summary: Create a lesson for a topic (optionally AI-generated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLesson'
+      responses:
+        '201':
+          description: The created lesson.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        '409':
+          description: The topic already has a lesson.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /lessons/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getLesson
+      tags:
+      - lessons
+      summary: Get a lesson with its resources
+      responses:
+        '200':
+          description: The lesson.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateLesson
+      tags:
+      - lessons
+      summary: Update a lesson (partial — title, body, status)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLesson'
+      responses:
+        '200':
+          description: The updated lesson.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteLesson
+      tags:
+      - lessons
+      summary: Delete a lesson and its resources
+      responses:
+        '204':
+          description: Deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /lessons/{id}/generate:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: generateLesson
+      tags:
+      - lessons
+      summary: (Re)generate the lesson body with the AI knowledge backend
+      description: Synchronous, like study-guide generation. Replaces the body; resources are kept.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateLessonRequest'
+      responses:
+        '200':
+          description: The lesson with its new body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        default:
+          $ref: '#/components/responses/Problem'
+  /lessons/{id}/enrich:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: enrichLesson
+      tags:
+      - lessons
+      summary: Enrich the lesson with YouTube videos and Wikipedia articles (async job)
+      description: >-
+        Queues an `enrich` job that searches YouTube (Data API v3; skipped with a warning when
+        YOUTUBE_API_KEY is not configured) and Wikipedia for the lesson's topic and attaches the
+        best matches as resources (deduplicated by URL). Poll the returned Job; its `result` is an
+        EnrichResult.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrichLessonRequest'
+      responses:
+        '202':
+          description: The queued job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        default:
+          $ref: '#/components/responses/Problem'
+  /lessons/{id}/resources:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: addLessonResource
+      tags:
+      - lessons
+      summary: Attach a resource by URL (YouTube video, Wikipedia article, or any link)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddLessonResource'
+      responses:
+        '201':
+          description: The attached resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonResource'
+        '409':
+          description: That URL is already attached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /lessons/{id}/resources/{resourceId}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    - name: resourceId
+      in: path
+      required: true
+      description: The LessonResource id.
+      schema:
+        type: string
+    delete:
+      operationId: deleteLessonResource
+      tags:
+      - lessons
+      summary: Detach a resource
+      responses:
+        '204':
+          description: Deleted.
         default:
           $ref: '#/components/responses/Problem'
   /guardian/status:
@@ -2609,6 +2804,199 @@ components:
           type: string
           format: date-time
           description: RFC 3339 timestamp of when the student was created.
+    LessonStatus:
+      type: string
+      description: draft = parent-only; published = visible to the student.
+      enum:
+      - draft
+      - published
+    LessonResourceKind:
+      type: string
+      enum:
+      - youtube
+      - wikipedia
+      - link
+    LessonResourceSource:
+      type: string
+      description: How the resource was attached — by the Enrich job or by hand.
+      enum:
+      - enrich
+      - manual
+    LessonResource:
+      type: object
+      description: A video/article/link attached to a lesson.
+      additionalProperties: false
+      required:
+      - id
+      - lessonId
+      - kind
+      - title
+      - url
+      - position
+      - source
+      - createdAt
+      properties:
+        id:
+          type: string
+        lessonId:
+          type: string
+        kind:
+          $ref: '#/components/schemas/LessonResourceKind'
+        title:
+          type: string
+        url:
+          type: string
+          description: Canonical URL (watch page for YouTube, article URL for Wikipedia).
+        description:
+          type: string
+          description: Short blurb (video description excerpt / article extract).
+        thumbnailUrl:
+          type: string
+        externalId:
+          type: string
+          description: YouTube video id or Wikipedia page key — lets the UI embed the video.
+        position:
+          type: integer
+        source:
+          $ref: '#/components/schemas/LessonResourceSource'
+        createdAt:
+          type: string
+          format: date-time
+    Lesson:
+      type: object
+      description: A class lesson for one topic — a Markdown body plus enrichment resources.
+      additionalProperties: false
+      required:
+      - id
+      - subjectId
+      - topicId
+      - title
+      - markdown
+      - status
+      - resources
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+        subjectId:
+          type: string
+        topicId:
+          type: string
+        title:
+          type: string
+        markdown:
+          type: string
+          description: Lesson body (objectives, explanation, worked examples, key terms, quick checks).
+        status:
+          $ref: '#/components/schemas/LessonStatus'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonResource'
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the body was last produced by the AI (absent for hand-written bodies).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateLesson:
+      type: object
+      additionalProperties: false
+      required:
+      - topicId
+      properties:
+        topicId:
+          type: string
+        title:
+          type: string
+          description: Defaults to the topic name.
+        generate:
+          type: boolean
+          default: true
+          description: Generate the body with the AI knowledge backend now (synchronous).
+        instructions:
+          type: string
+          description: Optional steer for the generator (e.g. "focus on fractions of a set, grade 5").
+    UpdateLesson:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+        markdown:
+          type: string
+        status:
+          $ref: '#/components/schemas/LessonStatus'
+    GenerateLessonRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        instructions:
+          type: string
+    EnrichLessonRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        youtube:
+          type: boolean
+          default: true
+        wikipedia:
+          type: boolean
+          default: true
+        maxPerKind:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+        query:
+          type: string
+          description: Override the search query (default is derived from the topic and subject).
+    EnrichResult:
+      type: object
+      description: The `result` payload of an `enrich` job.
+      additionalProperties: false
+      required:
+      - lessonId
+      - added
+      - youtube
+      - wikipedia
+      - warnings
+      properties:
+        lessonId:
+          type: string
+        added:
+          type: integer
+        youtube:
+          type: integer
+        wikipedia:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+    AddLessonResource:
+      type: object
+      additionalProperties: false
+      required:
+      - url
+      properties:
+        url:
+          type: string
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/LessonResourceKind'
+          description: Defaults to youtube/wikipedia when the URL is recognised, else link.
+        title:
+          type: string
+          description: Defaults to a title fetched from the provider (YouTube oEmbed / Wikipedia summary) or the URL.
+        description:
+          type: string
     WallKind:
       type: string
       description: Which Network Wall implementation is active. `fake` is an in-memory wall for development.
@@ -3546,6 +3934,8 @@ components:
           - ingest
           - syllabus
           - questions
+          - exam
+          - enrich
         status:
           type: string
           description: Lifecycle state of the job.

@@ -153,6 +153,32 @@ type Job struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+type Lesson struct {
+	ID          string             `json:"id"`
+	SubjectID   string             `json:"subjectId"`
+	TopicID     string             `json:"topicId"`
+	Title       string             `json:"title"`
+	Markdown    string             `json:"markdown"`
+	Status      string             `json:"status"`
+	GeneratedAt pgtype.Timestamptz `json:"generatedAt"`
+	CreatedAt   time.Time          `json:"createdAt"`
+	UpdatedAt   time.Time          `json:"updatedAt"`
+}
+
+type LessonResource struct {
+	ID           string    `json:"id"`
+	LessonID     string    `json:"lessonId"`
+	Kind         string    `json:"kind"`
+	Title        string    `json:"title"`
+	Url          string    `json:"url"`
+	Description  *string   `json:"description"`
+	ThumbnailUrl *string   `json:"thumbnailUrl"`
+	ExternalID   *string   `json:"externalId"`
+	Position     int32     `json:"position"`
+	Source       string    `json:"source"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
 type MasterySnapshot struct {
 	ID         string    `json:"id"`
 	StudentID  string    `json:"studentId"`
