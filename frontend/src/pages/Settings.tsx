@@ -19,7 +19,7 @@ import { useSettings, useUpdateSettings } from '../hooks/useSettings';
  * pass bar, and cooldown (U13 NumberStepper), the knowledge backend (U03
  * Select), and the difficulty-ramp toggle (U14). The Guardian-side reward knobs
  * (reward rate, daily cap) are shown but disabled with a "enabled with Guardian
- * (Phase 3)" note, since they are stored now and only consumed in Phase 3.
+ * → Policy" note, since the Guardian policy page is where they are edited.
  *
  * All data flows through the H07 useSettings / useUpdateSettings hooks; nothing
  * here hand-rolls a fetch. States: loading (skeleton), error (retry), and the
@@ -278,7 +278,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
             Rewards
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
-            Reward knobs are stored now and enabled with Guardian (Phase 3).{' '}
+            Rate and daily cap are edited on the Guardian policy page.{' '}
             <Link
               to="/parent/guardian/policy"
               className="font-medium text-primary hover:underline"
@@ -292,7 +292,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
         <SettingRow
           title="Reward rate"
           description="Minutes of earned time per correct question."
-          note="Enabled with Guardian (Phase 3)"
+          note="Edit in Guardian → Policy"
         >
           <NumberStepper
             label="Reward rate"
@@ -309,7 +309,7 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
         <SettingRow
           title="Daily cap"
           description="Maximum hours of earned time per day."
-          note="Enabled with Guardian (Phase 3)"
+          note="Edit in Guardian → Policy"
         >
           <NumberStepper
             label="Daily cap"

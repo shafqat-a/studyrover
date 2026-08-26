@@ -115,6 +115,7 @@ export default function StudentHome() {
                 onTakeExam={(examId) =>
                   navigate(`/student/exams/${examId}/start`)
                 }
+                onStudy={(id) => navigate(`/student/study?subject=${id}`)}
               />
             </li>
           ))}
@@ -203,6 +204,7 @@ interface SubjectCardProps {
   expanded: boolean;
   onSelect: () => void;
   onTakeExam: (examId: string) => void;
+  onStudy: (subjectId: string) => void;
 }
 
 function SubjectCard({
@@ -210,6 +212,7 @@ function SubjectCard({
   expanded,
   onSelect,
   onTakeExam,
+  onStudy,
 }: SubjectCardProps) {
   const color = subject.color ?? DEFAULT_COLOR;
   return (
@@ -249,7 +252,11 @@ function SubjectCard({
 
       {expanded && (
         <div className="mt-4 border-t border-border pt-4">
-          <SubjectExams subjectId={subject.id} onTakeExam={onTakeExam} />
+          <SubjectExams
+            subjectId={subject.id}
+            onTakeExam={onTakeExam}
+            onStudy={() => onStudy(subject.id)}
+          />
         </div>
       )}
     </Card>
@@ -259,9 +266,10 @@ function SubjectCard({
 interface SubjectExamsProps {
   subjectId: string;
   onTakeExam: (examId: string) => void;
+  onStudy: () => void;
 }
 
-function SubjectExams({ subjectId, onTakeExam }: SubjectExamsProps) {
+function SubjectExams({ subjectId, onTakeExam, onStudy }: SubjectExamsProps) {
   const examsQuery = useExamDefinitions(subjectId);
 
   if (examsQuery.isPending) {
@@ -311,7 +319,11 @@ function SubjectExams({ subjectId, onTakeExam }: SubjectExamsProps) {
     <ul className="space-y-2" aria-label="Exams">
       {exams.map((exam) => (
         <li key={exam.id}>
-          <ExamRow exam={exam} onTakeExam={() => onTakeExam(exam.id)} />
+          <ExamRow
+            exam={exam}
+            onTakeExam={() => onTakeExam(exam.id)}
+            onStudy={onStudy}
+          />
         </li>
       ))}
     </ul>
@@ -321,9 +333,10 @@ function SubjectExams({ subjectId, onTakeExam }: SubjectExamsProps) {
 interface ExamRowProps {
   exam: ExamDefinition;
   onTakeExam: () => void;
+  onStudy: () => void;
 }
 
-function ExamRow({ exam, onTakeExam }: ExamRowProps) {
+function ExamRow({ exam, onTakeExam, onStudy }: ExamRowProps) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-md bg-surface-muted px-3 py-2">
       <div className="min-w-0">
@@ -343,8 +356,8 @@ function ExamRow({ exam, onTakeExam }: ExamRowProps) {
         <Button
           variant="ghost"
           size="sm"
-          disabled
-          title="Study mode is coming soon"
+          onClick={onStudy}
+          title="Study this subject with the tutor"
           leadingIcon={<BookOpen className="h-4 w-4" aria-hidden="true" />}
         >
           Study

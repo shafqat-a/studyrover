@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GraduationCap, MessagesSquare, RotateCcw, Sparkles } from 'lucide-react';
 
 import { Button } from '../components/Button';
@@ -83,8 +83,14 @@ export default function StudyTutor() {
   );
 
   // Selected subject + topic. Topic empty string == "Whole subject".
-  const [subjectId, setSubjectId] = useState<string>('');
-  const [topicId, setTopicId] = useState<string>(ALL_TOPICS);
+  // `?subject=` / `?topic=` preselect (the student home's "Study" button).
+  const [searchParams] = useSearchParams();
+  const [subjectId, setSubjectId] = useState<string>(
+    () => searchParams.get('subject') ?? '',
+  );
+  const [topicId, setTopicId] = useState<string>(
+    () => searchParams.get('topic') ?? ALL_TOPICS,
+  );
 
   // Seed the subject selection from the first available subject.
   useEffect(() => {

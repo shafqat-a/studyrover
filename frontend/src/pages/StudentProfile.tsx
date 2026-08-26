@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
@@ -12,6 +13,7 @@ import { Textarea } from '../components/Textarea';
 import type { components } from '../api/schema';
 import { useToast } from '../app/providers';
 import { useStudentProfile, useUpdateStudentProfile } from '../hooks/useStudentProfile';
+import { useGuardianStatus } from '../hooks/useGuardian';
 
 /**
  * P03 — Student profile admin (screen 2.1)
@@ -228,7 +230,7 @@ export default function StudentProfile() {
             />
           </Card>
 
-          <DeviceSummaryPlaceholder />
+          <DeviceSummary />
 
           <div className="flex items-center justify-end gap-3">
             <p className="mr-auto text-sm text-foreground-muted" aria-live="polite">
@@ -249,29 +251,77 @@ export default function StudentProfile() {
 }
 
 /**
- * Read-only placeholder for the Guardian device summary (Phase 3). Rendered as a
- * disabled-looking panel so the parent knows where managed devices will appear.
+ * Guardian device summary: the student's registered (gated) devices, with a
+ * link to manage them. When the Guardian is not enabled on the server, says
+ * so instead of pretending devices are "coming soon".
  */
-function DeviceSummaryPlaceholder() {
+function DeviceSummary() {
+  const statusQuery = useGuardianStatus();
+  const status = statusQuery.data;
+  const devices = status?.devices ?? [];
+  const linkClass =
+    'text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm';
+
   return (
     <Card padding="lg">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-base font-semibold text-foreground">
-            Devices
-          </h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Managed devices and screen-time controls will appear here once the
-            Guardian companion is connected.
+          <h2 className="text-base font-semibold text-foreground">Devices</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">
+            Devices the Guardian gates for this student. Passed exams open them
+            for the earned minutes.
           </p>
         </div>
-        <Badge tone="neutral" className="shrink-0">
-          Coming soon
-        </Badge>
+        {status ? (
+          <Badge tone={status.enabled ? 'success' : 'neutral'} size="sm" dot>
+            {status.enabled ? 'Guardian on' : 'Guardian off'}
+          </Badge>
+        ) : null}
       </div>
-      <p className="mt-4 rounded-card border border-dashed border-border bg-surface-muted px-4 py-6 text-center text-sm text-foreground-muted">
-        No devices connected yet.
-      </p>
+
+      {statusQuery.isPending ? (
+        <p className="mt-4 text-sm text-foreground-muted">Loading devices…</p>
+      ) : !status?.enabled ? (
+        <p className="mt-4 text-sm text-foreground-muted">
+          The Guardian isn’t enabled on this server, so no devices are gated.{' '}
+          <Link to="/parent/guardian" className={linkClass}>
+            Learn how to enable it
+          </Link>
+        </p>
+      ) : devices.length === 0 ? (
+        <p className="mt-4 text-sm text-foreground-muted">
+          No devices registered yet.{' '}
+          <Link to="/parent/guardian/devices" className={linkClass}>
+            Register a device
+          </Link>
+        </p>
+      ) : (
+        <>
+          <ul className="mt-4 divide-y divide-border" aria-label="Registered devices">
+            {devices.map((d) => (
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {d.name}
+                  </p>
+                  <p className="font-mono text-xs text-foreground-muted">{d.mac}</p>
+                </div>
+                <Badge tone={d.gated ? 'info' : 'neutral'} size="sm">
+                  {d.gated ? 'Gated' : 'Always on'}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3">
+            <Link to="/parent/guardian/devices" className={linkClass}>
+              Manage devices
+            </Link>
+          </p>
+        </>
+      )}
     </Card>
   );
 }
