@@ -42,7 +42,8 @@ export default function ParentExamPreview() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const questions = previewQuery.data?.questions ?? [];
+  const previewData = previewQuery.data;
+  const questions = useMemo(() => previewData?.questions ?? [], [previewData]);
   const passBar = defQuery.data?.passBar ?? 70;
   const examName = defQuery.data?.name ?? 'Exam preview';
 

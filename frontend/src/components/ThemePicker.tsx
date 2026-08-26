@@ -100,38 +100,44 @@ function ModeSwitch() {
 }
 
 export function ThemePicker({ variant = 'compact' }: { variant?: 'compact' | 'full' }) {
+  return variant === 'full' ? <FullThemePicker /> : <CompactThemePicker />;
+}
+
+/** Full variant: inline swatches + mode switch (Settings page). */
+function FullThemePicker() {
   const { theme } = useTheme();
   const active = THEMES.find((t) => t.name === theme) ?? THEMES[0];
-
-  if (variant === 'full') {
-    return (
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm font-medium text-foreground">Theme</p>
-          <p className="mt-0.5 text-xs text-foreground-muted">
-            Choose the accent color used across the app.
-          </p>
-          <div className="mt-3">
-            <ThemeSwatches />
-          </div>
-          <p className="mt-2 text-xs font-medium text-foreground-muted">
-            {active.label}
-          </p>
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm font-medium text-foreground">Theme</p>
+        <p className="mt-0.5 text-xs text-foreground-muted">
+          Choose the accent color used across the app.
+        </p>
+        <div className="mt-3">
+          <ThemeSwatches />
         </div>
-        <div>
-          <p className="text-sm font-medium text-foreground">Appearance</p>
-          <p className="mt-0.5 text-xs text-foreground-muted">
-            Light, dark, or follow your system.
-          </p>
-          <div className="mt-3 max-w-xs">
-            <ModeSwitch />
-          </div>
+        <p className="mt-2 text-xs font-medium text-foreground-muted">
+          {active.label}
+        </p>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">Appearance</p>
+        <p className="mt-0.5 text-xs text-foreground-muted">
+          Light, dark, or follow your system.
+        </p>
+        <div className="mt-3 max-w-xs">
+          <ModeSwitch />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  // Compact: icon button + popover.
+/** Compact variant: icon button + popover (nav bars). */
+function CompactThemePicker() {
+  const { theme } = useTheme();
+  const active = THEMES.find((t) => t.name === theme) ?? THEMES[0];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
