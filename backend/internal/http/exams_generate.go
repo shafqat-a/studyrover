@@ -58,10 +58,10 @@ func (h *Handlers) GenerateExam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := jobs.ExamGenPayload{
-		SubjectID:  subjectID,
-		Name:       name,
-		PassBar:    body.PassBar,
-		Topics:     make([]jobs.ExamGenTopic, 0, len(body.Topics)),
+		SubjectID: subjectID,
+		Name:      name,
+		PassBar:   body.PassBar,
+		Topics:    make([]jobs.ExamGenTopic, 0, len(body.Topics)),
 	}
 	if body.Difficulty != nil {
 		payload.Difficulty = strings.TrimSpace(*body.Difficulty)

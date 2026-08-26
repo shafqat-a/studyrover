@@ -141,7 +141,7 @@ function ResultReport({
 
   const scorePct = Math.round(attempt.scorePct ?? 0);
   const passed = attempt.passed === true;
-  const perTopic = attempt.perTopic ?? [];
+  const perTopic = useMemo(() => attempt.perTopic ?? [], [attempt.perTopic]);
 
   const correctCount = attempt.answers.filter((a) => a.correct === true).length;
   const totalCount = attempt.questionIds.length;

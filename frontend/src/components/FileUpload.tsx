@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useId, useRef, useState } from 'react';
+import { forwardRef, useCallback, useId, useRef, useState, useMemo } from 'react';
 import type { DragEvent, KeyboardEvent, ReactNode } from 'react';
 
 /**
@@ -161,7 +161,7 @@ export const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
     const [rejected, setRejected] = useState(false);
 
     const tokens = parseAccept(accept);
-    const selected = files ?? [];
+    const selected = useMemo(() => files ?? [], [files]);
     const hasSelection = selected.length > 0;
     const showProgress =
       typeof progress === 'number' && progress >= 0 && progress < 100;

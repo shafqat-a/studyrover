@@ -72,7 +72,10 @@ export default function SubjectQuestionGen() {
   const approve = useApproveDraft();
   const reject = useRejectDraft();
 
-  const topics: Topic[] = topicsQuery.data?.items ?? [];
+  const topics: Topic[] = useMemo(
+    () => topicsQuery.data?.items ?? [],
+    [topicsQuery.data],
+  );
   const topicById = useMemo(() => {
     const map = new Map<string, Topic>();
     for (const t of topics) map.set(t.id, t);

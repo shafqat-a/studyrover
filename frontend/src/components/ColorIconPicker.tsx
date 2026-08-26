@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- this module intentionally co-exports non-component helpers/hooks with its component(s); Vite HMR falls back to a full reload for it. */
 import { forwardRef, useId } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 

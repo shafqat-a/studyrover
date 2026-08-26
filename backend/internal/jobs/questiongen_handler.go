@@ -108,7 +108,7 @@ func (h *QuestionGenHandler) Handle(ctx context.Context, job Job, prog ProgressF
 		// Whole-subject scope: give the model the active topic list to spread
 		// questions across. Cap the list so the prompt stays bounded.
 		if topics, err := h.Store.ListTopicsBySubject(ctx, store.ListTopicsBySubjectParams{
-			SubjectID: subjectID,
+			SubjectID:  subjectID,
 			PageOffset: 0,
 			PageLimit:  200,
 		}); err == nil {

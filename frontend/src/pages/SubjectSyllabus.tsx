@@ -125,7 +125,10 @@ export default function SubjectSyllabus() {
     () => (topicsQuery.data ? [...topicsQuery.data.items].sort(byOrder) : []),
     [topicsQuery.data],
   );
-  const sources = sourcesQuery.data?.items ?? [];
+  const sources = useMemo(
+    () => sourcesQuery.data?.items ?? [],
+    [sourcesQuery.data],
+  );
   const sourceById = useMemo(() => {
     const map = new Map<string, Source>();
     for (const source of sources) map.set(source.id, source);
