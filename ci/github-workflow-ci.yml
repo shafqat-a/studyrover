@@ -1,0 +1,118 @@
+# StudyRover CI — backend, frontend, and the Playwright e2e against a real
+# backend + Postgres. Mirrors `make test`, `make lint-frontend`, `make e2e`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: gofmt
+        run: |
+          out="$(gofmt -l ./cmd ./internal)"
+          if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test -race ./...
+
+  frontend:
+    name: Frontend (TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Lint (no warnings allowed)
+        run: pnpm exec eslint . --max-warnings=0
+      - name: Unit tests
+        run: pnpm run test
+      - name: Build
+        run: pnpm run build
+
+  e2e:
+    name: E2E (Playwright + real backend)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: studyrover
+          POSTGRES_PASSWORD: studyrover
+          POSTGRES_DB: studyrover_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U studyrover"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_CREATE_DB: '0'
+      E2E_DATABASE_URL: postgres://studyrover:studyrover@127.0.0.1:5432/studyrover_e2e?sslmode=disable
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install psql + golang-migrate
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Run e2e
+        run: scripts/e2e.sh
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/test-results
+            frontend/playwright-report
+          if-no-files-found: ignore
