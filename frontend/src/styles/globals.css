@@ -274,3 +274,41 @@ h3,
   list-style: decimal;
   padding-left: 1.25rem;
 }
+
+/*
+ * Print. Force the light palette regardless of `.dark`/theme so text is never
+ * light-on-white, strip chrome, and keep questions from splitting across pages.
+ * Pages opt into a paper layout with Tailwind's `print:` variant (see
+ * ParentExamPreview's PrintableExam).
+ */
+@media print {
+  :root,
+  :root.dark {
+    --sr-background: 0 0% 100%;
+    --sr-surface: 0 0% 100%;
+    --sr-surface-muted: 0 0% 96%;
+    --sr-border: 0 0% 0%;
+    --sr-foreground: 0 0% 0%;
+    --sr-foreground-muted: 0 0% 25%;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    min-height: 0;
+  }
+
+  .sr-rich svg {
+    border-color: #000000;
+    break-inside: avoid;
+  }
+  .sr-rich th,
+  .sr-rich td {
+    border-color: #000000;
+  }
+}

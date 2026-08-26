@@ -80,7 +80,7 @@ export default function ParentLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur print:hidden">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-4 px-5">
           <BrandMark to="/parent" />
           <span className="hidden rounded-md border border-border bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted lg:inline">
@@ -111,7 +111,7 @@ export default function ParentLayout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 print:max-w-none print:p-0">
         <Outlet />
       </main>
     </div>
