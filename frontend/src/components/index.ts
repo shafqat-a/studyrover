@@ -19,6 +19,8 @@ export * from './Dialog';
 export * from './EmptyState';
 export * from './FileUpload';
 export * from './GuidanceEditor';
+export * from './guardian/CountdownTimer';
+export * from './guardian/GuardianTimeSlot';
 export * from './JobStatus';
 export * from './MarkdownRenderer';
 export * from './MasteryTimeline';

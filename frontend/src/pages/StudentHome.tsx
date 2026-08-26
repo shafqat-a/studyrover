@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { GuardianTimeSlot } from '../components/guardian/GuardianTimeSlot';
 import type { components } from '../api/schema';
 import { useSubjects } from '../hooks/useSubjects';
 import { useExamDefinitions } from '../hooks/useExamDefinitions';
@@ -82,6 +83,8 @@ export default function StudentHome() {
           loading={progressQuery.isPending && Boolean(studentId)}
           recommendedTopic={recommendedTopic}
         />
+        {/* Phase-3: earned internet time. Renders nothing while the Guardian is off. */}
+        <GuardianTimeSlot variant="home" studentId={studentId} />
       </header>
 
       {subjectsQuery.isPending ? (

@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ProgressBar } from '../components/ProgressBar';
+import { GuardianTimeSlot } from '../components/guardian/GuardianTimeSlot';
 import type { components } from '../api/schema';
 import { useAttemptResult } from '../hooks/useExamAttempt';
 import { useExamDefinition } from '../hooks/useExamDefinitions';
@@ -202,6 +203,15 @@ function ResultReport({
           </div>
         </div>
       </Card>
+
+      {/* Phase-3: earned internet time for this pass. Renders nothing while the Guardian is off. */}
+      {passed && (
+        <GuardianTimeSlot
+          variant="result"
+          studentId={attempt.studentId}
+          attemptId={attempt.id}
+        />
+      )}
 
       {/* Per-topic breakdown */}
       {perTopic.length > 0 && (

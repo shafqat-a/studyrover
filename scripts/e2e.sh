@@ -9,7 +9,8 @@
 #   4. run `playwright test` with Vite on $E2E_PORT (default 5174) proxying to it
 #   5. stop the backend
 #
-# Overrides: E2E_DATABASE_URL, E2E_BACKEND_PORT, E2E_PORT. Extra args are passed
+# Overrides: E2E_DATABASE_URL, E2E_BACKEND_PORT, E2E_PORT, E2E_GUARDIAN_ENABLED
+# (default true: the Guardian runs with the in-memory fake wall). Extra args are passed
 # to `playwright test` (e.g. `scripts/e2e.sh --headed`, `--ui`, a spec path).
 set -euo pipefail
 
@@ -45,6 +46,9 @@ STORAGE_DIR="$(mktemp -d)"
   RP_ID=localhost \
   RP_ORIGIN="http://localhost:${E2E_PORT}" \
   STORAGE_DIR="$STORAGE_DIR" \
+  GUARDIAN_ENABLED="${E2E_GUARDIAN_ENABLED:-true}" \
+  GUARDIAN_WALL=fake \
+  GUARDIAN_FAKE_DEVICES="aa:bb:cc:dd:ee:01=demo-laptop,aa:bb:cc:dd:ee:02=demo-phone" \
   go run ./cmd/server ) &
 BACKEND_PID=$!
 cleanup() {

@@ -50,6 +50,11 @@ type Handlers struct {
 	// its next tick. Nil when the Guardian is off (the platform never imports
 	// the guardian packages — this is the only hook, and it's a plain func).
 	ScoreEventSink func()
+
+	// Guardian carries the Phase-3 dependencies (wall, session manager,
+	// subscriber). Nil when GUARDIAN_ENABLED is off: the /guardian handlers then
+	// report "disabled" (status / earned-time) or 409 (everything else).
+	Guardian *GuardianDeps
 }
 
 // spaDir is the built frontend served for non-API routes (client-side routing).

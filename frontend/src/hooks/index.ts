@@ -9,6 +9,7 @@ export * from './useDashboard';
 export * from './useExamAttempt';
 export * from './useExamDefinitions';
 export * from './useExamHistory';
+export * from './useGuardian';
 export * from './useGuidance';
 export * from './useJobs';
 export * from './useQuestionGen';

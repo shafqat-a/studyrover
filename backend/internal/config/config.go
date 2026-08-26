@@ -48,7 +48,44 @@ type Config struct {
 	// ZaiModel overrides the z.ai model id (env ZAI_MODEL). Optional; empty uses
 	// the adapter default (glm-5.2).
 	ZaiModel string
+
+	// GuardianEnabled wires the Phase-3 Guardian (reward engine + network wall)
+	// into this server (env GUARDIAN_ENABLED, "true"/"1"). Off by default: the
+	// platform then runs exactly as Phase 1+2 and no Guardian code executes.
+	GuardianEnabled bool
+	// GuardianWall selects the Network Wall implementation (env GUARDIAN_WALL):
+	// "fake" (default; in-memory, no hardware) or "routeros" (MikroTik REST).
+	GuardianWall string
+	// GuardianFakeDevices seeds the fake wall's Discover (env
+	// GUARDIAN_FAKE_DEVICES, comma-separated `mac=hostname` pairs; the hostname
+	// is optional). Ignored unless GuardianWall is "fake".
+	GuardianFakeDevices []FakeDevice
+	// RouterOSURL is the RouterOS REST base URL, e.g. "https://192.168.88.1"
+	// (env ROUTEROS_URL). Required when GuardianWall is "routeros".
+	RouterOSURL string
+	// RouterOSUser / RouterOSPassword authenticate the REST API (env
+	// ROUTEROS_USER / ROUTEROS_PASSWORD). Required for the routeros wall.
+	RouterOSUser     string
+	RouterOSPassword string
+	// RouterOSInsecureTLS skips TLS certificate verification for self-signed
+	// router certificates (env ROUTEROS_INSECURE_TLS, "true"/"1").
+	RouterOSInsecureTLS bool
+	// RouterOSHotspotServer names the /ip/hotspot server gating the student
+	// devices (env ROUTEROS_HOTSPOT_SERVER). Optional; empty = first/only.
+	RouterOSHotspotServer string
 }
+
+// FakeDevice is one seed for the fake wall's network discovery.
+type FakeDevice struct {
+	MAC      string
+	Hostname string
+}
+
+// Wall kinds accepted by GUARDIAN_WALL.
+const (
+	WallFake     = "fake"
+	WallRouterOS = "routeros"
+)
 
 // Default values applied when an optional env var is unset.
 const (
@@ -75,7 +112,21 @@ func Load() (*Config, error) {
 		ZaiAPIKey:     os.Getenv("ZAI_API_KEY"),
 		ZaiBaseURL:    os.Getenv("ZAI_BASE_URL"),
 		ZaiModel:      os.Getenv("ZAI_MODEL"),
+
+		GuardianEnabled:       envBool("GUARDIAN_ENABLED"),
+		GuardianWall:          strings.ToLower(getenv("GUARDIAN_WALL", WallFake)),
+		RouterOSURL:           os.Getenv("ROUTEROS_URL"),
+		RouterOSUser:          os.Getenv("ROUTEROS_USER"),
+		RouterOSPassword:      os.Getenv("ROUTEROS_PASSWORD"),
+		RouterOSInsecureTLS:   envBool("ROUTEROS_INSECURE_TLS"),
+		RouterOSHotspotServer: os.Getenv("ROUTEROS_HOTSPOT_SERVER"),
 	}
+
+	seeds, err := parseFakeDevices(os.Getenv("GUARDIAN_FAKE_DEVICES"))
+	if err != nil {
+		return nil, err
+	}
+	cfg.GuardianFakeDevices = seeds
 
 	var missing []string
 	if cfg.DatabaseURL == "" {
@@ -91,7 +142,77 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config: missing required environment variables: %s", strings.Join(missing, ", "))
 	}
 
+	if err := cfg.validateGuardian(); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// validateGuardian checks the Guardian block: the wall kind must be known and
+// the routeros wall needs its connection settings. Only enforced when the
+// Guardian is enabled so a half-filled block does not break a server that has
+// the feature off.
+func (c *Config) validateGuardian() error {
+	if !c.GuardianEnabled {
+		return nil
+	}
+	switch c.GuardianWall {
+	case WallFake:
+		return nil
+	case WallRouterOS:
+		var missing []string
+		if c.RouterOSURL == "" {
+			missing = append(missing, "ROUTEROS_URL")
+		}
+		if c.RouterOSUser == "" {
+			missing = append(missing, "ROUTEROS_USER")
+		}
+		if c.RouterOSPassword == "" {
+			missing = append(missing, "ROUTEROS_PASSWORD")
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("config: GUARDIAN_WALL=routeros requires: %s", strings.Join(missing, ", "))
+		}
+		return nil
+	default:
+		return fmt.Errorf("config: GUARDIAN_WALL must be %q or %q (got %q)", WallFake, WallRouterOS, c.GuardianWall)
+	}
+}
+
+// parseFakeDevices parses GUARDIAN_FAKE_DEVICES: a comma-separated list of
+// `mac=hostname` (hostname optional). MACs are kept verbatim; the wall
+// normalises them.
+func parseFakeDevices(raw string) ([]FakeDevice, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	var out []FakeDevice
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		mac, host, _ := strings.Cut(item, "=")
+		mac = strings.TrimSpace(mac)
+		if mac == "" {
+			return nil, fmt.Errorf("config: GUARDIAN_FAKE_DEVICES: entry %q has no mac", item)
+		}
+		out = append(out, FakeDevice{MAC: mac, Hostname: strings.TrimSpace(host)})
+	}
+	return out, nil
+}
+
+// envBool reports whether key is set to a truthy value ("true" or "1",
+// case-insensitive). Unset or anything else is false.
+func envBool(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true":
+		return true
+	default:
+		return false
+	}
 }
 
 // Addr returns the listen address derived from Port (e.g. ":8080").

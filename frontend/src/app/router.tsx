@@ -46,6 +46,11 @@ function lazyPage(
  *   /parent/subjects/:subjectId/ingest ....... Sources ingest    (P2, :subjectId)
  *   /parent/subjects/:subjectId/question-gen . Question gen      (P2, :subjectId)
  *   /parent/dashboard ........................ Parent dashboard       (Phase-2)
+ *   /parent/guardian ......................... Guardian hub + tabs    (Phase-3)
+ *     ./ (index) ............................. Overview
+ *     ./devices .............................. Devices
+ *     ./policy ............................... Reward policy
+ *     ./override ............................. Parent override
  *   /parent/settings ......................... Settings               (P10)
  *   /student ................................. Student home           (P11)
  *   /student/study ........................... Study tutor            (Phase-2)
@@ -158,6 +163,30 @@ export const routes: RouteObject[] = [
         // Phase-2: parent dashboard.
         path: 'dashboard',
         lazy: lazyPage(() => import('../pages/ParentDashboard')),
+      },
+      {
+        // Phase-3: Guardian (earned internet time). The hub hosts the routed
+        // tabs via its own <Outlet/>.
+        path: 'guardian',
+        lazy: lazyPage(() => import('../pages/guardian/Guardian')),
+        children: [
+          {
+            index: true,
+            lazy: lazyPage(() => import('../pages/guardian/GuardianOverview')),
+          },
+          {
+            path: 'devices',
+            lazy: lazyPage(() => import('../pages/guardian/GuardianDevices')),
+          },
+          {
+            path: 'policy',
+            lazy: lazyPage(() => import('../pages/guardian/GuardianPolicy')),
+          },
+          {
+            path: 'override',
+            lazy: lazyPage(() => import('../pages/guardian/GuardianOverride')),
+          },
+        ],
       },
       {
         path: 'settings',

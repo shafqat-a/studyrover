@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Library,
   Settings as SettingsIcon,
+  ShieldCheck,
   User,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ const PARENT_NAV: NavItem[] = [
   { to: '/parent', label: 'Home', icon: Home, end: true },
   { to: '/parent/subjects', label: 'Subjects', icon: Library },
   { to: '/parent/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/parent/guardian', label: 'Guardian', icon: ShieldCheck },
   { to: '/parent/profile', label: 'Student', icon: User },
   { to: '/parent/settings', label: 'Settings', icon: SettingsIcon },
 ];

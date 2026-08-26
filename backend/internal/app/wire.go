@@ -20,6 +20,11 @@ import (
 	"github.com/shafqat/studyrover/backend/internal/auth"
 	"github.com/shafqat/studyrover/backend/internal/config"
 	"github.com/shafqat/studyrover/backend/internal/contracts"
+	"github.com/shafqat/studyrover/backend/internal/guardian/ingest"
+	"github.com/shafqat/studyrover/backend/internal/guardian/session"
+	"github.com/shafqat/studyrover/backend/internal/guardian/wall"
+	fakewall "github.com/shafqat/studyrover/backend/internal/guardian/wall/fake"
+	"github.com/shafqat/studyrover/backend/internal/guardian/wall/routeros"
 	httpapi "github.com/shafqat/studyrover/backend/internal/http"
 	"github.com/shafqat/studyrover/backend/internal/jobs"
 	"github.com/shafqat/studyrover/backend/internal/knowledge"
@@ -64,21 +69,30 @@ func Run() error {
 	}
 	defer db.Close()
 
-	handler, worker, err := buildHandler(cfg, db)
+	handler, loops, err := buildHandler(cfg, db)
 	if err != nil {
 		return err
 	}
 
-	// Start the job worker pool. Worker.Run blocks until ctx is cancelled (the
-	// shutdown signal) and then drains in-flight jobs, so running it on a
-	// goroutine bound to the root context gives a clean, signal-driven shutdown.
-	go func() {
-		if err := worker.Run(ctx); err != nil {
-			log.Printf("app: job worker stopped: %v", err)
-		}
-	}()
+	// Start the background loops (job worker pool; Guardian session sweeper +
+	// score-event subscriber when enabled). Each Run blocks until ctx is
+	// cancelled (the shutdown signal) and then drains, so running them on
+	// goroutines bound to the root context gives a clean, signal-driven shutdown.
+	for _, l := range loops {
+		go func(l background) {
+			if err := l.run(ctx); err != nil {
+				log.Printf("app: %s stopped: %v", l.name, err)
+			}
+		}(l)
+	}
 
 	return serve(ctx, cfg, handler)
+}
+
+// background is a long-running loop started by Run and stopped by ctx.
+type background struct {
+	name string
+	run  func(ctx context.Context) error
 }
 
 // openStore opens the single pgx pool and returns the store facade over it.
@@ -101,9 +115,9 @@ const defaultStorageSubdir = "studyrover-files"
 // (storage, job queue, knowledge backend, job worker), and the HTTP handler set,
 // then mounts them on the chi router owned by internal/http (W02). The store is
 // passed as the Store interface so the handlers depend on the contract, not the
-// concrete pool. It returns the constructed *jobs.Worker so Run can start it on a
-// goroutine and stop it on shutdown; no job handlers are registered yet.
-func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worker, error) {
+// concrete pool. It returns the background loops (job worker; Guardian loops
+// when enabled) so Run can start them on goroutines and stop them on shutdown.
+func buildHandler(cfg *config.Config, db store.Store) (http.Handler, []background, error) {
 	sessions := auth.NewSessionManager(cfg.SessionSecret, cfg.RPOrigin)
 
 	authn, err := auth.NewAuthenticator(cfg.RPID, cfg.RPOrigin, "StudyRover")
@@ -164,8 +178,60 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, *jobs.Worke
 		Jobs:      queue,
 		Storage:   files,
 	}
+	loops := []background{{name: "job worker", run: worker.Run}}
 
-	return httpapi.NewRouter(h), worker, nil
+	// Phase-3 Guardian (spec §4 "optional add-on"): wired only behind the flag.
+	// With it off nothing below runs, h.Guardian stays nil and the /guardian
+	// endpoints report "disabled"; the platform is exactly Phase 1+2.
+	if cfg.GuardianEnabled {
+		w, err := buildWall(cfg)
+		if err != nil {
+			return nil, nil, err
+		}
+		grants := session.NewManager(db, w, session.Config{})
+		sub := ingest.NewSubscriber(db, grants, ingest.Config{})
+		h.ScoreEventSink = sub.Kick
+		h.Guardian = &httpapi.GuardianDeps{Wall: w, Sessions: grants, Subscriber: sub}
+		loops = append(loops,
+			background{name: "guardian session manager", run: grants.Run},
+			background{name: "guardian ingest", run: sub.Run},
+		)
+		log.Printf("guardian: enabled wall=%s", w.Kind())
+	}
+
+	return httpapi.NewRouter(h), loops, nil
+}
+
+// buildWall constructs the Network Wall selected by GUARDIAN_WALL: the
+// in-memory fake (seeded from GUARDIAN_FAKE_DEVICES) or the MikroTik RouterOS
+// REST adapter. Config.Load has already validated the RouterOS credentials.
+func buildWall(cfg *config.Config) (wall.Wall, error) {
+	switch cfg.GuardianWall {
+	case config.WallRouterOS:
+		w, err := routeros.New(routeros.Config{
+			BaseURL:       cfg.RouterOSURL,
+			User:          cfg.RouterOSUser,
+			Password:      cfg.RouterOSPassword,
+			InsecureTLS:   cfg.RouterOSInsecureTLS,
+			HotspotServer: cfg.RouterOSHotspotServer,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("app: build routeros wall: %w", err)
+		}
+		return w, nil
+	case config.WallFake, "":
+		seeds := make([]wall.DiscoveredDevice, 0, len(cfg.GuardianFakeDevices))
+		for _, d := range cfg.GuardianFakeDevices {
+			mac := d.MAC
+			if n, err := wall.NormalizeMAC(mac); err == nil {
+				mac = n
+			}
+			seeds = append(seeds, wall.DiscoveredDevice{MAC: mac, Hostname: d.Hostname})
+		}
+		return fakewall.New(seeds...), nil
+	default:
+		return nil, fmt.Errorf("app: unknown GUARDIAN_WALL %q", cfg.GuardianWall)
+	}
 }
 
 // serve runs the HTTP server until ctx is cancelled (shutdown signal) or the

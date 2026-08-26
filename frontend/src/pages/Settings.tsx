@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -277,7 +278,13 @@ function SettingsForm({ settings, saving, onSave }: SettingsFormProps) {
             Rewards
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
-            Reward knobs are stored now and enabled with Guardian (Phase 3).
+            Reward knobs are stored now and enabled with Guardian (Phase 3).{' '}
+            <Link
+              to="/parent/guardian/policy"
+              className="font-medium text-primary hover:underline"
+            >
+              Manage in Guardian
+            </Link>
           </p>
         </div>
 
