@@ -41,6 +41,12 @@ func (h *Handlers) assembleExamQuestions(ctx context.Context, def contracts.Exam
 			}
 			out = append(out, core.ShuffleOptions(toContractQuestion(row, opts), rng))
 		}
+		// A pinned set is normally delivered whole; when the student asked for a
+		// smaller round (def.Size < len(out)) sample that many, rotating like a
+		// bank so repeats vary between attempts.
+		if def.Size > 0 && def.Size < len(out) {
+			out = core.SelectFromBank(out, def.Size, nil, rng)
+		}
 		return out, nil
 	}
 

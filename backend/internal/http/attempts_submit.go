@@ -178,7 +178,14 @@ func (h *Handlers) SubmitAttempt(w http.ResponseWriter, r *http.Request, id cont
 		return
 	}
 
-	scoreEvent := core.BuildScoreEvent(gradedAttempt, examDefToContract(def), now)
+	// The ScoreEvent's size is the DELIVERED count (the student's 5/10/20
+	// choice), not the template's configured size, so earned time scales with
+	// the exam actually taken (spec §7).
+	scoreDef := examDefToContract(def)
+	if n := len(attempt.QuestionIds); n > 0 {
+		scoreDef.Size = n
+	}
+	scoreEvent := core.BuildScoreEvent(gradedAttempt, scoreDef, now)
 	if err := h.persistScoreEvent(r.Context(), scoreEvent); err != nil {
 		// The attempt is already graded and stored; losing the outbox row only
 		// means the Guardian never sees this score. Log loudly, don't fail.

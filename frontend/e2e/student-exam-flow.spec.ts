@@ -42,12 +42,14 @@ test('student can sign in, take an exam, and pass', async ({ page }) => {
     .click();
   await page.getByRole('button', { name: 'Take an exam' }).first().click();
   await expect(page).toHaveURL(/\/student\/exams\/[^/]+\/start$/);
+  // Choose the smallest round (spec §7: 5 questions → 15 min) so the size
+  // really reaches the server and the reward scales with it.
+  await page.getByLabel('Number of questions').selectOption('5');
   await page.getByRole('button', { name: 'Start exam' }).click();
   await expect(page).toHaveURL(/\/student\/attempts\/[^/]+$/);
+  await expect(page.getByText(/Question 1 of 5/)).toBeVisible();
 
   // Answer every question, advancing with Next; the last one exposes Submit.
-  // The attempt size comes from the exam template (the start screen's size
-  // picker is not sent to the server), so loop until Submit appears.
   const submit = page.getByRole('button', { name: 'Submit exam', exact: true });
   const next = page.getByRole('button', { name: 'Next', exact: true });
   const MAX_QUESTIONS = 50;
@@ -70,9 +72,9 @@ test('student can sign in, take an exam, and pass', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Review answers' })).toBeVisible();
 
   // Guardian (fake wall, seeded gated device): the pass should open internet
-  // time — 20 questions × 3 min = 60 min — within a few seconds of submit.
+  // time — 5 questions × 3 min = 15 min — within a few seconds of submit.
   await expect(
-    page.getByText(/You earned 60 minutes of internet/),
+    page.getByText(/You earned 15 minutes of internet/),
   ).toBeVisible({ timeout: 20_000 });
 
   // …and the student home shows the live "Online" strip.

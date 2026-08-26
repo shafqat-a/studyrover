@@ -58,6 +58,18 @@ func (h *Handlers) StartAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	contractDef := examDefToContract(def)
+	// Optional size override: the student's 5/10/20 choice on the start screen
+	// (spec §7 — size maps to earned time). Validated by the contract (1..200);
+	// core clamps to the available bank, and pinned exams deliver at most this
+	// many of their fixed set. The ScoreEvent's size is the delivered count, so
+	// a smaller exam earns proportionally less.
+	if body.Size != nil {
+		if *body.Size < 1 {
+			badRequest(w, "size must be at least 1")
+			return
+		}
+		contractDef.Size = *body.Size
+	}
 
 	// 2. Cooldown: if the student's most recent attempt at this exam failed and
 	// its cooldown window is still active, block with 409 CONFLICT carrying the

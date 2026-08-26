@@ -1185,6 +1185,8 @@ export interface components {
             examDefinitionId: string;
             /** @description The student starting the attempt. */
             studentId: string;
+            /** @description Number of questions to deliver this round (the student's 5/10/20 choice, spec §7). Defaults to the template's size. Bank exams sample this many; pinned (generated) exams deliver at most this many of their fixed set. */
+            size?: number;
         };
         /** @description Request body to submit answers for grading. */
         SubmitAttempt: {

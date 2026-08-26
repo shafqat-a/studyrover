@@ -25,11 +25,10 @@ import { useStudentProfile } from '../hooks/useStudentProfile';
  * template's size (spec default 20). Per the spec, time-per-option is hidden in
  * Phase 1, so no timer config is exposed here.
  *
- * "Start" calls H08 (`useStartAttempt` → POST /attempts). The contract's
- * StartAttempt body only carries `examDefinitionId` + `studentId`; the chosen
- * size is a client-side preference surfaced to the student (the server delivers
- * the template's configured size), so it is not sent on the wire. On success we
- * route to the in-progress page (P13) at `/student/attempts/{id}`, forwarding
+ * "Start" calls H08 (`useStartAttempt` → POST /attempts) with the chosen
+ * `size`, so the server delivers exactly that many questions and the earned
+ * internet time scales with it (spec §7: 5q → 15 min … 20q → 60 min). On
+ * success we route to the in-progress page (P13) at `/student/attempts/{id}`, forwarding
  * the just-delivered questions through router `state` exactly as ExamRun reads
  * them.
  *
@@ -104,6 +103,7 @@ export default function ExamStart() {
       const result = await startAttempt.mutateAsync({
         examDefinitionId: examId,
         studentId: studentQuery.data.id,
+        size: effectiveSize,
       });
       navigate(`/student/attempts/${result.attempt.id}`, {
         state: { questions: result.questions },
