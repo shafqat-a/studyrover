@@ -896,6 +896,33 @@ paths:
                 $ref: '#/components/schemas/Session'
         default:
           $ref: '#/components/responses/Problem'
+  /auth/student-profile:
+    get:
+      operationId: getStudentSignInProfile
+      tags:
+      - auth
+      summary: Student sign-in profile (public)
+      description: >-
+        The single student profile as shown on the student sign-in screen, readable
+        without a session so a fresh device can pick the student before signing in.
+        Exposes only display fields plus whether a PIN is required — never the
+        parent's notes or the PIN hash.
+      security: []
+      responses:
+        '200':
+          description: The sign-in profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSignInProfile'
+        '404':
+          description: No student profile has been created yet.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
   /progress:
     get:
       operationId: getProgress
@@ -2327,6 +2354,31 @@ components:
           type: string
           format: date-time
           description: RFC 3339 timestamp of when the student was created.
+    StudentSignInProfile:
+      type: object
+      description: Public projection of the student profile for the sign-in screen (no notes,
+        no secrets).
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - pinRequired
+      properties:
+        id:
+          type: string
+          description: The student's id (used as StudentSignIn.studentId).
+        name:
+          type: string
+          description: The student's display name.
+        gradeLevel:
+          type: string
+          description: Optional grade / year level.
+        avatarUrl:
+          type: string
+          description: Optional URL to an avatar image.
+        pinRequired:
+          type: boolean
+          description: True when the profile has a PIN set and sign-in must supply it.
     CreateStudent:
       type: object
       description: Request body to create (or, in Phase 1, update via PUT) a student profile. The server

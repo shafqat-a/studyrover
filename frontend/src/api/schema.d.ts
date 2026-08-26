@@ -511,6 +511,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/student-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Student sign-in profile (public)
+         * @description The single student profile as shown on the student sign-in screen, readable without a session so a fresh device can pick the student before signing in. Exposes only display fields plus whether a PIN is required — never the parent's notes or the PIN hash.
+         */
+        get: operations["getStudentSignInProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/progress": {
         parameters: {
             query?: never;
@@ -1425,6 +1445,19 @@ export interface components {
              * @description RFC 3339 timestamp of when the student was created.
              */
             createdAt: string;
+        };
+        /** @description Public projection of the student profile for the sign-in screen (no notes, no secrets). */
+        StudentSignInProfile: {
+            /** @description The student's id (used as StudentSignIn.studentId). */
+            id: string;
+            /** @description The student's display name. */
+            name: string;
+            /** @description Optional grade / year level. */
+            gradeLevel?: string;
+            /** @description Optional URL to an avatar image. */
+            avatarUrl?: string;
+            /** @description True when the profile has a PIN set and sign-in must supply it. */
+            pinRequired: boolean;
         };
         /** @description Request body to create (or, in Phase 1, update via PUT) a student profile. The server assigns id and createdAt. */
         CreateStudent: {
@@ -3041,6 +3074,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Session"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getStudentSignInProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sign-in profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSignInProfile"];
+                };
+            };
+            /** @description No student profile has been created yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             default: components["responses"]["Problem"];

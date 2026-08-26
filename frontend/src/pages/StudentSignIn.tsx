@@ -10,7 +10,7 @@ import { Logo } from '../components/Logo';
 import { TextInput } from '../components/TextInput';
 import { useToast } from '../app/providers';
 import type { components } from '../api/schema';
-import { useStudentProfile } from '../hooks/useStudentProfile';
+import { useStudentSignInProfile } from '../hooks/useAuth';
 import { useSignInStudent } from '../hooks/useAuth';
 
 /**
@@ -32,12 +32,12 @@ import { useSignInStudent } from '../hooks/useAuth';
  * parent at setup), and the populated picker.
  */
 
-type Student = components['schemas']['Student'];
+type Student = components['schemas']['StudentSignInProfile'];
 
 export default function StudentSignIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const studentQuery = useStudentProfile();
+  const studentQuery = useStudentSignInProfile();
   const signIn = useSignInStudent();
 
   // `null` = no student selected yet; otherwise the PIN entry is shown for it.
@@ -140,9 +140,9 @@ export default function StudentSignIn() {
   );
 }
 
-/** A student is PIN-gated if their profile notes carry a "pin:" marker. */
+/** A student is PIN-gated when the server reports a PIN is set on the profile. */
 function isPinProtected(student: Student): boolean {
-  return typeof student.notes === 'string' && student.notes.includes('pin:');
+  return student.pinRequired;
 }
 
 interface StudentChoiceProps {

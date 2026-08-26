@@ -215,6 +215,32 @@ export function useLoginParentPassword(): UseMutationResult<
 }
 
 /** Sign a student in (optionally with a PIN). Sets the session cookie + cache. */
+type StudentSignInProfile = components['schemas']['StudentSignInProfile'];
+
+/** Query key for the public student sign-in profile. */
+export const studentSignInProfileKey = ['auth', 'student-profile'] as const;
+
+/**
+ * Fetch the public student sign-in profile. `GET /auth/student-profile`.
+ * Needs no session — this is what the sign-in screen renders before a student
+ * has signed in. Exposes only display fields + `pinRequired`.
+ */
+export function useStudentSignInProfile(): UseQueryResult<
+  StudentSignInProfile,
+  Error
+> {
+  return useQuery({
+    queryKey: studentSignInProfileKey,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await api.GET('/auth/student-profile', { signal });
+      if (error) {
+        throw new Error(problemMessage(error, 'Failed to load student profile'));
+      }
+      return data;
+    },
+  });
+}
+
 export function useSignInStudent(): UseMutationResult<
   Session,
   Error,

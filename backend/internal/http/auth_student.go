@@ -72,3 +72,27 @@ func (h *Handlers) AuthStudent(w http.ResponseWriter, r *http.Request) {
 		Role: contracts.SessionRole(auth.RoleStudent),
 	})
 }
+
+// GetStudentSignInProfile handles GET /auth/student-profile: the public
+// projection of the single student profile shown on the student sign-in screen.
+// It is reachable without a session (isPublicPath) so a fresh device can pick
+// the student before signing in, which is why it exposes only display fields
+// plus whether a PIN is required — never the parent's notes or the PIN hash.
+func (h *Handlers) GetStudentSignInProfile(w http.ResponseWriter, r *http.Request) {
+	s, err := h.Store.GetStudent(r.Context())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			notFound(w, "student not found")
+			return
+		}
+		internalError(w, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, contracts.StudentSignInProfile{
+		Id:          s.ID,
+		Name:        s.Name,
+		GradeLevel:  s.GradeLevel,
+		AvatarUrl:   s.AvatarUrl,
+		PinRequired: s.PinHash != nil && *s.PinHash != "",
+	})
+}
