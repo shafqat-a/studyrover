@@ -9,7 +9,8 @@
 #   4. run `playwright test` with Vite on $E2E_PORT (default 5174) proxying to it
 #   5. stop the backend
 #
-# Overrides: E2E_DATABASE_URL, E2E_BACKEND_PORT, E2E_PORT, E2E_GUARDIAN_ENABLED
+# Overrides: E2E_DATABASE_URL, E2E_BACKEND_PORT, E2E_PORT, E2E_GUARDIAN_ENABLED,
+# E2E_CREATE_DB=0 (skip local createdb; CI provides the database)
 # (default true: the Guardian runs with the in-memory fake wall). Extra args are passed
 # to `playwright test` (e.g. `scripts/e2e.sh --headed`, `--ui`, a spec path).
 set -euo pipefail
@@ -23,7 +24,9 @@ PNPM="${PNPM:-pnpm}"
 command -v "$PNPM" >/dev/null || PNPM="corepack pnpm"
 
 echo "==> [1/5] database ${DB_NAME}"
-if ! sudo -n -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
+if [[ "${E2E_CREATE_DB:-1}" != "1" ]]; then
+  echo "    E2E_CREATE_DB=0 — using ${E2E_DATABASE_URL} as-is (CI service database)"
+elif ! sudo -n -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
   sudo -n -u postgres createdb -O studyrover "$DB_NAME"
   echo "    created"
 else
