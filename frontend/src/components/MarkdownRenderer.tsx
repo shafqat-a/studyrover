@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import katex from 'katex';
 
 /**
  * U10 — MarkdownRenderer
@@ -24,6 +25,13 @@ import type { ReactNode } from 'react';
  * - Horizontal rules (`---`, `***`, `___`)
  * - Inline: bold (`**`/`__`), italic (`*`/`_`), inline code (`` ` ``),
  *   links (`[text](url)`), and autolinked bare http(s) URLs.
+ * - Math: inline `$…$` and display `$$…$$` (also as a standalone block),
+ *   typeset with KaTeX. This is the ONE place HTML is injected: KaTeX's
+ *   `renderToString` output, produced from TeX with `trust: false`, so no
+ *   author-supplied markup can pass through it.
+ * - GFM pipe tables (header row + `---` separator row).
+ * - `<details>` / `<summary>` blocks (used by lessons for hidden answers);
+ *   any other HTML is still rendered as literal text.
  *
  * Styling uses the StudyRover design tokens from `tailwind.config.ts`.
  */
@@ -83,8 +91,27 @@ const INLINE = new RegExp(
     '!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+"([^"]*)")?\\)', // 7,8,9: image
     '\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+"([^"]*)")?\\)', // 10,11,12: link
     '(https?:\\/\\/[^\\s<]+[^\\s<.,:;"\')\\]])', // 13: autolink
+    '(\\$\\$)([^$]+?)\\$\\$', // 14,15: display math ($$…$$)
+    '\\$([^$\\s](?:[^$\\n]*?[^$\\s])?)\\$', // 16: inline math ($…$)
   ].join('|'),
 );
+
+/** Typesets TeX with KaTeX; on a syntax error KaTeX renders the source in red. */
+function renderMath(tex: string, displayMode: boolean, ctx: InlineCtx): ReactNode {
+  const html = katex.renderToString(tex.trim(), {
+    displayMode,
+    throwOnError: false,
+    trust: false,
+    output: 'html',
+  });
+  return (
+    <span
+      key={ctx.next()}
+      className={displayMode ? 'block overflow-x-auto py-1' : undefined}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
 
 function parseInline(text: string, ctx: InlineCtx): ReactNode[] {
   const out: ReactNode[] = [];
@@ -159,6 +186,10 @@ function parseInline(text: string, ctx: InlineCtx): ReactNode[] {
       } else {
         out.push(<Fragment key={ctx.next()}>{label}</Fragment>);
       }
+    } else if (m[14] !== undefined) {
+      out.push(renderMath(m[15] ?? '', true, ctx));
+    } else if (m[16] !== undefined) {
+      out.push(renderMath(m[16], false, ctx));
     } else if (m[13] !== undefined) {
       const href = sanitizeUrl(m[13]);
       if (href) {
@@ -225,6 +256,123 @@ const BLOCKQUOTE = /^ {0,3}>\s?(.*)$/;
 let blockKey = 0;
 function key(): string {
   return `b-${blockKey++}`;
+}
+
+const DETAILS_OPEN = /^\s*<details(?:\s[^>]*)?>/i;
+const DETAILS_CLOSE = /<\/details>\s*$/i;
+const SUMMARY = /<summary>([\s\S]*?)<\/summary>/i;
+const TABLE_SEP = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+const DISPLAY_MATH_OPEN = /^\s*\$\$/;
+const DISPLAY_MATH_CLOSE = /\$\$\s*$/;
+
+function isTableStart(lines: string[], i: number): boolean {
+  return (
+    lines[i].includes('|') &&
+    i + 1 < lines.length &&
+    TABLE_SEP.test(lines[i + 1]) &&
+    lines[i + 1].includes('-')
+  );
+}
+
+/** Splits a table row on unescaped pipes, trimming the optional outer pipes. */
+function splitCells(row: string): string[] {
+  let r = row.trim();
+  if (r.startsWith('|')) r = r.slice(1);
+  if (r.endsWith('|') && !r.endsWith('\\|')) r = r.slice(0, -1);
+  return r.split(/(?<!\\)\|/).map((c) => c.replace(/\\\|/g, '|').trim());
+}
+
+type Align = 'left' | 'center' | 'right';
+
+function parseAlign(sep: string): Align[] {
+  return splitCells(sep).map((c) => {
+    const l = c.startsWith(':');
+    const r = c.endsWith(':');
+    if (l && r) return 'center';
+    if (r) return 'right';
+    return 'left';
+  });
+}
+
+function renderTable(lines: string[], start: number): { node: ReactNode; next: number } {
+  const header = splitCells(lines[start]);
+  const align = parseAlign(lines[start + 1]);
+  const rows: string[][] = [];
+  let i = start + 2;
+  while (i < lines.length && lines[i].trim() !== '' && lines[i].includes('|')) {
+    rows.push(splitCells(lines[i]));
+    i++;
+  }
+  const alignClass = (idx: number) =>
+    align[idx] === 'center' ? 'text-center' : align[idx] === 'right' ? 'text-right' : 'text-left';
+  const ctx = makeCtx(key());
+  const node = (
+    <div key={key()} className="my-3 overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr>
+            {header.map((h, idx) => (
+              <th
+                key={idx}
+                scope="col"
+                className={cx(
+                  'border-b-2 border-border px-3 py-2 font-semibold text-foreground',
+                  alignClass(idx),
+                )}
+              >
+                {parseInline(h, ctx)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, r) => (
+            <tr key={r} className="border-b border-border last:border-b-0">
+              {header.map((_, idx) => (
+                <td key={idx} className={cx('px-3 py-2 align-top text-foreground', alignClass(idx))}>
+                  {parseInline(row[idx] ?? '', ctx)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  return { node, next: i };
+}
+
+function renderDetails(lines: string[], start: number): { node: ReactNode; next: number } {
+  let i = start;
+  const collected: string[] = [];
+  while (i < lines.length) {
+    collected.push(lines[i]);
+    if (DETAILS_CLOSE.test(lines[i])) {
+      i++;
+      break;
+    }
+    i++;
+  }
+  let inner = collected.join('\n').replace(DETAILS_OPEN, '').replace(DETAILS_CLOSE, '');
+  let summary = 'Details';
+  const sm = SUMMARY.exec(inner);
+  if (sm) {
+    summary = sm[1].trim();
+    inner = inner.replace(SUMMARY, '');
+  }
+  const ctx = makeCtx(key());
+  const node = (
+    <details
+      key={key()}
+      className="my-3 rounded-md border border-border bg-surface-muted/40 px-4 py-2"
+    >
+      <summary className="cursor-pointer select-none font-medium text-foreground">
+        {parseInline(summary, ctx)}
+      </summary>
+      <div className="mt-2">{renderBlocks(inner)}</div>
+    </details>
+  );
+  return { node, next: i };
 }
 
 function renderBlocks(src: string): ReactNode[] {
@@ -302,6 +450,53 @@ function renderBlocks(src: string): ReactNode[] {
       continue;
     }
 
+    // Standalone display math ($$ … $$ on its own lines or one line).
+    if (DISPLAY_MATH_OPEN.test(line)) {
+      const mathLines: string[] = [];
+      let closed = false;
+      while (i < lines.length) {
+        mathLines.push(lines[i]);
+        const isFirst = mathLines.length === 1;
+        const body = isFirst ? lines[i].replace(DISPLAY_MATH_OPEN, '') : lines[i];
+        i++;
+        if (DISPLAY_MATH_CLOSE.test(body)) {
+          closed = true;
+          break;
+        }
+      }
+      if (closed) {
+        const tex = mathLines
+          .join('\n')
+          .replace(DISPLAY_MATH_OPEN, '')
+          .replace(DISPLAY_MATH_CLOSE, '');
+        const ctx = makeCtx(key());
+        out.push(
+          <div key={key()} className="my-3">
+            {renderMath(tex, true, ctx)}
+          </div>,
+        );
+        continue;
+      }
+      // Unterminated: fall through and treat as a paragraph.
+      i -= mathLines.length;
+    }
+
+    // <details> … </details> (lesson quick-check answers).
+    if (DETAILS_OPEN.test(line)) {
+      const r = renderDetails(lines, i);
+      out.push(r.node);
+      i = r.next;
+      continue;
+    }
+
+    // Pipe table.
+    if (isTableStart(lines, i)) {
+      const r = renderTable(lines, i);
+      out.push(r.node);
+      i = r.next;
+      continue;
+    }
+
     // Lists.
     if (UL_ITEM.test(line) || OL_ITEM.test(line)) {
       const consumed = parseList(lines, i);
@@ -321,7 +516,10 @@ function renderBlocks(src: string): ReactNode[] {
         HR.test(l) ||
         BLOCKQUOTE.test(l) ||
         UL_ITEM.test(l) ||
-        OL_ITEM.test(l)
+        OL_ITEM.test(l) ||
+        DETAILS_OPEN.test(l) ||
+        (para.length > 0 && DISPLAY_MATH_OPEN.test(l)) ||
+        (para.length > 0 && isTableStart(lines, i))
       ) {
         break;
       }

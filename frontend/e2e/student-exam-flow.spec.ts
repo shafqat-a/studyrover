@@ -82,4 +82,17 @@ test('student can sign in, take an exam, and pass', async ({ page }) => {
   await expect(page).toHaveURL(/\/studyrover\/student\/?$/);
   await expect(page.getByText('Online', { exact: true })).toBeVisible();
   await expect(page.getByText('left', { exact: true })).toBeVisible();
+
+  // Lessons: the seeded published lesson renders its body (math + table) and
+  // its enrichment article for the student.
+  await page
+    .getByRole('list', { name: 'Subjects' })
+    .getByRole('button', { name: /Demo Mathematics/ })
+    .click();
+  await page.getByRole('button', { name: 'Lessons' }).click();
+  await expect(page).toHaveURL(/\/student\/subjects\/[^/]+\/lessons/);
+  await expect(page.getByText('Add small numbers quickly')).toBeVisible();
+  await expect(page.locator('.katex').first()).toBeVisible();
+  await expect(page.getByRole('table')).toContainText('the result of adding');
+  await expect(page.getByRole('link', { name: /Read on Wikipedia/ })).toBeVisible();
 });

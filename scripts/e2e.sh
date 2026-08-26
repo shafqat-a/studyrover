@@ -49,6 +49,18 @@ DELETE FROM guardian_daily_usage;
 INSERT INTO guardian_score_inbox (score_event_id, minutes, note)
 SELECT id, 0, 'e2e reset' FROM score_event
 WHERE id NOT IN (SELECT score_event_id FROM guardian_score_inbox);
+-- A published lesson (with one article) on the demo topic for the student lessons page.
+INSERT INTO lesson (id, subject_id, topic_id, title, markdown, status)
+VALUES ('e2e00000-0000-0000-0000-00000000le55', '11111111-1111-1111-1111-111111111111',
+        '22222222-2222-2222-2222-222222222222', 'Arithmetic Basics',
+        E'## Learning objectives\n- Add small numbers quickly\n\nHalf of a whole is $\\frac{1}{2}$.\n\n| Term | Meaning |\n|---|---|\n| sum | the result of adding |',
+        'published')
+ON CONFLICT (topic_id) DO UPDATE SET status = 'published', markdown = EXCLUDED.markdown;
+INSERT INTO lesson_resource (lesson_id, kind, title, url, description, external_id, position, source)
+VALUES ('e2e00000-0000-0000-0000-00000000le55', 'wikipedia', 'Addition',
+        'https://en.wikipedia.org/wiki/Addition', 'Addition is one of the four basic operations of arithmetic.',
+        'Addition', 0, 'enrich')
+ON CONFLICT (lesson_id, url) DO NOTHING;
 SQL
 
 echo "==> [3/5] backend on :${E2E_BACKEND_PORT}"
