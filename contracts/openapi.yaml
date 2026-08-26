@@ -49,6 +49,8 @@ tags:
 - name: tutorInstructions
 - name: guidance
 - name: dashboard
+- name: guardian
+  description: Phase 3 Guardian — reward engine + network wall (optional add-on; parent-managed).
 paths:
   /syllabuses:
     get:
@@ -921,6 +923,252 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/status:
+    get:
+      operationId: getGuardianStatus
+      tags:
+      - guardian
+      summary: Guardian status (enabled, wall health, active grants, usage)
+      responses:
+        '200':
+          description: The current Guardian status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianStatus'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/policy:
+    get:
+      operationId: getGuardianPolicy
+      tags:
+      - guardian
+      summary: Get the reward policy
+      responses:
+        '200':
+          description: The effective reward policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianPolicy'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateGuardianPolicy
+      tags:
+      - guardian
+      summary: Update the reward policy (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGuardianPolicy'
+      responses:
+        '200':
+          description: The updated policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianPolicy'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/devices:
+    get:
+      operationId: listGuardianDevices
+      tags:
+      - guardian
+      summary: List registered (gated) devices
+      responses:
+        '200':
+          description: All registered devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuardianDevice'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createGuardianDevice
+      tags:
+      - guardian
+      summary: Register a device (by MAC) for the student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuardianDevice'
+      responses:
+        '201':
+          description: The registered device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianDevice'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/devices/scan:
+    post:
+      operationId: scanGuardianDevices
+      tags:
+      - guardian
+      summary: Discover devices on the network via the wall
+      responses:
+        '200':
+          description: Devices currently visible to the wall.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiscoveredDevice'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/devices/{id}:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getGuardianDevice
+      tags:
+      - guardian
+      summary: Get a registered device
+      responses:
+        '200':
+          description: The device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianDevice'
+        default:
+          $ref: '#/components/responses/Problem'
+    put:
+      operationId: updateGuardianDevice
+      tags:
+      - guardian
+      summary: Update a registered device (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGuardianDevice'
+      responses:
+        '200':
+          description: The updated device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianDevice'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteGuardianDevice
+      tags:
+      - guardian
+      summary: Unregister a device (revokes any active grant)
+      responses:
+        '204':
+          description: Deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/sessions:
+    get:
+      operationId: listGuardianSessions
+      tags:
+      - guardian
+      summary: Active internet grants
+      responses:
+        '200':
+          description: Grants that are currently open on the wall.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuardianGrant'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/sessions/{id}/revoke:
+    parameters:
+    - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: revokeGuardianSession
+      tags:
+      - guardian
+      summary: Revoke an active grant now
+      responses:
+        '200':
+          description: The revoked grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianGrant'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/grant:
+    post:
+      operationId: createGuardianGrant
+      tags:
+      - guardian
+      summary: Parent override — open a device for N minutes now
+      description: Logged to the override log. Does not count against the student's daily cap.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualGrant'
+      responses:
+        '201':
+          description: The opened grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardianGrant'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/override-log:
+    get:
+      operationId: listGuardianOverrideLog
+      tags:
+      - guardian
+      summary: Parent override history (newest first)
+      responses:
+        '200':
+          description: Override log entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuardianOverrideLog'
+        default:
+          $ref: '#/components/responses/Problem'
+  /guardian/earned-time:
+    get:
+      operationId: getGuardianEarnedTime
+      tags:
+      - guardian
+      summary: A student's earned / remaining internet time (student-readable)
+      parameters:
+      - name: studentId
+        in: query
+        required: true
+        description: The student to report on.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Earned time summary. `enabled` is false when the Guardian is off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EarnedTime'
         default:
           $ref: '#/components/responses/Problem'
   /progress:
@@ -2354,6 +2602,355 @@ components:
           type: string
           format: date-time
           description: RFC 3339 timestamp of when the student was created.
+    WallKind:
+      type: string
+      description: Which Network Wall implementation is active. `fake` is an in-memory wall for development.
+      enum:
+      - fake
+      - routeros
+    GrantSource:
+      type: string
+      description: What opened the grant — a passed exam or a parent override.
+      enum:
+      - exam
+      - manual
+    GuardianDevice:
+      type: object
+      description: A student device the Guardian gates, keyed by MAC address.
+      additionalProperties: false
+      required:
+      - id
+      - studentId
+      - name
+      - mac
+      - gated
+      - createdAt
+      properties:
+        id:
+          type: string
+        studentId:
+          type: string
+          description: The student who owns the device.
+        name:
+          type: string
+          description: Friendly label (e.g. "Maya's laptop").
+        mac:
+          type: string
+          description: Normalised MAC address (lower-case, colon-separated).
+        ip:
+          type: string
+          description: Last known IP (helper; DHCP may change it).
+        hostname:
+          type: string
+          description: Last known hostname (helper; optional).
+        gated:
+          type: boolean
+          description: When false the device is exempt from the wall (always online).
+        createdAt:
+          type: string
+          format: date-time
+    CreateGuardianDevice:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - mac
+      properties:
+        name:
+          type: string
+          minLength: 1
+        mac:
+          type: string
+          description: Any common MAC format; normalised server-side.
+        studentId:
+          type: string
+          description: Defaults to the single student profile when omitted.
+        ip:
+          type: string
+        hostname:
+          type: string
+        gated:
+          type: boolean
+          default: true
+    UpdateGuardianDevice:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        mac:
+          type: string
+        ip:
+          type: string
+        hostname:
+          type: string
+        gated:
+          type: boolean
+    DiscoveredDevice:
+      type: object
+      description: A device the wall can currently see on the network.
+      additionalProperties: false
+      required:
+      - mac
+      - registered
+      properties:
+        mac:
+          type: string
+        ip:
+          type: string
+        hostname:
+          type: string
+        registered:
+          type: boolean
+          description: True when a GuardianDevice with this MAC already exists.
+    GuardianPolicy:
+      type: object
+      description: The effective reward policy. Rate/cap/pass bar/cooldown mirror the platform Settings; the rest is Guardian-only.
+      additionalProperties: false
+      required:
+      - enabled
+      - rewardStyle
+      - diminishingReturns
+      - rateMinPerQ
+      - dailyCapHours
+      - passBar
+      - cooldownMin
+      - difficultyRamp
+      - wall
+      - updatedAt
+      properties:
+        enabled:
+          type: boolean
+          description: Parent switch. When false, passed exams are recorded but open no internet time.
+        rewardStyle:
+          $ref: '#/components/schemas/RewardStyle'
+        diminishingReturns:
+          type: boolean
+          description: The Nth pass of the day pays less (1st–2nd full, 3rd 75%, 4th 50%, 5th+ 25%).
+        rateMinPerQ:
+          type: integer
+          description: Minutes of internet per question on a pass (Settings.rewardRateMinPerQ).
+        dailyCapHours:
+          type: integer
+          description: Maximum earnable hours per day (Settings.dailyCapHours).
+        passBar:
+          type: integer
+          description: Settings.defaultPassBar (read-only here).
+        cooldownMin:
+          type: integer
+          description: Settings.defaultCooldownMin (read-only here).
+        difficultyRamp:
+          type: boolean
+          description: Settings.difficultyRamp (read-only here).
+        wall:
+          $ref: '#/components/schemas/WallKind'
+        updatedAt:
+          type: string
+          format: date-time
+    UpdateGuardianPolicy:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        rewardStyle:
+          $ref: '#/components/schemas/RewardStyle'
+        diminishingReturns:
+          type: boolean
+        rateMinPerQ:
+          type: integer
+          minimum: 1
+          maximum: 60
+        dailyCapHours:
+          type: integer
+          minimum: 0
+          maximum: 24
+    GuardianGrant:
+      type: object
+      description: An internet-time grant for a device (open, expired, or revoked).
+      additionalProperties: false
+      required:
+      - id
+      - deviceId
+      - deviceName
+      - studentId
+      - mac
+      - minutes
+      - source
+      - startedAt
+      - expiresAt
+      - remainingSeconds
+      properties:
+        id:
+          type: string
+        deviceId:
+          type: string
+        deviceName:
+          type: string
+        studentId:
+          type: string
+        mac:
+          type: string
+        minutes:
+          type: integer
+        source:
+          $ref: '#/components/schemas/GrantSource'
+        attemptId:
+          type: string
+          description: The exam attempt that earned it (source=exam).
+        reason:
+          type: string
+          description: Parent's note (source=manual).
+        startedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+        remainingSeconds:
+          type: integer
+          description: Seconds left, 0 when expired or revoked.
+    ManualGrant:
+      type: object
+      additionalProperties: false
+      required:
+      - deviceId
+      - minutes
+      properties:
+        deviceId:
+          type: string
+        minutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        reason:
+          type: string
+    GuardianDailyUsage:
+      type: object
+      additionalProperties: false
+      required:
+      - studentId
+      - day
+      - minutes
+      - passes
+      - capMinutes
+      properties:
+        studentId:
+          type: string
+        day:
+          type: string
+          format: date
+        minutes:
+          type: integer
+          description: Minutes earned today from exams (overrides excluded).
+        passes:
+          type: integer
+          description: Passed exams today (drives diminishing returns).
+        capMinutes:
+          type: integer
+    GuardianOverrideLog:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - deviceId
+      - deviceName
+      - minutes
+      - who
+      - at
+      properties:
+        id:
+          type: string
+        deviceId:
+          type: string
+        deviceName:
+          type: string
+        minutes:
+          type: integer
+        reason:
+          type: string
+        who:
+          type: string
+          description: The parent id that authorised it.
+        at:
+          type: string
+          format: date-time
+    GuardianStatus:
+      type: object
+      additionalProperties: false
+      required:
+      - enabled
+      - paused
+      - wall
+      - wallHealthy
+      - active
+      - recent
+      - dailyUsage
+      - devices
+      properties:
+        enabled:
+          type: boolean
+          description: The Guardian subsystem is wired into this server (GUARDIAN_ENABLED).
+        paused:
+          type: boolean
+          description: Parent switch is off (policy.enabled=false).
+        wall:
+          $ref: '#/components/schemas/WallKind'
+        wallHealthy:
+          type: boolean
+        wallError:
+          type: string
+        active:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardianGrant'
+        recent:
+          type: array
+          description: Most recent grants (newest first, max 20).
+          items:
+            $ref: '#/components/schemas/GuardianGrant'
+        dailyUsage:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardianDailyUsage'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardianDevice'
+    EarnedTime:
+      type: object
+      description: Student-facing summary of internet time.
+      additionalProperties: false
+      required:
+      - enabled
+      - remainingSeconds
+      - minutesToday
+      - capMinutes
+      properties:
+        enabled:
+          type: boolean
+          description: False when the Guardian is off/paused — the UI should stay dark.
+        remainingSeconds:
+          type: integer
+          description: Seconds left on the longest active grant, 0 when offline.
+        expiresAt:
+          type: string
+          format: date-time
+        deviceName:
+          type: string
+        minutesToday:
+          type: integer
+        capMinutes:
+          type: integer
+        lastGrantMinutes:
+          type: integer
+          description: Minutes opened by the most recent exam grant (for "you earned N minutes").
+        lastGrantAttemptId:
+          type: string
     StudentSignInProfile:
       type: object
       description: Public projection of the student profile for the sign-in screen (no notes,

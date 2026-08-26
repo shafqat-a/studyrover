@@ -44,6 +44,12 @@ type Handlers struct {
 	Knowledge knowledge.Source
 	Jobs      *jobs.Queue
 	Storage   storage.Store
+
+	// ScoreEventSink, when set, is called after a ScoreEvent is appended to the
+	// outbox so the Guardian's subscriber can poll immediately instead of on
+	// its next tick. Nil when the Guardian is off (the platform never imports
+	// the guardian packages — this is the only hook, and it's a plain func).
+	ScoreEventSink func()
 }
 
 // spaDir is the built frontend served for non-API routes (client-side routing).

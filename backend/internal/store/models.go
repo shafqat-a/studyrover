@@ -71,6 +71,65 @@ type FileBlob struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+type GuardianDailyUsage struct {
+	StudentID string      `json:"studentId"`
+	Day       pgtype.Date `json:"day"`
+	Minutes   int32       `json:"minutes"`
+	Passes    int32       `json:"passes"`
+}
+
+type GuardianDevice struct {
+	ID        string    `json:"id"`
+	StudentID string    `json:"studentId"`
+	Name      string    `json:"name"`
+	Mac       string    `json:"mac"`
+	Ip        *string   `json:"ip"`
+	Hostname  *string   `json:"hostname"`
+	Gated     bool      `json:"gated"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type GuardianGrant struct {
+	ID        string             `json:"id"`
+	DeviceID  string             `json:"deviceId"`
+	StudentID string             `json:"studentId"`
+	Mac       string             `json:"mac"`
+	Minutes   int32              `json:"minutes"`
+	Source    string             `json:"source"`
+	AttemptID *string            `json:"attemptId"`
+	Reason    *string            `json:"reason"`
+	WallRef   *string            `json:"wallRef"`
+	StartedAt time.Time          `json:"startedAt"`
+	ExpiresAt time.Time          `json:"expiresAt"`
+	RevokedAt pgtype.Timestamptz `json:"revokedAt"`
+}
+
+type GuardianOverrideLog struct {
+	ID         string    `json:"id"`
+	DeviceID   string    `json:"deviceId"`
+	DeviceName string    `json:"deviceName"`
+	Minutes    int32     `json:"minutes"`
+	Reason     *string   `json:"reason"`
+	Who        string    `json:"who"`
+	At         time.Time `json:"at"`
+}
+
+type GuardianPolicy struct {
+	ID                 string    `json:"id"`
+	Enabled            bool      `json:"enabled"`
+	RewardStyle        string    `json:"rewardStyle"`
+	DiminishingReturns bool      `json:"diminishingReturns"`
+	UpdatedAt          time.Time `json:"updatedAt"`
+}
+
+type GuardianScoreInbox struct {
+	ScoreEventID int64     `json:"scoreEventId"`
+	ProcessedAt  time.Time `json:"processedAt"`
+	Minutes      int32     `json:"minutes"`
+	GrantID      *string   `json:"grantId"`
+	Note         *string   `json:"note"`
+}
+
 type Guidance struct {
 	ID        string    `json:"id"`
 	Scope     string    `json:"scope"`
@@ -149,6 +208,20 @@ type QuestionDraft struct {
 	Difficulty         *string   `json:"difficulty"`
 	Status             string    `json:"status"`
 	CreatedAt          time.Time `json:"createdAt"`
+}
+
+type ScoreEvent struct {
+	ID               int64     `json:"id"`
+	AttemptID        string    `json:"attemptId"`
+	StudentID        string    `json:"studentId"`
+	SubjectID        string    `json:"subjectId"`
+	ExamDefinitionID string    `json:"examDefinitionId"`
+	ScopeTopicIds    []string  `json:"scopeTopicIds"`
+	Size             int32     `json:"size"`
+	ScorePct         int32     `json:"scorePct"`
+	Passed           bool      `json:"passed"`
+	PerTopic         []byte    `json:"perTopic"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 type Setting struct {

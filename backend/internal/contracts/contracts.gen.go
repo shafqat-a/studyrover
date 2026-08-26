@@ -130,6 +130,24 @@ func (e ExamType) Valid() bool {
 	}
 }
 
+// Defines values for GrantSource.
+const (
+	Exam   GrantSource = "exam"
+	Manual GrantSource = "manual"
+)
+
+// Valid indicates whether the value is a known member of the GrantSource enum.
+func (e GrantSource) Valid() bool {
+	switch e {
+	case Exam:
+		return true
+	case Manual:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GuidanceScope.
 const (
 	GuidanceScopeGlobal  GuidanceScope = "global"
@@ -352,6 +370,24 @@ func (e TutorInstructionsDifficulty) Valid() bool {
 	}
 }
 
+// Defines values for WallKind.
+const (
+	Fake     WallKind = "fake"
+	Routeros WallKind = "routeros"
+)
+
+// Valid indicates whether the value is a known member of the WallKind enum.
+func (e WallKind) Valid() bool {
+	switch e {
+	case Fake:
+		return true
+	case Routeros:
+		return true
+	default:
+		return false
+	}
+}
+
 // Answer A single answer within an attempt. selectedOptionId is absent when the student left the question unanswered; correct is populated only after server-side grading.
 type Answer struct {
 	// Correct Whether the selected option was correct (set on grading).
@@ -482,6 +518,20 @@ type CreateExamDefinition struct {
 
 	// Type Kind of exam. `gate` exams are the everyday internet-time gate; `formal` exams are heavier graded assessments.
 	Type *ExamType `json:"type,omitempty"`
+}
+
+// CreateGuardianDevice defines model for CreateGuardianDevice.
+type CreateGuardianDevice struct {
+	Gated    *bool   `json:"gated,omitempty"`
+	Hostname *string `json:"hostname,omitempty"`
+	Ip       *string `json:"ip,omitempty"`
+
+	// Mac Any common MAC format; normalised server-side.
+	Mac  string `json:"mac"`
+	Name string `json:"name"`
+
+	// StudentId Defaults to the single student profile when omitted.
+	StudentId *string `json:"studentId,omitempty"`
 }
 
 // CreateGuidance Request body to create or replace parent guidance; the server assigns id/createdAt. subjectId is required when scope is "subject" and must be omitted when scope is "global".
@@ -640,6 +690,34 @@ type DeliveredQuestion struct {
 // Difficulty Relative difficulty of a question.
 type Difficulty string
 
+// DiscoveredDevice A device the wall can currently see on the network.
+type DiscoveredDevice struct {
+	Hostname *string `json:"hostname,omitempty"`
+	Ip       *string `json:"ip,omitempty"`
+	Mac      string  `json:"mac"`
+
+	// Registered True when a GuardianDevice with this MAC already exists.
+	Registered bool `json:"registered"`
+}
+
+// EarnedTime Student-facing summary of internet time.
+type EarnedTime struct {
+	CapMinutes int     `json:"capMinutes"`
+	DeviceName *string `json:"deviceName,omitempty"`
+
+	// Enabled False when the Guardian is off/paused — the UI should stay dark.
+	Enabled            bool       `json:"enabled"`
+	ExpiresAt          *time.Time `json:"expiresAt,omitempty"`
+	LastGrantAttemptId *string    `json:"lastGrantAttemptId,omitempty"`
+
+	// LastGrantMinutes Minutes opened by the most recent exam grant (for "you earned N minutes").
+	LastGrantMinutes *int `json:"lastGrantMinutes,omitempty"`
+	MinutesToday     int  `json:"minutesToday"`
+
+	// RemainingSeconds Seconds left on the longest active grant, 0 when offline.
+	RemainingSeconds int `json:"remainingSeconds"`
+}
+
 // ExamAttempt A student's attempt at an exam definition. Created in_progress with the assembled questionIds; graded fields (scorePct, passed, perTopic, cooldownUntil, submittedAt) are populated after submission.
 type ExamAttempt struct {
 	// Answers The student's answers; empty until questions are answered.
@@ -760,6 +838,135 @@ type GenerateExamRequest struct {
 	} `json:"topics"`
 }
 
+// GrantSource What opened the grant — a passed exam or a parent override.
+type GrantSource string
+
+// GuardianDailyUsage defines model for GuardianDailyUsage.
+type GuardianDailyUsage struct {
+	CapMinutes int                `json:"capMinutes"`
+	Day        openapi_types.Date `json:"day"`
+
+	// Minutes Minutes earned today from exams (overrides excluded).
+	Minutes int `json:"minutes"`
+
+	// Passes Passed exams today (drives diminishing returns).
+	Passes    int    `json:"passes"`
+	StudentId string `json:"studentId"`
+}
+
+// GuardianDevice A student device the Guardian gates, keyed by MAC address.
+type GuardianDevice struct {
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Gated When false the device is exempt from the wall (always online).
+	Gated bool `json:"gated"`
+
+	// Hostname Last known hostname (helper; optional).
+	Hostname *string `json:"hostname,omitempty"`
+	Id       string  `json:"id"`
+
+	// Ip Last known IP (helper; DHCP may change it).
+	Ip *string `json:"ip,omitempty"`
+
+	// Mac Normalised MAC address (lower-case, colon-separated).
+	Mac string `json:"mac"`
+
+	// Name Friendly label (e.g. "Maya's laptop").
+	Name string `json:"name"`
+
+	// StudentId The student who owns the device.
+	StudentId string `json:"studentId"`
+}
+
+// GuardianGrant An internet-time grant for a device (open, expired, or revoked).
+type GuardianGrant struct {
+	// AttemptId The exam attempt that earned it (source=exam).
+	AttemptId  *string   `json:"attemptId,omitempty"`
+	DeviceId   string    `json:"deviceId"`
+	DeviceName string    `json:"deviceName"`
+	ExpiresAt  time.Time `json:"expiresAt"`
+	Id         string    `json:"id"`
+	Mac        string    `json:"mac"`
+	Minutes    int       `json:"minutes"`
+
+	// Reason Parent's note (source=manual).
+	Reason *string `json:"reason,omitempty"`
+
+	// RemainingSeconds Seconds left, 0 when expired or revoked.
+	RemainingSeconds int        `json:"remainingSeconds"`
+	RevokedAt        *time.Time `json:"revokedAt,omitempty"`
+
+	// Source What opened the grant — a passed exam or a parent override.
+	Source    GrantSource `json:"source"`
+	StartedAt time.Time   `json:"startedAt"`
+	StudentId string      `json:"studentId"`
+}
+
+// GuardianOverrideLog defines model for GuardianOverrideLog.
+type GuardianOverrideLog struct {
+	At         time.Time `json:"at"`
+	DeviceId   string    `json:"deviceId"`
+	DeviceName string    `json:"deviceName"`
+	Id         string    `json:"id"`
+	Minutes    int       `json:"minutes"`
+	Reason     *string   `json:"reason,omitempty"`
+
+	// Who The parent id that authorised it.
+	Who string `json:"who"`
+}
+
+// GuardianPolicy The effective reward policy. Rate/cap/pass bar/cooldown mirror the platform Settings; the rest is Guardian-only.
+type GuardianPolicy struct {
+	// CooldownMin Settings.defaultCooldownMin (read-only here).
+	CooldownMin int `json:"cooldownMin"`
+
+	// DailyCapHours Maximum earnable hours per day (Settings.dailyCapHours).
+	DailyCapHours int `json:"dailyCapHours"`
+
+	// DifficultyRamp Settings.difficultyRamp (read-only here).
+	DifficultyRamp bool `json:"difficultyRamp"`
+
+	// DiminishingReturns The Nth pass of the day pays less (1st–2nd full, 3rd 75%, 4th 50%, 5th+ 25%).
+	DiminishingReturns bool `json:"diminishingReturns"`
+
+	// Enabled Parent switch. When false, passed exams are recorded but open no internet time.
+	Enabled bool `json:"enabled"`
+
+	// PassBar Settings.defaultPassBar (read-only here).
+	PassBar int `json:"passBar"`
+
+	// RateMinPerQ Minutes of internet per question on a pass (Settings.rewardRateMinPerQ).
+	RateMinPerQ int `json:"rateMinPerQ"`
+
+	// RewardStyle How earned internet time relates to the score. `flat` grants the full time for the exam size on a pass; `scaled` multiplies by the score%.
+	RewardStyle RewardStyle `json:"rewardStyle"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
+
+	// Wall Which Network Wall implementation is active. `fake` is an in-memory wall for development.
+	Wall WallKind `json:"wall"`
+}
+
+// GuardianStatus defines model for GuardianStatus.
+type GuardianStatus struct {
+	Active     []GuardianGrant      `json:"active"`
+	DailyUsage []GuardianDailyUsage `json:"dailyUsage"`
+	Devices    []GuardianDevice     `json:"devices"`
+
+	// Enabled The Guardian subsystem is wired into this server (GUARDIAN_ENABLED).
+	Enabled bool `json:"enabled"`
+
+	// Paused Parent switch is off (policy.enabled=false).
+	Paused bool `json:"paused"`
+
+	// Recent Most recent grants (newest first, max 20).
+	Recent []GuardianGrant `json:"recent"`
+
+	// Wall Which Network Wall implementation is active. `fake` is an in-memory wall for development.
+	Wall        WallKind `json:"wall"`
+	WallError   *string  `json:"wallError,omitempty"`
+	WallHealthy bool     `json:"wallHealthy"`
+}
+
 // Guidance Parent-authored guidance that steers the AI tutor's behaviour (spec §2.10). When scope is "global" it applies to every subject; when scope is "subject" it applies only to the subject named by subjectId.
 type Guidance struct {
 	// CreatedAt RFC 3339 creation timestamp.
@@ -828,6 +1035,13 @@ type JobType string
 
 // KnowledgeBackend The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative. Ollama (DeepSeek) and z.ai (GLM) author questions/guides from curriculum knowledge without ingested sources.
 type KnowledgeBackend string
+
+// ManualGrant defines model for ManualGrant.
+type ManualGrant struct {
+	DeviceId string  `json:"deviceId"`
+	Minutes  int     `json:"minutes"`
+	Reason   *string `json:"reason,omitempty"`
+}
 
 // MasteryTimelinePoint A single dated mastery sample for a topic, used to plot how a topic's mastery has changed over time.
 type MasteryTimelinePoint struct {
@@ -1444,6 +1658,29 @@ type TutorInstructions struct {
 // TutorInstructionsDifficulty Optional difficulty level the tutor should pitch explanations and follow-up questions at.
 type TutorInstructionsDifficulty string
 
+// UpdateGuardianDevice defines model for UpdateGuardianDevice.
+type UpdateGuardianDevice struct {
+	Gated    *bool   `json:"gated,omitempty"`
+	Hostname *string `json:"hostname,omitempty"`
+	Ip       *string `json:"ip,omitempty"`
+	Mac      *string `json:"mac,omitempty"`
+	Name     *string `json:"name,omitempty"`
+}
+
+// UpdateGuardianPolicy defines model for UpdateGuardianPolicy.
+type UpdateGuardianPolicy struct {
+	DailyCapHours      *int  `json:"dailyCapHours,omitempty"`
+	DiminishingReturns *bool `json:"diminishingReturns,omitempty"`
+	Enabled            *bool `json:"enabled,omitempty"`
+	RateMinPerQ        *int  `json:"rateMinPerQ,omitempty"`
+
+	// RewardStyle How earned internet time relates to the score. `flat` grants the full time for the exam size on a pass; `scaled` multiplies by the score%.
+	RewardStyle *RewardStyle `json:"rewardStyle,omitempty"`
+}
+
+// WallKind Which Network Wall implementation is active. `fake` is an in-memory wall for development.
+type WallKind string
+
 // WebAuthnCeremony Free-form WebAuthn ceremony payload (registration/authentication options or the authenticator's response). Opaque — the structure is owned by the WebAuthn libraries, not this contract.
 type WebAuthnCeremony map[string]interface{}
 
@@ -1487,6 +1724,12 @@ type ListExamDefinitionsParams struct {
 
 	// PageSize Maximum number of items per page.
 	PageSize *PageSizeParam `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// GetGuardianEarnedTimeParams defines parameters for GetGuardianEarnedTime.
+type GetGuardianEarnedTimeParams struct {
+	// StudentId The student to report on.
+	StudentId string `form:"studentId" json:"studentId"`
 }
 
 // GetGuidanceParams defines parameters for GetGuidance.
@@ -1609,6 +1852,18 @@ type GenerateExamJSONRequestBody = GenerateExamRequest
 // UpdateExamDefinitionJSONRequestBody defines body for UpdateExamDefinition for application/json ContentType.
 type UpdateExamDefinitionJSONRequestBody = ExamDefinition
 
+// CreateGuardianDeviceJSONRequestBody defines body for CreateGuardianDevice for application/json ContentType.
+type CreateGuardianDeviceJSONRequestBody = CreateGuardianDevice
+
+// UpdateGuardianDeviceJSONRequestBody defines body for UpdateGuardianDevice for application/json ContentType.
+type UpdateGuardianDeviceJSONRequestBody = UpdateGuardianDevice
+
+// CreateGuardianGrantJSONRequestBody defines body for CreateGuardianGrant for application/json ContentType.
+type CreateGuardianGrantJSONRequestBody = ManualGrant
+
+// UpdateGuardianPolicyJSONRequestBody defines body for UpdateGuardianPolicy for application/json ContentType.
+type UpdateGuardianPolicyJSONRequestBody = UpdateGuardianPolicy
+
 // UpdateGuidanceJSONRequestBody defines body for UpdateGuidance for application/json ContentType.
 type UpdateGuidanceJSONRequestBody = CreateGuidance
 
@@ -1725,6 +1980,48 @@ type ServerInterface interface {
 	// Preview an exam as the parent (with answers)
 	// (GET /exam-definitions/{id}/preview)
 	PreviewExam(w http.ResponseWriter, r *http.Request, id IdPath)
+	// List registered (gated) devices
+	// (GET /guardian/devices)
+	ListGuardianDevices(w http.ResponseWriter, r *http.Request)
+	// Register a device (by MAC) for the student
+	// (POST /guardian/devices)
+	CreateGuardianDevice(w http.ResponseWriter, r *http.Request)
+	// Discover devices on the network via the wall
+	// (POST /guardian/devices/scan)
+	ScanGuardianDevices(w http.ResponseWriter, r *http.Request)
+	// Unregister a device (revokes any active grant)
+	// (DELETE /guardian/devices/{id})
+	DeleteGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath)
+	// Get a registered device
+	// (GET /guardian/devices/{id})
+	GetGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath)
+	// Update a registered device (partial)
+	// (PUT /guardian/devices/{id})
+	UpdateGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath)
+	// A student's earned / remaining internet time (student-readable)
+	// (GET /guardian/earned-time)
+	GetGuardianEarnedTime(w http.ResponseWriter, r *http.Request, params GetGuardianEarnedTimeParams)
+	// Parent override — open a device for N minutes now
+	// (POST /guardian/grant)
+	CreateGuardianGrant(w http.ResponseWriter, r *http.Request)
+	// Parent override history (newest first)
+	// (GET /guardian/override-log)
+	ListGuardianOverrideLog(w http.ResponseWriter, r *http.Request)
+	// Get the reward policy
+	// (GET /guardian/policy)
+	GetGuardianPolicy(w http.ResponseWriter, r *http.Request)
+	// Update the reward policy (partial)
+	// (PUT /guardian/policy)
+	UpdateGuardianPolicy(w http.ResponseWriter, r *http.Request)
+	// Active internet grants
+	// (GET /guardian/sessions)
+	ListGuardianSessions(w http.ResponseWriter, r *http.Request)
+	// Revoke an active grant now
+	// (POST /guardian/sessions/{id}/revoke)
+	RevokeGuardianSession(w http.ResponseWriter, r *http.Request, id IdPath)
+	// Guardian status (enabled, wall health, active grants, usage)
+	// (GET /guardian/status)
+	GetGuardianStatus(w http.ResponseWriter, r *http.Request)
 	// Get parent guidance to the tutor
 	// (GET /guidance)
 	GetGuidance(w http.ResponseWriter, r *http.Request, params GetGuidanceParams)
@@ -1983,6 +2280,90 @@ func (_ Unimplemented) UpdateExamDefinition(w http.ResponseWriter, r *http.Reque
 // Preview an exam as the parent (with answers)
 // (GET /exam-definitions/{id}/preview)
 func (_ Unimplemented) PreviewExam(w http.ResponseWriter, r *http.Request, id IdPath) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List registered (gated) devices
+// (GET /guardian/devices)
+func (_ Unimplemented) ListGuardianDevices(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Register a device (by MAC) for the student
+// (POST /guardian/devices)
+func (_ Unimplemented) CreateGuardianDevice(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Discover devices on the network via the wall
+// (POST /guardian/devices/scan)
+func (_ Unimplemented) ScanGuardianDevices(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unregister a device (revokes any active grant)
+// (DELETE /guardian/devices/{id})
+func (_ Unimplemented) DeleteGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a registered device
+// (GET /guardian/devices/{id})
+func (_ Unimplemented) GetGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a registered device (partial)
+// (PUT /guardian/devices/{id})
+func (_ Unimplemented) UpdateGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A student's earned / remaining internet time (student-readable)
+// (GET /guardian/earned-time)
+func (_ Unimplemented) GetGuardianEarnedTime(w http.ResponseWriter, r *http.Request, params GetGuardianEarnedTimeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Parent override — open a device for N minutes now
+// (POST /guardian/grant)
+func (_ Unimplemented) CreateGuardianGrant(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Parent override history (newest first)
+// (GET /guardian/override-log)
+func (_ Unimplemented) ListGuardianOverrideLog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the reward policy
+// (GET /guardian/policy)
+func (_ Unimplemented) GetGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update the reward policy (partial)
+// (PUT /guardian/policy)
+func (_ Unimplemented) UpdateGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Active internet grants
+// (GET /guardian/sessions)
+func (_ Unimplemented) ListGuardianSessions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke an active grant now
+// (POST /guardian/sessions/{id}/revoke)
+func (_ Unimplemented) RevokeGuardianSession(w http.ResponseWriter, r *http.Request, id IdPath) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Guardian status (enabled, wall health, active grants, usage)
+// (GET /guardian/status)
+func (_ Unimplemented) GetGuardianStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2805,6 +3186,353 @@ func (siw *ServerInterfaceWrapper) PreviewExam(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewExam(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListGuardianDevices operation middleware
+func (siw *ServerInterfaceWrapper) ListGuardianDevices(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGuardianDevices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGuardianDevice operation middleware
+func (siw *ServerInterfaceWrapper) CreateGuardianDevice(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGuardianDevice(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ScanGuardianDevices operation middleware
+func (siw *ServerInterfaceWrapper) ScanGuardianDevices(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ScanGuardianDevices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGuardianDevice operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGuardianDevice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IdPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGuardianDevice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGuardianDevice operation middleware
+func (siw *ServerInterfaceWrapper) GetGuardianDevice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IdPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGuardianDevice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateGuardianDevice operation middleware
+func (siw *ServerInterfaceWrapper) UpdateGuardianDevice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IdPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateGuardianDevice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGuardianEarnedTime operation middleware
+func (siw *ServerInterfaceWrapper) GetGuardianEarnedTime(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetGuardianEarnedTimeParams
+
+	// ------------- Required query parameter "studentId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "studentId", r.URL.Query(), &params.StudentId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "studentId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "studentId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGuardianEarnedTime(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGuardianGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreateGuardianGrant(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGuardianGrant(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListGuardianOverrideLog operation middleware
+func (siw *ServerInterfaceWrapper) ListGuardianOverrideLog(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGuardianOverrideLog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGuardianPolicy operation middleware
+func (siw *ServerInterfaceWrapper) GetGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGuardianPolicy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateGuardianPolicy operation middleware
+func (siw *ServerInterfaceWrapper) UpdateGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateGuardianPolicy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListGuardianSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListGuardianSessions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGuardianSessions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeGuardianSession operation middleware
+func (siw *ServerInterfaceWrapper) RevokeGuardianSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IdPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeGuardianSession(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGuardianStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetGuardianStatus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGuardianStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4562,6 +5290,48 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/exam-definitions/{id}/preview", wrapper.PreviewExam)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/devices", wrapper.ListGuardianDevices)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/guardian/devices", wrapper.CreateGuardianDevice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/guardian/devices/scan", wrapper.ScanGuardianDevices)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/guardian/devices/{id}", wrapper.DeleteGuardianDevice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/devices/{id}", wrapper.GetGuardianDevice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/guardian/devices/{id}", wrapper.UpdateGuardianDevice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/earned-time", wrapper.GetGuardianEarnedTime)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/guardian/grant", wrapper.CreateGuardianGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/override-log", wrapper.ListGuardianOverrideLog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/policy", wrapper.GetGuardianPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/guardian/policy", wrapper.UpdateGuardianPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/sessions", wrapper.ListGuardianSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/guardian/sessions/{id}/revoke", wrapper.RevokeGuardianSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/guardian/status", wrapper.GetGuardianStatus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/guidance", wrapper.GetGuidance)
 	})
 	r.Group(func(r chi.Router) {
@@ -5446,6 +6216,541 @@ type PreviewExamdefaultJSONResponse struct {
 }
 
 func (response PreviewExamdefaultJSONResponse) VisitPreviewExamResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianDevicesRequestObject struct {
+}
+
+type ListGuardianDevicesResponseObject interface {
+	VisitListGuardianDevicesResponse(w http.ResponseWriter) error
+}
+
+type ListGuardianDevices200JSONResponse []GuardianDevice
+
+func (response ListGuardianDevices200JSONResponse) VisitListGuardianDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianDevicesdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListGuardianDevicesdefaultJSONResponse) VisitListGuardianDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGuardianDeviceRequestObject struct {
+	Body *CreateGuardianDeviceJSONRequestBody
+}
+
+type CreateGuardianDeviceResponseObject interface {
+	VisitCreateGuardianDeviceResponse(w http.ResponseWriter) error
+}
+
+type CreateGuardianDevice201JSONResponse GuardianDevice
+
+func (response CreateGuardianDevice201JSONResponse) VisitCreateGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGuardianDevicedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateGuardianDevicedefaultJSONResponse) VisitCreateGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanGuardianDevicesRequestObject struct {
+}
+
+type ScanGuardianDevicesResponseObject interface {
+	VisitScanGuardianDevicesResponse(w http.ResponseWriter) error
+}
+
+type ScanGuardianDevices200JSONResponse []DiscoveredDevice
+
+func (response ScanGuardianDevices200JSONResponse) VisitScanGuardianDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanGuardianDevicesdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ScanGuardianDevicesdefaultJSONResponse) VisitScanGuardianDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGuardianDeviceRequestObject struct {
+	Id IdPath `json:"id"`
+}
+
+type DeleteGuardianDeviceResponseObject interface {
+	VisitDeleteGuardianDeviceResponse(w http.ResponseWriter) error
+}
+
+type DeleteGuardianDevice204Response struct {
+}
+
+func (response DeleteGuardianDevice204Response) VisitDeleteGuardianDeviceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteGuardianDevicedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteGuardianDevicedefaultJSONResponse) VisitDeleteGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianDeviceRequestObject struct {
+	Id IdPath `json:"id"`
+}
+
+type GetGuardianDeviceResponseObject interface {
+	VisitGetGuardianDeviceResponse(w http.ResponseWriter) error
+}
+
+type GetGuardianDevice200JSONResponse GuardianDevice
+
+func (response GetGuardianDevice200JSONResponse) VisitGetGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianDevicedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetGuardianDevicedefaultJSONResponse) VisitGetGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGuardianDeviceRequestObject struct {
+	Id   IdPath `json:"id"`
+	Body *UpdateGuardianDeviceJSONRequestBody
+}
+
+type UpdateGuardianDeviceResponseObject interface {
+	VisitUpdateGuardianDeviceResponse(w http.ResponseWriter) error
+}
+
+type UpdateGuardianDevice200JSONResponse GuardianDevice
+
+func (response UpdateGuardianDevice200JSONResponse) VisitUpdateGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGuardianDevicedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateGuardianDevicedefaultJSONResponse) VisitUpdateGuardianDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianEarnedTimeRequestObject struct {
+	Params GetGuardianEarnedTimeParams
+}
+
+type GetGuardianEarnedTimeResponseObject interface {
+	VisitGetGuardianEarnedTimeResponse(w http.ResponseWriter) error
+}
+
+type GetGuardianEarnedTime200JSONResponse EarnedTime
+
+func (response GetGuardianEarnedTime200JSONResponse) VisitGetGuardianEarnedTimeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianEarnedTimedefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetGuardianEarnedTimedefaultJSONResponse) VisitGetGuardianEarnedTimeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGuardianGrantRequestObject struct {
+	Body *CreateGuardianGrantJSONRequestBody
+}
+
+type CreateGuardianGrantResponseObject interface {
+	VisitCreateGuardianGrantResponse(w http.ResponseWriter) error
+}
+
+type CreateGuardianGrant201JSONResponse GuardianGrant
+
+func (response CreateGuardianGrant201JSONResponse) VisitCreateGuardianGrantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGuardianGrantdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateGuardianGrantdefaultJSONResponse) VisitCreateGuardianGrantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianOverrideLogRequestObject struct {
+}
+
+type ListGuardianOverrideLogResponseObject interface {
+	VisitListGuardianOverrideLogResponse(w http.ResponseWriter) error
+}
+
+type ListGuardianOverrideLog200JSONResponse []GuardianOverrideLog
+
+func (response ListGuardianOverrideLog200JSONResponse) VisitListGuardianOverrideLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianOverrideLogdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListGuardianOverrideLogdefaultJSONResponse) VisitListGuardianOverrideLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianPolicyRequestObject struct {
+}
+
+type GetGuardianPolicyResponseObject interface {
+	VisitGetGuardianPolicyResponse(w http.ResponseWriter) error
+}
+
+type GetGuardianPolicy200JSONResponse GuardianPolicy
+
+func (response GetGuardianPolicy200JSONResponse) VisitGetGuardianPolicyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianPolicydefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetGuardianPolicydefaultJSONResponse) VisitGetGuardianPolicyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGuardianPolicyRequestObject struct {
+	Body *UpdateGuardianPolicyJSONRequestBody
+}
+
+type UpdateGuardianPolicyResponseObject interface {
+	VisitUpdateGuardianPolicyResponse(w http.ResponseWriter) error
+}
+
+type UpdateGuardianPolicy200JSONResponse GuardianPolicy
+
+func (response UpdateGuardianPolicy200JSONResponse) VisitUpdateGuardianPolicyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateGuardianPolicydefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateGuardianPolicydefaultJSONResponse) VisitUpdateGuardianPolicyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianSessionsRequestObject struct {
+}
+
+type ListGuardianSessionsResponseObject interface {
+	VisitListGuardianSessionsResponse(w http.ResponseWriter) error
+}
+
+type ListGuardianSessions200JSONResponse []GuardianGrant
+
+func (response ListGuardianSessions200JSONResponse) VisitListGuardianSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGuardianSessionsdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListGuardianSessionsdefaultJSONResponse) VisitListGuardianSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeGuardianSessionRequestObject struct {
+	Id IdPath `json:"id"`
+}
+
+type RevokeGuardianSessionResponseObject interface {
+	VisitRevokeGuardianSessionResponse(w http.ResponseWriter) error
+}
+
+type RevokeGuardianSession200JSONResponse GuardianGrant
+
+func (response RevokeGuardianSession200JSONResponse) VisitRevokeGuardianSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeGuardianSessiondefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RevokeGuardianSessiondefaultJSONResponse) VisitRevokeGuardianSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianStatusRequestObject struct {
+}
+
+type GetGuardianStatusResponseObject interface {
+	VisitGetGuardianStatusResponse(w http.ResponseWriter) error
+}
+
+type GetGuardianStatus200JSONResponse GuardianStatus
+
+func (response GetGuardianStatus200JSONResponse) VisitGetGuardianStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetGuardianStatusdefaultJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetGuardianStatusdefaultJSONResponse) VisitGetGuardianStatusResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -7391,6 +8696,48 @@ type StrictServerInterface interface {
 	// Preview an exam as the parent (with answers)
 	// (GET /exam-definitions/{id}/preview)
 	PreviewExam(ctx context.Context, request PreviewExamRequestObject) (PreviewExamResponseObject, error)
+	// List registered (gated) devices
+	// (GET /guardian/devices)
+	ListGuardianDevices(ctx context.Context, request ListGuardianDevicesRequestObject) (ListGuardianDevicesResponseObject, error)
+	// Register a device (by MAC) for the student
+	// (POST /guardian/devices)
+	CreateGuardianDevice(ctx context.Context, request CreateGuardianDeviceRequestObject) (CreateGuardianDeviceResponseObject, error)
+	// Discover devices on the network via the wall
+	// (POST /guardian/devices/scan)
+	ScanGuardianDevices(ctx context.Context, request ScanGuardianDevicesRequestObject) (ScanGuardianDevicesResponseObject, error)
+	// Unregister a device (revokes any active grant)
+	// (DELETE /guardian/devices/{id})
+	DeleteGuardianDevice(ctx context.Context, request DeleteGuardianDeviceRequestObject) (DeleteGuardianDeviceResponseObject, error)
+	// Get a registered device
+	// (GET /guardian/devices/{id})
+	GetGuardianDevice(ctx context.Context, request GetGuardianDeviceRequestObject) (GetGuardianDeviceResponseObject, error)
+	// Update a registered device (partial)
+	// (PUT /guardian/devices/{id})
+	UpdateGuardianDevice(ctx context.Context, request UpdateGuardianDeviceRequestObject) (UpdateGuardianDeviceResponseObject, error)
+	// A student's earned / remaining internet time (student-readable)
+	// (GET /guardian/earned-time)
+	GetGuardianEarnedTime(ctx context.Context, request GetGuardianEarnedTimeRequestObject) (GetGuardianEarnedTimeResponseObject, error)
+	// Parent override — open a device for N minutes now
+	// (POST /guardian/grant)
+	CreateGuardianGrant(ctx context.Context, request CreateGuardianGrantRequestObject) (CreateGuardianGrantResponseObject, error)
+	// Parent override history (newest first)
+	// (GET /guardian/override-log)
+	ListGuardianOverrideLog(ctx context.Context, request ListGuardianOverrideLogRequestObject) (ListGuardianOverrideLogResponseObject, error)
+	// Get the reward policy
+	// (GET /guardian/policy)
+	GetGuardianPolicy(ctx context.Context, request GetGuardianPolicyRequestObject) (GetGuardianPolicyResponseObject, error)
+	// Update the reward policy (partial)
+	// (PUT /guardian/policy)
+	UpdateGuardianPolicy(ctx context.Context, request UpdateGuardianPolicyRequestObject) (UpdateGuardianPolicyResponseObject, error)
+	// Active internet grants
+	// (GET /guardian/sessions)
+	ListGuardianSessions(ctx context.Context, request ListGuardianSessionsRequestObject) (ListGuardianSessionsResponseObject, error)
+	// Revoke an active grant now
+	// (POST /guardian/sessions/{id}/revoke)
+	RevokeGuardianSession(ctx context.Context, request RevokeGuardianSessionRequestObject) (RevokeGuardianSessionResponseObject, error)
+	// Guardian status (enabled, wall health, active grants, usage)
+	// (GET /guardian/status)
+	GetGuardianStatus(ctx context.Context, request GetGuardianStatusRequestObject) (GetGuardianStatusResponseObject, error)
 	// Get parent guidance to the tutor
 	// (GET /guidance)
 	GetGuidance(ctx context.Context, request GetGuidanceRequestObject) (GetGuidanceResponseObject, error)
@@ -8095,6 +9442,380 @@ func (sh *strictHandler) PreviewExam(w http.ResponseWriter, r *http.Request, id 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PreviewExamResponseObject); ok {
 		if err := validResponse.VisitPreviewExamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListGuardianDevices operation middleware
+func (sh *strictHandler) ListGuardianDevices(w http.ResponseWriter, r *http.Request) {
+	var request ListGuardianDevicesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListGuardianDevices(ctx, request.(ListGuardianDevicesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGuardianDevices")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListGuardianDevicesResponseObject); ok {
+		if err := validResponse.VisitListGuardianDevicesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGuardianDevice operation middleware
+func (sh *strictHandler) CreateGuardianDevice(w http.ResponseWriter, r *http.Request) {
+	var request CreateGuardianDeviceRequestObject
+
+	var body CreateGuardianDeviceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGuardianDevice(ctx, request.(CreateGuardianDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGuardianDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGuardianDeviceResponseObject); ok {
+		if err := validResponse.VisitCreateGuardianDeviceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ScanGuardianDevices operation middleware
+func (sh *strictHandler) ScanGuardianDevices(w http.ResponseWriter, r *http.Request) {
+	var request ScanGuardianDevicesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ScanGuardianDevices(ctx, request.(ScanGuardianDevicesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ScanGuardianDevices")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ScanGuardianDevicesResponseObject); ok {
+		if err := validResponse.VisitScanGuardianDevicesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGuardianDevice operation middleware
+func (sh *strictHandler) DeleteGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	var request DeleteGuardianDeviceRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGuardianDevice(ctx, request.(DeleteGuardianDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGuardianDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGuardianDeviceResponseObject); ok {
+		if err := validResponse.VisitDeleteGuardianDeviceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGuardianDevice operation middleware
+func (sh *strictHandler) GetGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	var request GetGuardianDeviceRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGuardianDevice(ctx, request.(GetGuardianDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGuardianDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGuardianDeviceResponseObject); ok {
+		if err := validResponse.VisitGetGuardianDeviceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateGuardianDevice operation middleware
+func (sh *strictHandler) UpdateGuardianDevice(w http.ResponseWriter, r *http.Request, id IdPath) {
+	var request UpdateGuardianDeviceRequestObject
+
+	request.Id = id
+
+	var body UpdateGuardianDeviceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateGuardianDevice(ctx, request.(UpdateGuardianDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateGuardianDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateGuardianDeviceResponseObject); ok {
+		if err := validResponse.VisitUpdateGuardianDeviceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGuardianEarnedTime operation middleware
+func (sh *strictHandler) GetGuardianEarnedTime(w http.ResponseWriter, r *http.Request, params GetGuardianEarnedTimeParams) {
+	var request GetGuardianEarnedTimeRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGuardianEarnedTime(ctx, request.(GetGuardianEarnedTimeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGuardianEarnedTime")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGuardianEarnedTimeResponseObject); ok {
+		if err := validResponse.VisitGetGuardianEarnedTimeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGuardianGrant operation middleware
+func (sh *strictHandler) CreateGuardianGrant(w http.ResponseWriter, r *http.Request) {
+	var request CreateGuardianGrantRequestObject
+
+	var body CreateGuardianGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGuardianGrant(ctx, request.(CreateGuardianGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGuardianGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGuardianGrantResponseObject); ok {
+		if err := validResponse.VisitCreateGuardianGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListGuardianOverrideLog operation middleware
+func (sh *strictHandler) ListGuardianOverrideLog(w http.ResponseWriter, r *http.Request) {
+	var request ListGuardianOverrideLogRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListGuardianOverrideLog(ctx, request.(ListGuardianOverrideLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGuardianOverrideLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListGuardianOverrideLogResponseObject); ok {
+		if err := validResponse.VisitListGuardianOverrideLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGuardianPolicy operation middleware
+func (sh *strictHandler) GetGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+	var request GetGuardianPolicyRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGuardianPolicy(ctx, request.(GetGuardianPolicyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGuardianPolicy")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGuardianPolicyResponseObject); ok {
+		if err := validResponse.VisitGetGuardianPolicyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateGuardianPolicy operation middleware
+func (sh *strictHandler) UpdateGuardianPolicy(w http.ResponseWriter, r *http.Request) {
+	var request UpdateGuardianPolicyRequestObject
+
+	var body UpdateGuardianPolicyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateGuardianPolicy(ctx, request.(UpdateGuardianPolicyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateGuardianPolicy")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateGuardianPolicyResponseObject); ok {
+		if err := validResponse.VisitUpdateGuardianPolicyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListGuardianSessions operation middleware
+func (sh *strictHandler) ListGuardianSessions(w http.ResponseWriter, r *http.Request) {
+	var request ListGuardianSessionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListGuardianSessions(ctx, request.(ListGuardianSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGuardianSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListGuardianSessionsResponseObject); ok {
+		if err := validResponse.VisitListGuardianSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeGuardianSession operation middleware
+func (sh *strictHandler) RevokeGuardianSession(w http.ResponseWriter, r *http.Request, id IdPath) {
+	var request RevokeGuardianSessionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeGuardianSession(ctx, request.(RevokeGuardianSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeGuardianSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeGuardianSessionResponseObject); ok {
+		if err := validResponse.VisitRevokeGuardianSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGuardianStatus operation middleware
+func (sh *strictHandler) GetGuardianStatus(w http.ResponseWriter, r *http.Request) {
+	var request GetGuardianStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGuardianStatus(ctx, request.(GetGuardianStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGuardianStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetGuardianStatusResponseObject); ok {
+		if err := validResponse.VisitGetGuardianStatusResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9435,243 +11156,288 @@ func (sh *strictHandler) PostMessage(w http.ResponseWriter, r *http.Request, id 
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

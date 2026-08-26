@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"errors"
 	"net/http"
 	"strings"
@@ -177,6 +179,13 @@ func (h *Handlers) SubmitAttempt(w http.ResponseWriter, r *http.Request, id cont
 	}
 
 	scoreEvent := core.BuildScoreEvent(gradedAttempt, examDefToContract(def), now)
+	if err := h.persistScoreEvent(r.Context(), scoreEvent); err != nil {
+		// The attempt is already graded and stored; losing the outbox row only
+		// means the Guardian never sees this score. Log loudly, don't fail.
+		slog.Error("score_event: persist failed", "attemptId", id, "err", err)
+	} else if h.ScoreEventSink != nil {
+		h.ScoreEventSink()
+	}
 
 	writeJSON(w, http.StatusOK, contracts.SubmitAttemptResult{
 		Attempt:    gradedAttempt,
@@ -198,4 +207,30 @@ func toStoreAnswers(attemptID string, answers []contracts.Answer) []store.Answer
 		})
 	}
 	return out
+}
+
+// persistScoreEvent appends the graded outcome to the score_event outbox
+// (migration 0026) — the single seam the Phase-3 Guardian consumes
+// (CONTRACTS-P3). Idempotent per attempt (ON CONFLICT on attempt_id).
+func (h *Handlers) persistScoreEvent(ctx context.Context, ev contracts.ScoreEvent) error {
+	perTopic, err := json.Marshal(ev.PerTopic)
+	if err != nil {
+		return err
+	}
+	scope := ev.ScopeTopicIds
+	if scope == nil {
+		scope = []string{}
+	}
+	_, err = h.Store.InsertScoreEvent(ctx, store.InsertScoreEventParams{
+		AttemptID:        ev.AttemptId,
+		StudentID:        ev.StudentId,
+		SubjectID:        ev.SubjectId,
+		ExamDefinitionID: ev.ExamDefinitionId,
+		ScopeTopicIds:    scope,
+		Size:             int32(ev.Size),
+		ScorePct:         int32(ev.ScorePct),
+		Passed:           ev.Passed,
+		PerTopic:         perTopic,
+	})
+	return err
 }

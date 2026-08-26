@@ -531,6 +531,189 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/guardian/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Guardian status (enabled, wall health, active grants, usage) */
+        get: operations["getGuardianStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the reward policy */
+        get: operations["getGuardianPolicy"];
+        /** Update the reward policy (partial) */
+        put: operations["updateGuardianPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List registered (gated) devices */
+        get: operations["listGuardianDevices"];
+        put?: never;
+        /** Register a device (by MAC) for the student */
+        post: operations["createGuardianDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/devices/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discover devices on the network via the wall */
+        post: operations["scanGuardianDevices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /** Get a registered device */
+        get: operations["getGuardianDevice"];
+        /** Update a registered device (partial) */
+        put: operations["updateGuardianDevice"];
+        post?: never;
+        /** Unregister a device (revokes any active grant) */
+        delete: operations["deleteGuardianDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active internet grants */
+        get: operations["listGuardianSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/sessions/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an active grant now */
+        post: operations["revokeGuardianSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parent override — open a device for N minutes now
+         * @description Logged to the override log. Does not count against the student's daily cap.
+         */
+        post: operations["createGuardianGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/override-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Parent override history (newest first) */
+        get: operations["listGuardianOverrideLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guardian/earned-time": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A student's earned / remaining internet time (student-readable) */
+        get: operations["getGuardianEarnedTime"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/progress": {
         parameters: {
             query?: never;
@@ -1445,6 +1628,165 @@ export interface components {
              * @description RFC 3339 timestamp of when the student was created.
              */
             createdAt: string;
+        };
+        /**
+         * @description Which Network Wall implementation is active. `fake` is an in-memory wall for development.
+         * @enum {string}
+         */
+        WallKind: "fake" | "routeros";
+        /**
+         * @description What opened the grant — a passed exam or a parent override.
+         * @enum {string}
+         */
+        GrantSource: "exam" | "manual";
+        /** @description A student device the Guardian gates, keyed by MAC address. */
+        GuardianDevice: {
+            id: string;
+            /** @description The student who owns the device. */
+            studentId: string;
+            /** @description Friendly label (e.g. "Maya's laptop"). */
+            name: string;
+            /** @description Normalised MAC address (lower-case, colon-separated). */
+            mac: string;
+            /** @description Last known IP (helper; DHCP may change it). */
+            ip?: string;
+            /** @description Last known hostname (helper; optional). */
+            hostname?: string;
+            /** @description When false the device is exempt from the wall (always online). */
+            gated: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateGuardianDevice: {
+            name: string;
+            /** @description Any common MAC format; normalised server-side. */
+            mac: string;
+            /** @description Defaults to the single student profile when omitted. */
+            studentId?: string;
+            ip?: string;
+            hostname?: string;
+            /** @default true */
+            gated: boolean;
+        };
+        UpdateGuardianDevice: {
+            name?: string;
+            mac?: string;
+            ip?: string;
+            hostname?: string;
+            gated?: boolean;
+        };
+        /** @description A device the wall can currently see on the network. */
+        DiscoveredDevice: {
+            mac: string;
+            ip?: string;
+            hostname?: string;
+            /** @description True when a GuardianDevice with this MAC already exists. */
+            registered: boolean;
+        };
+        /** @description The effective reward policy. Rate/cap/pass bar/cooldown mirror the platform Settings; the rest is Guardian-only. */
+        GuardianPolicy: {
+            /** @description Parent switch. When false, passed exams are recorded but open no internet time. */
+            enabled: boolean;
+            rewardStyle: components["schemas"]["RewardStyle"];
+            /** @description The Nth pass of the day pays less (1st–2nd full, 3rd 75%, 4th 50%, 5th+ 25%). */
+            diminishingReturns: boolean;
+            /** @description Minutes of internet per question on a pass (Settings.rewardRateMinPerQ). */
+            rateMinPerQ: number;
+            /** @description Maximum earnable hours per day (Settings.dailyCapHours). */
+            dailyCapHours: number;
+            /** @description Settings.defaultPassBar (read-only here). */
+            passBar: number;
+            /** @description Settings.defaultCooldownMin (read-only here). */
+            cooldownMin: number;
+            /** @description Settings.difficultyRamp (read-only here). */
+            difficultyRamp: boolean;
+            wall: components["schemas"]["WallKind"];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UpdateGuardianPolicy: {
+            enabled?: boolean;
+            rewardStyle?: components["schemas"]["RewardStyle"];
+            diminishingReturns?: boolean;
+            rateMinPerQ?: number;
+            dailyCapHours?: number;
+        };
+        /** @description An internet-time grant for a device (open, expired, or revoked). */
+        GuardianGrant: {
+            id: string;
+            deviceId: string;
+            deviceName: string;
+            studentId: string;
+            mac: string;
+            minutes: number;
+            source: components["schemas"]["GrantSource"];
+            /** @description The exam attempt that earned it (source=exam). */
+            attemptId?: string;
+            /** @description Parent's note (source=manual). */
+            reason?: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            revokedAt?: string;
+            /** @description Seconds left, 0 when expired or revoked. */
+            remainingSeconds: number;
+        };
+        ManualGrant: {
+            deviceId: string;
+            minutes: number;
+            reason?: string;
+        };
+        GuardianDailyUsage: {
+            studentId: string;
+            /** Format: date */
+            day: string;
+            /** @description Minutes earned today from exams (overrides excluded). */
+            minutes: number;
+            /** @description Passed exams today (drives diminishing returns). */
+            passes: number;
+            capMinutes: number;
+        };
+        GuardianOverrideLog: {
+            id: string;
+            deviceId: string;
+            deviceName: string;
+            minutes: number;
+            reason?: string;
+            /** @description The parent id that authorised it. */
+            who: string;
+            /** Format: date-time */
+            at: string;
+        };
+        GuardianStatus: {
+            /** @description The Guardian subsystem is wired into this server (GUARDIAN_ENABLED). */
+            enabled: boolean;
+            /** @description Parent switch is off (policy.enabled=false). */
+            paused: boolean;
+            wall: components["schemas"]["WallKind"];
+            wallHealthy: boolean;
+            wallError?: string;
+            active: components["schemas"]["GuardianGrant"][];
+            /** @description Most recent grants (newest first, max 20). */
+            recent: components["schemas"]["GuardianGrant"][];
+            dailyUsage: components["schemas"]["GuardianDailyUsage"][];
+            devices: components["schemas"]["GuardianDevice"][];
+        };
+        /** @description Student-facing summary of internet time. */
+        EarnedTime: {
+            /** @description False when the Guardian is off/paused — the UI should stay dark. */
+            enabled: boolean;
+            /** @description Seconds left on the longest active grant, 0 when offline. */
+            remainingSeconds: number;
+            /** Format: date-time */
+            expiresAt?: string;
+            deviceName?: string;
+            minutesToday: number;
+            capMinutes: number;
+            /** @description Minutes opened by the most recent exam grant (for "you earned N minutes"). */
+            lastGrantMinutes?: number;
+            lastGrantAttemptId?: string;
         };
         /** @description Public projection of the student profile for the sign-in screen (no notes, no secrets). */
         StudentSignInProfile: {
@@ -3104,6 +3446,329 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGuardianStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current Guardian status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianStatus"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGuardianPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The effective reward policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianPolicy"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateGuardianPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGuardianPolicy"];
+            };
+        };
+        responses: {
+            /** @description The updated policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianPolicy"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listGuardianDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All registered devices. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianDevice"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createGuardianDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGuardianDevice"];
+            };
+        };
+        responses: {
+            /** @description The registered device. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianDevice"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    scanGuardianDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices currently visible to the wall. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveredDevice"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGuardianDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The device. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianDevice"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateGuardianDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGuardianDevice"];
+            };
+        };
+        responses: {
+            /** @description The updated device. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianDevice"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteGuardianDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listGuardianSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grants that are currently open on the wall. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianGrant"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeGuardianSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource identifier (UUID/cuid). */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The revoked grant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianGrant"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createGuardianGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualGrant"];
+            };
+        };
+        responses: {
+            /** @description The opened grant. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianGrant"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listGuardianOverrideLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Override log entries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuardianOverrideLog"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGuardianEarnedTime: {
+        parameters: {
+            query: {
+                /** @description The student to report on. */
+                studentId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Earned time summary. `enabled` is false when the Guardian is off. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarnedTime"];
                 };
             };
             default: components["responses"]["Problem"];

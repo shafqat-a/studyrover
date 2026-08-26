@@ -6,12 +6,15 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	AddCredential(ctx context.Context, arg AddCredentialParams) (Credential, error)
+	AddGuardianDailyUsage(ctx context.Context, arg AddGuardianDailyUsageParams) (GuardianDailyUsage, error)
 	AppendMessage(ctx context.Context, arg AppendMessageParams) (Message, error)
 	// Atomically claim the oldest runnable queued job and mark it processing.
 	// FOR UPDATE SKIP LOCKED lets multiple workers run concurrently without contention.
@@ -33,6 +36,9 @@ type Querier interface {
 	// Conversation + Message queries (D01) — contract 2-C01.
 	CreateConversation(ctx context.Context, arg CreateConversationParams) (Conversation, error)
 	CreateExamDefinition(ctx context.Context, arg CreateExamDefinitionParams) (ExamDefinition, error)
+	CreateGuardianDevice(ctx context.Context, arg CreateGuardianDeviceParams) (GuardianDevice, error)
+	// Guardian grants (0027). Active = revoked_at IS NULL AND expires_at > now().
+	CreateGuardianGrant(ctx context.Context, arg CreateGuardianGrantParams) (GuardianGrant, error)
 	// Guidance queries (D05) — contract 2-C07.
 	CreateGuidance(ctx context.Context, arg CreateGuidanceParams) (Guidance, error)
 	CreateOption(ctx context.Context, arg CreateOptionParams) (Option, error)
@@ -52,6 +58,7 @@ type Querier interface {
 	CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error)
 	DeleteBlob(ctx context.Context, id string) error
 	DeleteExamDefinition(ctx context.Context, id string) error
+	DeleteGuardianDevice(ctx context.Context, id string) (int64, error)
 	DeleteGuidance(ctx context.Context, id string) error
 	DeleteOptionsByQuestion(ctx context.Context, questionID string) error
 	DeleteQuestion(ctx context.Context, id string) error
@@ -63,12 +70,25 @@ type Querier interface {
 	// Job queue queries (D03) — contract 2-C03. Drives the 2-F06 worker.
 	// Schedule a new job. run_after defaults to now() when NULL is passed.
 	EnqueueJob(ctx context.Context, arg EnqueueJobParams) (Job, error)
+	// Mark grants whose time ran out as revoked (the wall enforced expiry).
+	ExpireGuardianGrants(ctx context.Context, now time.Time) ([]GuardianGrant, error)
 	// Mark a job errored and store the failure message.
 	FailJob(ctx context.Context, arg FailJobParams) (Job, error)
 	GetAttempt(ctx context.Context, id string) (ExamAttempt, error)
 	GetBlob(ctx context.Context, id string) (FileBlob, error)
 	GetConversation(ctx context.Context, id string) (Conversation, error)
 	GetExamDefinition(ctx context.Context, id string) (ExamDefinition, error)
+	// Guardian daily usage (0027): earned minutes + pass count per student per day.
+	GetGuardianDailyUsage(ctx context.Context, arg GetGuardianDailyUsageParams) (GuardianDailyUsage, error)
+	GetGuardianDevice(ctx context.Context, id string) (GuardianDevice, error)
+	GetGuardianDeviceByMAC(ctx context.Context, mac string) (GuardianDevice, error)
+	GetGuardianGrant(ctx context.Context, id string) (GuardianGrant, error)
+	GetGuardianInboxByAttempt(ctx context.Context, attemptID string) (GuardianScoreInbox, error)
+	// Guardian score inbox (0027): one row per consumed score_event; cursor = max id.
+	GetGuardianInboxCursor(ctx context.Context) (int64, error)
+	GetGuardianInboxEntry(ctx context.Context, scoreEventID int64) (GuardianScoreInbox, error)
+	// Guardian policy singleton (0027). Rate/cap/pass bar come from settings.
+	GetGuardianPolicy(ctx context.Context) (GuardianPolicy, error)
 	GetJob(ctx context.Context, id string) (Job, error)
 	GetLastFailedForExam(ctx context.Context, arg GetLastFailedForExamParams) (ExamAttempt, error)
 	GetParentByEmail(ctx context.Context, email string) (Parent, error)
@@ -77,6 +97,7 @@ type Querier interface {
 	// Fetch a specific set of questions by id (used by pinned/generated exams),
 	// regardless of enabled state.
 	GetQuestionsByIDs(ctx context.Context, ids []string) ([]Question, error)
+	GetScoreEventByAttempt(ctx context.Context, attemptID string) (ScoreEvent, error)
 	// Settings queries (D11) — contract C09. Single-row ('singleton') pattern.
 	// Returns the singleton settings row.
 	GetSettings(ctx context.Context) (Setting, error)
@@ -99,13 +120,22 @@ type Querier interface {
 	// the unique(attempt_id, question_id) constraint guarantees at most one answer
 	// per question per attempt.
 	InsertAnswers(ctx context.Context, arg []InsertAnswersParams) (int64, error)
+	InsertGuardianInboxEntry(ctx context.Context, arg InsertGuardianInboxEntryParams) (GuardianScoreInbox, error)
+	// Guardian override log (0027).
+	InsertGuardianOverride(ctx context.Context, arg InsertGuardianOverrideParams) (GuardianOverrideLog, error)
 	// QuestionDraft queries (D06) — contract 2-C05.
 	// Insert a single generated draft. Used in a batch loop for generation results.
 	InsertQuestionDraft(ctx context.Context, arg InsertQuestionDraftParams) (QuestionDraft, error)
+	// ScoreEvent outbox queries (0026) — contract C10. The platform appends;
+	// the Guardian reads forward from a cursor.
+	InsertScoreEvent(ctx context.Context, arg InsertScoreEventParams) (ScoreEvent, error)
 	// MasterySnapshot queries (D07) — contract 2-C08 (Dashboard timeline).
 	InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) (MasterySnapshot, error)
 	// Most recent snapshot per topic for a student (current mastery state).
 	LatestByStudent(ctx context.Context, studentID string) ([]MasterySnapshot, error)
+	ListActiveGuardianGrants(ctx context.Context, now time.Time) ([]GuardianGrant, error)
+	ListActiveGuardianGrantsByDevice(ctx context.Context, arg ListActiveGuardianGrantsByDeviceParams) ([]GuardianGrant, error)
+	ListActiveGuardianGrantsByStudent(ctx context.Context, arg ListActiveGuardianGrantsByStudentParams) ([]GuardianGrant, error)
 	// ListAnswersByAttempt returns every answer recorded for an attempt.
 	ListAnswersByAttempt(ctx context.Context, attemptID string) ([]Answer, error)
 	ListByStudent(ctx context.Context, arg ListByStudentParams) ([]ExamAttempt, error)
@@ -115,6 +145,11 @@ type Querier interface {
 	// "whole subject" (no topic filter).
 	ListEligibleForExam(ctx context.Context, arg ListEligibleForExamParams) ([]Question, error)
 	ListExamDefinitionsBySubject(ctx context.Context, arg ListExamDefinitionsBySubjectParams) ([]ExamDefinition, error)
+	ListGuardianDailyUsageSince(ctx context.Context, day pgtype.Date) ([]GuardianDailyUsage, error)
+	// Guardian device registry (0027).
+	ListGuardianDevices(ctx context.Context) ([]GuardianDevice, error)
+	ListGuardianDevicesByStudent(ctx context.Context, studentID string) ([]GuardianDevice, error)
+	ListGuardianOverrides(ctx context.Context, limit int32) ([]GuardianOverrideLog, error)
 	// Optionally filtered by scope and/or subject. When a narg is NULL the
 	// corresponding filter is skipped. Newest first.
 	ListGuidance(ctx context.Context, arg ListGuidanceParams) ([]Guidance, error)
@@ -130,6 +165,10 @@ type Querier interface {
 	// exams and are never hand-curated here).
 	ListQuestionsBySubject(ctx context.Context, arg ListQuestionsBySubjectParams) ([]Question, error)
 	ListQuestionsByTopic(ctx context.Context, arg ListQuestionsByTopicParams) ([]Question, error)
+	ListRecentGuardianGrants(ctx context.Context, limit int32) ([]GuardianGrant, error)
+	ListRecentGuardianGrantsByStudent(ctx context.Context, arg ListRecentGuardianGrantsByStudentParams) ([]GuardianGrant, error)
+	// Forward scan for the Guardian subscriber: rows newer than the cursor, oldest first.
+	ListScoreEventsAfter(ctx context.Context, arg ListScoreEventsAfterParams) ([]ScoreEvent, error)
 	// Range-filtered timeline for the dashboard. NULL range bounds are skipped, so
 	// omitting both returns the student's full history, oldest first for charting.
 	ListSnapshotsByStudent(ctx context.Context, arg ListSnapshotsByStudentParams) ([]MasterySnapshot, error)
@@ -140,10 +179,15 @@ type Querier interface {
 	ListSyllabuses(ctx context.Context) ([]Syllabus, error)
 	ListTopicsBySubject(ctx context.Context, arg ListTopicsBySubjectParams) ([]Topic, error)
 	MarkSubmitted(ctx context.Context, arg MarkSubmittedParams) (ExamAttempt, error)
+	RevokeGuardianGrant(ctx context.Context, arg RevokeGuardianGrantParams) (GuardianGrant, error)
 	// Advance a draft through its review lifecycle (pending → approved/rejected).
 	SetQuestionDraftStatus(ctx context.Context, arg SetQuestionDraftStatusParams) (QuestionDraft, error)
 	UpdateCredentialCounter(ctx context.Context, arg UpdateCredentialCounterParams) (Credential, error)
 	UpdateExamDefinition(ctx context.Context, arg UpdateExamDefinitionParams) (ExamDefinition, error)
+	// Partial update: NULL params leave the existing value untouched.
+	UpdateGuardianDevice(ctx context.Context, arg UpdateGuardianDeviceParams) (GuardianDevice, error)
+	// Partial update: NULL params leave the existing value untouched.
+	UpdateGuardianPolicy(ctx context.Context, arg UpdateGuardianPolicyParams) (GuardianPolicy, error)
 	// Report incremental progress (0-100) while processing.
 	UpdateJobProgress(ctx context.Context, arg UpdateJobProgressParams) (Job, error)
 	UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) (Question, error)
