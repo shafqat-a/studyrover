@@ -48,6 +48,16 @@ type Config struct {
 	// ZaiModel overrides the z.ai model id (env ZAI_MODEL). Optional; empty uses
 	// the adapter default (glm-5.2).
 	ZaiModel string
+	// CodexBin is the OpenAI Codex CLI used by the "codex" knowledge backend
+	// (env CODEX_BIN). Optional; empty looks up "codex" on PATH. systemd's PATH
+	// is short, so set an absolute path in production.
+	CodexBin string
+	// CodexHome is the CODEX_HOME holding the ChatGPT/Codex subscription login
+	// (env CODEX_HOME). Optional; empty uses ~/.codex of the service user.
+	CodexHome string
+	// CodexModel overrides the Codex model id (env CODEX_MODEL). Optional;
+	// empty uses the CLI default for the signed-in plan.
+	CodexModel string
 
 	// Lessons — enrichment providers (Phase 2.5 "class lessons").
 	// YouTubeAPIKey enables YouTube Data API v3 search in the Enrich job; empty
@@ -119,6 +129,9 @@ func Load() (*Config, error) {
 		ZaiAPIKey:     os.Getenv("ZAI_API_KEY"),
 		ZaiBaseURL:    os.Getenv("ZAI_BASE_URL"),
 		ZaiModel:      os.Getenv("ZAI_MODEL"),
+		CodexBin:      os.Getenv("CODEX_BIN"),
+		CodexHome:     os.Getenv("CODEX_HOME"),
+		CodexModel:    os.Getenv("CODEX_MODEL"),
 		YouTubeAPIKey: os.Getenv("YOUTUBE_API_KEY"),
 		WikipediaLang: getenv("WIKIPEDIA_LANG", "en"),
 

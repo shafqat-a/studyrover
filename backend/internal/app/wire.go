@@ -29,6 +29,7 @@ import (
 	httpapi "github.com/shafqat/studyrover/backend/internal/http"
 	"github.com/shafqat/studyrover/backend/internal/jobs"
 	"github.com/shafqat/studyrover/backend/internal/knowledge"
+	"github.com/shafqat/studyrover/backend/internal/knowledge/codex"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/fake"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/gemini"
 	"github.com/shafqat/studyrover/backend/internal/knowledge/notebooklm"
@@ -154,6 +155,7 @@ func buildHandler(cfg *config.Config, db store.Store) (http.Handler, []backgroun
 			NotebookLM: notebooklm.New(notebooklm.Config{}),
 			Ollama:     ollama.New(ollama.Config{APIKey: cfg.OllamaAPIKey, BaseURL: cfg.OllamaBaseURL, Model: cfg.OllamaModel}),
 			Zai:        zai.New(zai.Config{APIKey: cfg.ZaiAPIKey, BaseURL: cfg.ZaiBaseURL, Model: cfg.ZaiModel}),
+			Codex:      codex.New(codex.Config{Bin: cfg.CodexBin, Home: cfg.CodexHome, Model: cfg.CodexModel}),
 			Fake:       fake.New(0),
 		},
 	)

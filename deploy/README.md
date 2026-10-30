@@ -131,3 +131,24 @@ router user with write access to `/ip/firewall` and read access to DHCP/ARP
 Trying it without a router: `GUARDIAN_ENABLED=true GUARDIAN_WALL=fake` with a
 couple of `GUARDIAN_FAKE_DEVICES`, register a device from the Scan dialog, pass
 an exam as the student and watch `/guardian/status` and the student's time slot.
+
+## Codex (bring your own ChatGPT/Codex subscription)
+The `codex` knowledge backend uses the parent's own ChatGPT/Codex plan instead
+of a metered API key. It runs the OpenAI Codex CLI on the server, one
+`codex exec` per AI call (question/exam generation, lessons, study guides,
+syllabus, tutor), in a read-only sandbox inside an empty temp directory.
+
+1. Install the Codex CLI for the user the service runs as (`studyrover.service`
+   `User=`), and sign it in once as that user:
+   `codex login` (or `codex login --device-auth` on a headless box).
+   Check with `codex login status` → `Logged in using ChatGPT`.
+2. Set `CODEX_BIN` in `studyrover.env` to the CLI's absolute path (systemd's
+   PATH does not include `~/.local/bin`). `CODEX_HOME` (default `~/.codex`) and
+   `CODEX_MODEL` (default: the plan's default model) are optional.
+3. Pick **Codex** under Settings → Knowledge backend, then
+   `sudo systemctl restart studyrover` (the engine is chosen at startup).
+
+Notes: calls count against the plan's usage limits. The tutor answer arrives in
+one piece (the CLI does not stream tokens). Like Ollama and z.ai, Codex does
+not ingest documents; use Gemini/NotebookLM for uploads. A missing or expired
+login fails the call with "not signed in (run `codex login` …)".

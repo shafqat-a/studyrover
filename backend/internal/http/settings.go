@@ -76,10 +76,10 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	backend := strings.TrimSpace(string(body.KnowledgeBackend))
 	switch contracts.KnowledgeBackend(backend) {
-	case "", contracts.KnowledgeBackendNotebooklm, contracts.KnowledgeBackendGemini, contracts.KnowledgeBackendOllama, contracts.KnowledgeBackendZai:
+	case "", contracts.KnowledgeBackendNotebooklm, contracts.KnowledgeBackendGemini, contracts.KnowledgeBackendOllama, contracts.KnowledgeBackendZai, contracts.KnowledgeBackendCodex:
 		// ok
 	default:
-		badRequest(w, "knowledgeBackend must be 'notebooklm', 'gemini', 'ollama', or 'zai'")
+		badRequest(w, "knowledgeBackend must be 'notebooklm', 'gemini', 'ollama', 'zai', or 'codex'")
 		return
 	}
 

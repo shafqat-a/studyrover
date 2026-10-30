@@ -1646,10 +1646,10 @@ export interface components {
             timestamp: string;
         };
         /**
-         * @description The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative. Ollama (DeepSeek) and z.ai (GLM) author questions/guides from curriculum knowledge without ingested sources.
+         * @description The swappable knowledge backend used by the AI tutor / ingestion (Phase 2). NotebookLM is the default; Gemini is the direct alternative. Ollama (DeepSeek) and z.ai (GLM) author questions/guides from curriculum knowledge without ingested sources. Codex runs the OpenAI Codex CLI on the server with the operator's own ChatGPT/Codex subscription (no API key).
          * @enum {string}
          */
-        KnowledgeBackend: "notebooklm" | "gemini" | "ollama" | "zai";
+        KnowledgeBackend: "notebooklm" | "gemini" | "ollama" | "zai" | "codex";
         /** @description The application settings singleton. Holds the spec defaults that gate exam creation plus the Guardian-side reward knobs (stored now, used in Phase 3). L10 ResolveSettings fills any missing field from these same defaults at runtime. */
         Settings: {
             /** @description Identifier of the settings singleton row. */

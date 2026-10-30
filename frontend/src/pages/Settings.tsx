@@ -46,6 +46,7 @@ const KNOWLEDGE_BACKEND_OPTIONS: Array<{
   { value: 'gemini', label: 'Gemini' },
   { value: 'ollama', label: 'Ollama Cloud (DeepSeek)' },
   { value: 'zai', label: 'z.ai (GLM)' },
+  { value: 'codex', label: 'Codex (your ChatGPT subscription)' },
 ];
 
 function formFromSettings(settings: Settings): FormState {

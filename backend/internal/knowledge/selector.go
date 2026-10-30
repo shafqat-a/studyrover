@@ -34,6 +34,10 @@ type Config struct {
 	// Zai is the constructed z.ai (Zhipu GLM) adapter, or nil when the z.ai API
 	// key is absent. Selecting "zai" with a nil Zai falls back to Fake.
 	Zai Source
+	// Codex is the constructed Codex CLI adapter (bring-your-own ChatGPT/Codex
+	// subscription). It is always constructed; a missing CLI or login fails each
+	// call with a clear error instead of falling back silently.
+	Codex Source
 	// Fake is the deterministic fallback backend (2-F02). It must be non-nil:
 	// selectBackend returns it whenever the chosen backend is unavailable, so the
 	// platform keeps working without external services. When nil, New substitutes
@@ -92,6 +96,12 @@ func selectBackend(settings contracts.Settings, cfg Config) Source {
 	case contracts.KnowledgeBackendZai:
 		if cfg.Zai != nil {
 			return cfg.Zai
+		}
+		return fallback
+
+	case contracts.KnowledgeBackendCodex:
+		if cfg.Codex != nil {
+			return cfg.Codex
 		}
 		return fallback
 
