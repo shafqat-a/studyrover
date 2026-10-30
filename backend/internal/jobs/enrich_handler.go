@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -16,14 +17,15 @@ import (
 )
 
 // EnrichPayload is the queued request for an "enrich" job: search YouTube
-// and/or Wikipedia for the lesson's topic and attach the best matches as
-// resources. The HTTP handler encodes it; the worker decodes it here.
+// and/or Wikipedia for the lesson's topic and attach the best matches that are
+// actually about the topic as resources. The HTTP handler encodes it; the worker decodes it here.
 type EnrichPayload struct {
 	LessonID   string `json:"lessonId"`
 	YouTube    bool   `json:"youtube"`
 	Wikipedia  bool   `json:"wikipedia"`
 	MaxPerKind int    `json:"maxPerKind"`
-	// Query overrides the derived "<topic> <subject>" search text.
+	// Query overrides the lesson topic as the search text (and as the words a
+	// hit must be about).
 	Query string `json:"query,omitempty"`
 }
 
@@ -42,6 +44,9 @@ type EnrichResult struct {
 const (
 	enrichDefaultMax = 3
 	enrichMaxPerKind = 10
+	// enrichSearchMax is how many hits each search asks for, so enough remain
+	// after the relevance filter drops the off-topic ones.
+	enrichSearchMax = 20
 )
 
 // EnrichStore is the slice of store.Store the enrich handler needs. Keeping it
@@ -55,9 +60,11 @@ type EnrichStore interface {
 	CreateLessonResource(ctx context.Context, arg store.CreateLessonResourceParams) (store.LessonResource, error)
 }
 
-// EnrichHandler processes "enrich" jobs. For each enabled provider it runs one
-// search, skips hits whose URL is already attached (the (lesson_id, url)
-// uniqueness rule), and inserts the rest as source=enrich resources. A single
+// EnrichHandler processes "enrich" jobs. For each enabled provider it runs the
+// searches of the lesson's [enrich.Plan], keeps only hits about the lesson's
+// topic ([enrich.Plan.Relevant]), skips hits whose URL is already attached (the
+// (lesson_id, url) uniqueness rule), and inserts the rest as source=enrich
+// resources. A single
 // provider failing is reported as a warning in the result so the other's
 // resources still land; only when every attempted provider fails does the job
 // itself fail.
@@ -107,8 +114,9 @@ func (h *EnrichHandler) Handle(ctx context.Context, job Job, prog ProgressFunc) 
 		return nil, fmt.Errorf("enrich: load lesson: %w", err)
 	}
 
-	// Names drive the search query; the lesson title is the fallback when the
-	// topic row is gone (it defaults to the topic name at creation).
+	// Names drive the searches and the relevance check; the lesson title is the
+	// fallback when the topic row is gone (it defaults to the topic name at
+	// creation).
 	topicName := lesson.Title
 	if t, err := h.Store.GetTopic(ctx, lesson.TopicID); err == nil && strings.TrimSpace(t.Name) != "" {
 		topicName = t.Name
@@ -118,13 +126,7 @@ func (h *EnrichHandler) Handle(ctx context.Context, job Job, prog ProgressFunc) 
 		subjectName = s.Name
 	}
 
-	query := strings.TrimSpace(p.Query)
-	youTubeQuery := query
-	if query == "" {
-		query = strings.TrimSpace(fmt.Sprintf("%s %s", topicName, subjectName))
-		// Bias YouTube towards teaching videos rather than, say, music.
-		youTubeQuery = query + " lesson"
-	}
+	plan := enrich.NewPlan(topicName, subjectName, p.Query)
 
 	_ = prog(ctx, 5)
 
@@ -139,7 +141,7 @@ func (h *EnrichHandler) Handle(ctx context.Context, job Job, prog ProgressFunc) 
 			result.Warnings = append(result.Warnings, "YouTube skipped: YOUTUBE_API_KEY not configured")
 		} else {
 			attempted++
-			n, err := h.attach(ctx, lesson.ID, h.YouTube, youTubeQuery, p.MaxPerKind)
+			n, err := h.attach(ctx, lesson.ID, h.YouTube, plan, []string{plan.YouTubeQuery}, p.MaxPerKind)
 			result.YouTube = n
 			result.Added += n
 			if err != nil {
@@ -156,7 +158,7 @@ func (h *EnrichHandler) Handle(ctx context.Context, job Job, prog ProgressFunc) 
 			result.Warnings = append(result.Warnings, "Wikipedia skipped: provider not configured")
 		} else {
 			attempted++
-			n, err := h.attach(ctx, lesson.ID, h.Wikipedia, query, p.MaxPerKind)
+			n, err := h.attach(ctx, lesson.ID, h.Wikipedia, plan, plan.WikipediaQueries, p.MaxPerKind)
 			result.Wikipedia = n
 			result.Added += n
 			if err != nil {
@@ -178,18 +180,67 @@ func (h *EnrichHandler) Handle(ctx context.Context, job Job, prog ProgressFunc) 
 	return json.Marshal(result)
 }
 
-// attach searches one provider and inserts the new (not-yet-attached) hits. It
-// returns how many were added; a search error is returned after any partial
-// insert count so the caller can still report what landed.
-func (h *EnrichHandler) attach(ctx context.Context, lessonID string, prov enrich.Provider, query string, max int) (int, error) {
-	found, err := prov.Search(ctx, query, max)
-	if err != nil {
-		return 0, err
+// attach runs one provider's searches and inserts up to max new
+// (not-yet-attached) hits that are about the lesson's topic. A failing search
+// is skipped while another still answers; only when every search fails is the
+// error returned. It returns how many were added; a store error is returned
+// after any partial insert count so the caller can still report what landed.
+func (h *EnrichHandler) attach(ctx context.Context, lessonID string, prov enrich.Provider, plan enrich.Plan, queries []string, max int) (int, error) {
+	var (
+		perQuery [][]enrich.Resource
+		lastErr  error
+		ok       int
+	)
+	for _, q := range queries {
+		hits, err := prov.Search(ctx, q, enrichSearchMax)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		ok++
+		var keep []enrich.Resource
+		for _, r := range hits {
+			if r.URL != "" && plan.Relevant(r) {
+				keep = append(keep, r)
+			}
+		}
+		// Closest to the concept first ("Integer" before "Integer programming");
+		// the search engine's order breaks ties.
+		sort.SliceStable(keep, func(i, j int) bool { return plan.Score(keep[i]) < plan.Score(keep[j]) })
+		perQuery = append(perQuery, keep)
 	}
+	if ok == 0 {
+		if lastErr == nil {
+			lastErr = errors.New("no search to run for this topic")
+		}
+		return 0, lastErr
+	}
+
+	// Take hits from each search in turn, so every concept of the topic gets a
+	// share of the slots rather than the first one taking them all.
+	var found []enrich.Resource
+	seen := map[string]bool{}
+	for i := 0; ; i++ {
+		more := false
+		for _, hits := range perQuery {
+			if i >= len(hits) {
+				continue
+			}
+			more = true
+			if r := hits[i]; !seen[r.URL] {
+				seen[r.URL] = true
+				found = append(found, r)
+			}
+		}
+		if !more {
+			break
+		}
+	}
+
 	added := 0
 	for _, r := range found {
-		if r.URL == "" {
-			continue
+		if added == max {
+			break
 		}
 		if _, err := h.Store.GetLessonResourceByURL(ctx, store.GetLessonResourceByURLParams{LessonID: lessonID, Url: r.URL}); err == nil {
 			continue // already attached (by an earlier run or by hand)

@@ -63,6 +63,12 @@ demand ("Generate") and can be topped up with external resources via
 "Enrich", an async `enrich` job that searches YouTube and Wikipedia for the
 lesson's topic and attaches the best matches (deduplicated by URL; poll the
 returned Job, its `result` is `{lessonId, added, youtube, wikipedia, warnings}`).
+Only hits about the topic are attached: the topic is split into its concepts
+("Number: Integers, powers and roots" → integers / powers / roots), Wikipedia is
+searched per concept in the subject's field ("Integers mathematics"), and a hit
+is kept only when its title names a concept (Wikipedia titles may add at most two
+words, and a bracketed qualifier must fit the field). If nothing on-topic is
+found, nothing is attached (`added: 0`).
 Parents can also paste a YouTube / Wikipedia / any URL by hand; the title and
 thumbnail are fetched best-effort (YouTube oEmbed, Wikipedia page summary — no
 key needed).
